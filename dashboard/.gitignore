@@ -1,9 +1,21 @@
 HELP.md
+
+# 🔨 Build
 target/
+build/
+dist/
+out/
+
+# Maven wrapper
 .mvn/wrapper/maven-wrapper.jar
+
+# Permitir target/build dentro de src (como tenías)
 !**/src/main/**/target/
 !**/src/test/**/target/
+!**/src/main/**/build/
+!**/src/test/**/build/
 
+# 🧠 IDEs
 ### STS ###
 .apt_generated
 .classpath
@@ -13,8 +25,8 @@ target/
 .springBeans
 .sts4-cache
 
-### IntelliJ IDEA ###
-.idea
+### IntelliJ ###
+.idea/
 *.iws
 *.iml
 *.ipr
@@ -22,12 +34,45 @@ target/
 ### NetBeans ###
 /nbproject/private/
 /nbbuild/
-/dist/
 /nbdist/
 /.nb-gradle/
-build/
-!**/src/main/**/build/
-!**/src/test/**/build/
 
 ### VS Code ###
 .vscode/
+
+# 🔐 SEGURIDAD (LO MÁS IMPORTANTE)
+
+# Variables de entorno (CLAVES, TOKENS, PASSWORDS)
+.env
+.env.*
+*.env
+
+# Configuración sensible
+application.properties
+application.yml
+application-*.yml
+application-*.properties
+
+# Archivos con credenciales
+*.key
+*.pem
+*.p12
+*.jks
+
+# Logs
+*.log
+
+# Sistema
+.DS_Store
+Thumbs.db
+
+# 🗄️ Base de datos local
+*.sqlite
+*.db
+
+# 📦 Dependencias (por si acaso)
+node_modules/
+
+# 🔑 Archivos de configuración secretos personalizados
+secrets.*
+config.local.*
