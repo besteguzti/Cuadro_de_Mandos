@@ -1,168 +1,272 @@
 package com.tfg.dashboard.service;
 
 import java.time.LocalDateTime;
-import java.util.Optional;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.tfg.dashboard.client.ArubaApiClient;
-import com.tfg.dashboard.entity.KpiEntity;
-import com.tfg.dashboard.entity.PlatformEntity;
+import com.tfg.dashboard.dto.ApInfo;
+import com.tfg.dashboard.model.AccessPointHistory;
 import com.tfg.dashboard.model.ArubaSummary;
-import com.tfg.dashboard.repository.KpiRepository;
-import com.tfg.dashboard.repository.PlatformRepository;
+import com.tfg.dashboard.repository.AccessPointHistoryRepository;
 
 @Service
 public class ArubaService {
 
-    // Cliente Aruba (mock actualmente)
     private final ArubaApiClient client;
 
-    // Repository plataformas
-    private final PlatformRepository platformRepository;
+    private final AccessPointHistoryRepository
+            accessPointHistoryRepository;
 
-    // Repository KPIs
-    private final KpiRepository kpiRepository;
-
-    // Inyección dependencias
     public ArubaService(
             ArubaApiClient client,
-            PlatformRepository platformRepository,
-            KpiRepository kpiRepository
+            AccessPointHistoryRepository accessPointHistoryRepository
     ) {
+
         this.client = client;
-        this.platformRepository = platformRepository;
-        this.kpiRepository = kpiRepository;
+        this.accessPointHistoryRepository =
+                accessPointHistoryRepository;
     }
+
+    // =========================================
+    // RESUMEN GENERAL
+    // =========================================
 
     public ArubaSummary getSummary() {
 
+        List<ApInfo> aps =
+                client.getApsList();
+
+
+        
         // =========================
-        // Obtención métricas Aruba
-        // =========================
-
-        int wifiUsers = client.getWifiUsers();
-
-        int remoteUsers = client.getRemoteUsers();
-
-        int apsDegraded = client.getApsDegraded();
-
-        int apsSaturated = client.getApsSaturated();
-
-        int vpnApsActive = client.getVpnApsActive();
-
-        int downAps = client.getDownAps();
-
-        int networkTraffic = client.getNetworkTraffic();
-
-        // =========================
-        // Cálculo estado global
+        // KPIs básicos
         // =========================
 
-        String status = calculateStatus(
-                apsDegraded,
-                apsSaturated,
-                downAps
+        int totalAps =
+                aps.size();
+
+        int upAps =
+                (int) aps.stream()
+
+                .filter(ap ->
+                        ap.getStatus() != null
+                        && ap.getStatus()
+                                .equalsIgnoreCase("Up"))
+
+                .count();
+
+        int downAps =
+                totalAps - upAps;
+
+
+
+        int totalSites =
+                (int) aps.stream()
+
+                .map(ApInfo::getSite)
+
+                .filter(site ->
+                        site != null
+                        && !site.isBlank())
+
+                .distinct()
+
+                .count();
+
+        int totalSwarms =
+                (int) aps.stream()
+
+                .map(ApInfo::getSwarmName)
+
+                .filter(sw ->
+                        sw != null
+                        && !sw.isBlank())
+
+                .distinct()
+
+                .count();
+
+        // =========================
+        // Firmware swarms
+        // =========================
+
+        JsonNode firmwareSwarms = client.getFirmwareSwarms();
+
+        int firmwareOutdated = 0;
+
+        if (firmwareSwarms != null) {
+
+            JsonNode swarms =
+                    firmwareSwarms.get("swarms");
+
+            if (swarms != null
+                    && swarms.isArray()) {
+
+                for (JsonNode swarm : swarms) {
+
+                    String swarmName =
+                            swarm.path("swarm_name")
+                                 .asText();
+
+                    String state =
+                            swarm.path("status")
+                                 .path("state")
+                                 .asText();
+
+                    
+
+                    boolean upgradeRequired =
+                            state.trim()
+                                 .equalsIgnoreCase(
+                                        "UPGRADE_REQUIRED"
+                                 );
+
+                    if (upgradeRequired) {
+
+                        firmwareOutdated++;
+                    }
+                }
+
+               
+            }
+        }
+
+        // =========================
+        // APs sin IP pública
+        // =========================
+
+        int apsWithoutPublicIp =
+                (int) aps.stream()
+
+                .filter(ap ->
+                        ap.getPublicIpAddress() == null
+                        || ap.getPublicIpAddress()
+                                .isBlank())
+
+                .count();
+
+        // =========================
+        // Estado global red
+        // =========================
+
+        String networkStatus = "GREEN";
+
+        if (downAps > 10
+                || firmwareOutdated > 5) {
+
+            networkStatus = "RED";
+
+        } else if (downAps > 0
+                || firmwareOutdated > 0) {
+
+            networkStatus = "YELLOW";
+        }
+
+        // =========================
+        // APs inactivos 3 meses
+        // =========================
+
+        LocalDateTime limitDate =
+                LocalDateTime.now()
+                             .minusMonths(3);
+
+        long inactiveAps =
+                accessPointHistoryRepository
+                        .countInactiveSince(
+                                limitDate
+                        );
+
+        // =========================
+        // Construcción summary
+        // =========================
+
+        ArubaSummary summary =
+                new ArubaSummary();
+
+        summary.setTotalAps(totalAps);
+
+        summary.setUpAps(upAps);
+
+        summary.setDownAps(downAps);
+
+        summary.setTotalSites(totalSites);
+
+        summary.setTotalSwarms(totalSwarms);
+
+        summary.setFirmwareOutdated(
+                firmwareOutdated
         );
 
-        // =========================
-        // Buscar o crear plataforma
-        // =========================
+        summary.setApsWithoutPublicIp(
+                apsWithoutPublicIp
+        );
 
-        Optional<PlatformEntity> optionalPlatform =
-                platformRepository.findByName("Aruba");
+        summary.setDownAps(
+                (int) downAps
+        );
 
-        PlatformEntity platform;
+        summary.setInactiveAps(
+                (int) inactiveAps
+        );
 
-        // Si Aruba no existe en BD -> crearla
-        if (optionalPlatform.isEmpty()) {
+        summary.setNetworkStatus(
+                networkStatus
+        );
 
-            platform = new PlatformEntity(
-                    "Aruba",
-                    "Network",
-                    "Plataforma de monitorización Aruba"
+        return summary;
+    }
+
+    // =========================================
+    // LISTADO APs
+    // =========================================
+
+    public List<ApInfo> getApsList() {
+
+        return client.getApsList();
+    }
+
+    // =========================================
+    // SNAPSHOT HISTÓRICO
+    // =========================================
+
+    public void saveAccessPointSnapshot() {
+
+        List<ApInfo> aps =
+                client.getApsList();
+
+        for (ApInfo ap : aps) {
+
+            AccessPointHistory entity =
+                    new AccessPointHistory();
+
+            entity.setName(
+                    ap.getName()
             );
-            platformRepository.save(platform);
 
-        } else {
+            entity.setStatus(
+                    ap.getStatus()
+            );
 
-            // Reutilizar plataforma existente
-            platform = optionalPlatform.get();
+            entity.setSite(
+                    ap.getSite()
+            );
+
+            entity.setSwarmName(
+                    ap.getSwarmName()
+            );
+
+            entity.setCollectedAt(
+                    LocalDateTime.now()
+            );
+
+            accessPointHistoryRepository
+                    .save(entity);
         }
 
-        // =========================
-        // Persistencia KPIs
-        // =========================
-
-        saveKpi("wifiUsers", String.valueOf(wifiUsers), platform);
-
-        saveKpi("remoteUsers", String.valueOf(remoteUsers), platform);
-
-        saveKpi("apsDegraded", String.valueOf(apsDegraded), platform);
-
-        saveKpi("apsSaturated", String.valueOf(apsSaturated), platform);
-
-        saveKpi("vpnApsActive", String.valueOf(vpnApsActive), platform);
-
-        saveKpi("downAps", String.valueOf(downAps), platform);
-
-        saveKpi("networkTraffic", String.valueOf(networkTraffic), platform);
-
-        saveKpi("networkStatus", status, platform);
-
-        // =========================
-        // Respuesta API REST
-        // =========================
-
-        return new ArubaSummary(
-                wifiUsers,
-                remoteUsers,
-                apsDegraded,
-                apsSaturated,
-                vpnApsActive,
-                downAps,
-                networkTraffic,
-                status
-        );
-    }
-
-    // Método auxiliar reutilizable para guardar KPIs
-    private void saveKpi(
-            String name,
-            String value,
-            PlatformEntity platform
-    ) {
-
-        KpiEntity kpi = new KpiEntity(
-                name,
-                value,
-                LocalDateTime.now(),
-                platform
-        );
-
-        kpiRepository.save(kpi);
-    }
-
-    // Cálculo estado general red
-    private String calculateStatus(
-            int degraded,
-            int saturated,
-            int downAps
-    ) {
-
-        // Estado crítico
-        if (downAps > 2 || degraded > 8 || saturated > 6) {
-            return "RED";
-        }
-
-        // Estado degradado
-        else if (downAps > 0 || degraded > 3 || saturated > 3) {
-            return "YELLOW";
-        }
-
-        // Estado correcto
-        else {
-            return "GREEN";
-        }
     }
 }

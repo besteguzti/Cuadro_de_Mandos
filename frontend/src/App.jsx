@@ -12,68 +12,76 @@ function App() {
   const [summary, setSummary] = useState(null)
 
   const [anomalies, setAnomalies] = useState([])
+
   const [wifiHistory, setWifiHistory] = useState([])
+
+  // =========================
+  // Carga completa dashboard
+  // =========================
 
   const loadDashboard = () => {
 
+    // =========================
+    // Resumen Aruba
+    // =========================
+
+    fetch('http://localhost:8080/aruba/summary')
+      .then(response => response.json())
+      .then(data => {
+
+        setSummary(data)
+      })
+
+    // =========================
+    // Anomalías
+    // =========================
+
+    fetch('http://localhost:8080/kpis/anomalies')
+      .then(response => response.json())
+      .then(data => {
+
+        setAnomalies(data)
+      })
+
+    // =========================
+    // Histórico WiFi
+    // =========================
+
+    fetch('http://localhost:8080/kpis/name/wifiUsers')
+      .then(response => response.json())
+      .then(data => {
+
+        const formattedData = data.map(item => ({
+
+          ...item,
+
+          value: Number(item.value)
+        }))
+
+        setWifiHistory(formattedData)
+      })
+  }
+
   // =========================
-  // Resumen Aruba
+  // Auto refresh
   // =========================
 
-  fetch('http://localhost:8080/aruba/summary')
-    .then(response => response.json())
-    .then(data => {
+  useEffect(() => {
 
-      setSummary(data)
-    })
-
-  // =========================
-  // Anomalías
-  // =========================
-
-  fetch('http://localhost:8080/kpis/anomalies')
-    .then(response => response.json())
-    .then(data => {
-
-      setAnomalies(data)
-    })
-
-  // =========================
-  // Histórico WiFi
-  // =========================
-
-  fetch('http://localhost:8080/kpis/name/wifiUsers')
-    .then(response => response.json())
-    .then(data => {
-
-      const formattedData = data.map(item => ({
-
-        ...item,
-
-        value: Number(item.value)
-      }))
-
-      setWifiHistory(formattedData)
-    })
-}
-
-
-   useEffect(() => {
-
-  // Primera carga
-  loadDashboard()
-
-  // Refresco automático cada 5 segundos
-  const interval = setInterval(() => {
-
+    // Primera carga
     loadDashboard()
 
-  }, 5000)
+    // Refresco automático
+    const interval = setInterval(() => {
 
-  // Limpiar interval al cerrar componente
-  return () => clearInterval(interval)
+      loadDashboard()
 
-}, [])
+    }, 5000)
+
+    // Limpiar interval
+    return () => clearInterval(interval)
+
+  }, [])
 
   // =========================
   // Pantalla carga
@@ -85,16 +93,70 @@ function App() {
   }
 
   // =========================
+  // Color dinámico estado
+  // =========================
+
+  let statusColor = '#4CAF50'
+
+  // GREEN
+  if (summary.networkStatus === 'GREEN') {
+
+    statusColor = '#4CAF50'
+  }
+
+  // YELLOW
+  else if (summary.networkStatus === 'YELLOW') {
+
+    statusColor = '#FF9800'
+  }
+
+  // RED
+  else if (summary.networkStatus === 'RED') {
+
+    statusColor = '#F44336'
+  }
+
+  // =========================
   // Render principal
   // =========================
 
   return (
 
-    <div style={{ padding: '20px' }}>
+    <div style={{
+
+      padding: '20px',
+
+      fontFamily: 'Arial'
+    }}>
 
       <h1>TFG Dashboard</h1>
 
-      <h2>Estado Red: {summary.networkStatus}</h2>
+      {/* =========================
+           Estado red
+      ========================= */}
+
+      <div style={{
+
+        backgroundColor: statusColor,
+
+        color: 'white',
+
+        padding: '15px',
+
+        borderRadius: '10px',
+
+        width: '300px',
+
+        marginBottom: '30px',
+
+        fontWeight: 'bold',
+
+        fontSize: '20px'
+      }}>
+
+        Estado Red: {summary.networkStatus}
+
+      </div>
 
       {/* =========================
            KPIs
@@ -171,7 +233,9 @@ function App() {
 
                 marginTop: '10px',
 
-                width: '300px'
+                width: '300px',
+
+                backgroundColor: '#fff5f5'
               }}
             >
 
@@ -186,14 +250,14 @@ function App() {
       }
 
       {/* =========================
-     HISTÓRICO
-========================= */}
+           Histórico WiFi
+      ========================= */}
 
-<h2 style={{ marginTop: '40px' }}>
-  Histórico WiFi Users
-</h2>
+      <h2 style={{ marginTop: '40px' }}>
+        Histórico WiFi Users
+      </h2>
 
-<KpiChart data={wifiHistory} />
+      <KpiChart data={wifiHistory} />
 
     </div>
   )

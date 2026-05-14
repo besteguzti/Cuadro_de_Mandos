@@ -1,6 +1,6 @@
 package com.tfg.dashboard.scheduler;
 
-import org.springframework.scheduling.annotation.Scheduled;
+
 import org.springframework.stereotype.Component;
 
 import com.tfg.dashboard.service.ArubaService;
@@ -17,7 +17,7 @@ public class ArubaScheduler {
     }
 
     // Ejecutar automáticamente cada 30 segundos
-    @Scheduled(fixedRate = 30000)
+    //@Scheduled(fixedRate = 30000)
     public void collectMetrics() {
 
         System.out.println("Recogiendo métricas Aruba...");

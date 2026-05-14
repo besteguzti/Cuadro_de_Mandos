@@ -2,66 +2,101 @@ package com.tfg.dashboard.model;
 
 public class ArubaSummary {
 
-    private int wifiUsers;
-    private int remoteUsers;
-    private int apsDegraded;
-    private int apsSaturated;
-    private int vpnApsActive;
-    private String networkStatus;
-    private int downAps;
-    private int networkTraffic;
+    private int totalAps;
 
-     public ArubaSummary() {
+    private int upAps;
+
+    private int downAps;
+
+    private int totalSites;
+
+    private int totalSwarms;
+
+    private int firmwareOutdated;
+
+    private int apsWithoutPublicIp;
+
+    private String networkStatus;
+
+    private int inactiveAps;
+
+    // =========================
+    // GETTERS
+    // =========================
+
+    public int getTotalAps() {
+        return totalAps;
     }
-    public ArubaSummary(
-        int wifiUsers,
-        int remoteUsers,
-        int apsDegraded,
-        int apsSaturated,
-        int vpnApsActive,
-        int downAps,
-        int networkTraffic,
-        String networkStatus
-    ){
-        this.wifiUsers = wifiUsers;
-        this.remoteUsers = remoteUsers;
-        this.apsDegraded = apsDegraded;
-        this.apsSaturated = apsSaturated;
-        this.vpnApsActive = vpnApsActive;
+
+    public int getUpAps() {
+        return upAps;
+    }
+
+    public int getDownAps() {
+        return downAps;
+    }
+
+    public int getTotalSites() {
+        return totalSites;
+    }
+
+    public int getTotalSwarms() {
+        return totalSwarms;
+    }
+
+    public int getFirmwareOutdated() {
+        return firmwareOutdated;
+    }
+
+    public int getApsWithoutPublicIp() {
+        return apsWithoutPublicIp;
+    }
+
+    public String getNetworkStatus() {
+        return networkStatus;
+    }
+
+    public int getInactiveAps() {
+        return inactiveAps;
+    }
+
+    // =========================
+    // SETTERS
+    // =========================
+
+    public void setTotalAps(int totalAps) {
+        this.totalAps = totalAps;
+    }
+
+    public void setUpAps(int upAps) {
+        this.upAps = upAps;
+    }
+
+    public void setDownAps(int downAps) {
         this.downAps = downAps;
-        this.networkTraffic = networkTraffic;
+    }
+
+    public void setTotalSites(int totalSites) {
+        this.totalSites = totalSites;
+    }
+
+    public void setTotalSwarms(int totalSwarms) {
+        this.totalSwarms = totalSwarms;
+    }
+
+    public void setFirmwareOutdated(int firmwareOutdated) {
+        this.firmwareOutdated = firmwareOutdated;
+    }
+
+    public void setApsWithoutPublicIp(int apsWithoutPublicIp) {
+        this.apsWithoutPublicIp = apsWithoutPublicIp;
+    }
+
+    public void setNetworkStatus(String networkStatus) {
         this.networkStatus = networkStatus;
     }
 
-    public int getWifiUsers() {
-    return wifiUsers;
-}
-
-public int getRemoteUsers() {
-    return remoteUsers;
-}
-
-public int getApsDegraded() {
-    return apsDegraded;
-}
-
-public int getApsSaturated() {
-    return apsSaturated;
-}
-
-public int getVpnApsActive() {
-    return vpnApsActive;
-}
-
-public int getDownAps() {
-    return downAps;
-}
-
-public int getNetworkTraffic() {
-    return networkTraffic;
-}
-
-public String getNetworkStatus() {
-    return networkStatus;
-}
+    public void setInactiveAps(int inactiveAps) {
+        this.inactiveAps = inactiveAps;
+    }
 }
