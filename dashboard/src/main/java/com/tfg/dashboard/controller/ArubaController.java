@@ -4,10 +4,12 @@ import java.util.List;
 
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.tfg.dashboard.dto.ApInfo;
+import com.tfg.dashboard.model.AccessPoint;
 import com.tfg.dashboard.model.ArubaSummary;
 import com.tfg.dashboard.service.ArubaService;
 
@@ -34,11 +36,17 @@ public class ArubaController {
         return service.getApsList();
     }
 
-    @GetMapping("/save-history")
-        public String saveHistory() {
+    @GetMapping("/stored-aps")
+    public List<AccessPoint> getStoredAps() {
 
-            service.saveAccessPointSnapshot();
+        return service.getStoredAccessPoints();
+    }
 
-            return "Histórico guardado";
+    @PostMapping("/sync-aps")
+        public String syncAps() {
+
+            service.syncAccessPoints();
+
+            return "APs sincronizados";
     }
 }

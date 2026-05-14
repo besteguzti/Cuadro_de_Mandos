@@ -2,6 +2,8 @@ package com.tfg.dashboard.service;
 
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
@@ -14,6 +16,9 @@ import com.tfg.dashboard.repository.OAuthTokenRepository;
 
 @Service
 public class ArubaAuthService {
+
+    private static final Logger log =
+            LoggerFactory.getLogger(ArubaAuthService.class);
 
     @Value("${aruba.client.id}")
     private String clientId;
@@ -48,7 +53,7 @@ public class ArubaAuthService {
             return token.getAccessToken();
         }
 
-        System.out.println("Renovando token Aruba...");
+        log.info("Renovando token Aruba");
 
         String url = baseUrl + "/oauth2/token";
 

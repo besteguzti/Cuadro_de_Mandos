@@ -2,22 +2,13 @@ function KpiCard({ title, value }) {
 
     return (
 
-        <div style={{
+        <article className="kpi-card">
 
-            border: '1px solid #ccc',
-            borderRadius: '10px',
-            padding: '20px',
-            width: '200px',
-            textAlign: 'center',
-            margin: '10px',
-            boxShadow: '0px 2px 5px rgba(0,0,0,0.2)'
-        }}>
+            <h2>{title}</h2>
 
-            <h3>{title}</h3>
+            <p>{value}</p>
 
-            <h1>{value}</h1>
-
-        </div>
+        </article>
     )
 }
 

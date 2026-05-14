@@ -2,8 +2,9 @@ package com.tfg.dashboard.client;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Random;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -22,11 +23,8 @@ import com.tfg.dashboard.service.ArubaAuthService;
 @Component
 public class ArubaApiClient {
 
-    // =========================
-    // Mock temporal
-    // =========================
-
-    private final Random random = new Random();
+    private static final Logger log =
+            LoggerFactory.getLogger(ArubaApiClient.class);
 
     // =========================
     // Auth Aruba
@@ -201,7 +199,10 @@ public class ArubaApiClient {
 
     } catch (Exception e) {
 
-        e.printStackTrace();
+        log.error(
+                "Error obteniendo listado de APs desde Aruba",
+                e
+        );
     }
 
     return result;
@@ -289,7 +290,10 @@ public class ArubaApiClient {
 
     } catch (Exception e) {
 
-        e.printStackTrace();
+        log.error(
+                "Error obteniendo firmware de swarms desde Aruba",
+                e
+        );
 
         return null;
     }

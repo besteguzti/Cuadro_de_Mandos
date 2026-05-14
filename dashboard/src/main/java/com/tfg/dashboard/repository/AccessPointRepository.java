@@ -1,0 +1,17 @@
+package com.tfg.dashboard.repository;
+
+import java.time.LocalDateTime;
+import java.util.Optional;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import com.tfg.dashboard.model.AccessPoint;
+
+public interface AccessPointRepository
+        extends JpaRepository<AccessPoint, Long> {
+
+    Optional<AccessPoint> findBySerial(String serial);
+
+    Long countBySerialIsNotNullAndLastSeenAtBefore(
+            LocalDateTime date);
+}

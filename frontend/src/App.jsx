@@ -1,265 +1,119 @@
 import { useEffect, useState } from 'react'
 
+import './App.css'
 import KpiCard from './components/KpiCard'
-import KpiChart from './components/KpiChart'
+
+const API_BASE_URL = 'http://localhost:8080'
 
 function App() {
 
-  // =========================
-  // Estados React
-  // =========================
-
   const [summary, setSummary] = useState(null)
-
-  const [anomalies, setAnomalies] = useState([])
-
-  const [wifiHistory, setWifiHistory] = useState([])
-
-  // =========================
-  // Carga completa dashboard
-  // =========================
+  const [lastUpdated, setLastUpdated] = useState(null)
+  const [error, setError] = useState(null)
 
   const loadDashboard = () => {
 
-    // =========================
-    // Resumen Aruba
-    // =========================
+    fetch(`${API_BASE_URL}/aruba/summary`)
+      .then(response => {
 
-    fetch('http://localhost:8080/aruba/summary')
-      .then(response => response.json())
+        if (!response.ok) {
+
+          throw new Error('No se pudo cargar el resumen Aruba')
+        }
+
+        return response.json()
+      })
       .then(data => {
 
         setSummary(data)
+        setLastUpdated(new Date())
+        setError(null)
       })
+      .catch(() => {
 
-    // =========================
-    // Anomalías
-    // =========================
-
-    fetch('http://localhost:8080/kpis/anomalies')
-      .then(response => response.json())
-      .then(data => {
-
-        setAnomalies(data)
-      })
-
-    // =========================
-    // Histórico WiFi
-    // =========================
-
-    fetch('http://localhost:8080/kpis/name/wifiUsers')
-      .then(response => response.json())
-      .then(data => {
-
-        const formattedData = data.map(item => ({
-
-          ...item,
-
-          value: Number(item.value)
-        }))
-
-        setWifiHistory(formattedData)
+        setError('No se pudo conectar con el backend o Aruba Central.')
       })
   }
 
-  // =========================
-  // Auto refresh
-  // =========================
-
   useEffect(() => {
 
-    // Primera carga
     loadDashboard()
 
-    // Refresco automático
     const interval = setInterval(() => {
 
       loadDashboard()
 
-    }, 5000)
+    }, 30000)
 
-    // Limpiar interval
     return () => clearInterval(interval)
 
   }, [])
 
-  // =========================
-  // Pantalla carga
-  // =========================
+  if (!summary && !error) {
 
-  if (!summary) {
-
-    return <h1>Cargando dashboard...</h1>
+    return (
+      <main className="dashboard">
+        <h1>TFG Dashboard</h1>
+        <p className="loading">Cargando dashboard...</p>
+      </main>
+    )
   }
 
-  // =========================
-  // Color dinámico estado
-  // =========================
+  const status = summary?.networkStatus ?? 'UNKNOWN'
 
-  let statusColor = '#4CAF50'
-
-  // GREEN
-  if (summary.networkStatus === 'GREEN') {
-
-    statusColor = '#4CAF50'
-  }
-
-  // YELLOW
-  else if (summary.networkStatus === 'YELLOW') {
-
-    statusColor = '#FF9800'
-  }
-
-  // RED
-  else if (summary.networkStatus === 'RED') {
-
-    statusColor = '#F44336'
-  }
-
-  // =========================
-  // Render principal
-  // =========================
+  const cards = summary
+    ? [
+      { title: 'Total APs', value: summary.totalAps },
+      { title: 'APs activos', value: summary.upAps },
+      { title: 'APs caidos', value: summary.downAps },
+      { title: 'Sites', value: summary.totalSites },
+      { title: 'Swarms', value: summary.totalSwarms },
+      { title: 'Firmware pendiente', value: summary.firmwareOutdated },
+      { title: 'APs sin IP publica', value: summary.apsWithoutPublicIp },
+      { title: 'APs inactivos', value: summary.inactiveAps }
+    ]
+    : []
 
   return (
+    <main className="dashboard">
+      <header className="dashboard-header">
+        <div>
+          <p className="eyebrow">Monitorizacion Aruba</p>
+          <h1>TFG Dashboard</h1>
+        </div>
 
-    <div style={{
+        {lastUpdated && (
+          <p className="updated">
+            Ultima actualizacion: {lastUpdated.toLocaleTimeString()}
+          </p>
+        )}
+      </header>
 
-      padding: '20px',
+      {error && (
+        <section className="alert" role="alert">
+          {error}
+        </section>
+      )}
 
-      fontFamily: 'Arial'
-    }}>
+      {summary && (
+        <>
+          <section className={`status status-${status.toLowerCase()}`}>
+            <span>Estado red</span>
+            <strong>{status}</strong>
+          </section>
 
-      <h1>TFG Dashboard</h1>
-
-      {/* =========================
-           Estado red
-      ========================= */}
-
-      <div style={{
-
-        backgroundColor: statusColor,
-
-        color: 'white',
-
-        padding: '15px',
-
-        borderRadius: '10px',
-
-        width: '300px',
-
-        marginBottom: '30px',
-
-        fontWeight: 'bold',
-
-        fontSize: '20px'
-      }}>
-
-        Estado Red: {summary.networkStatus}
-
-      </div>
-
-      {/* =========================
-           KPIs
-      ========================= */}
-
-      <div style={{
-
-        display: 'flex',
-
-        flexWrap: 'wrap',
-
-        gap: '20px',
-
-        alignItems: 'flex-start'
-      }}>
-
-        <KpiCard
-          title="WiFi Users"
-          value={summary.wifiUsers}
-        />
-
-        <KpiCard
-          title="Remote Users"
-          value={summary.remoteUsers}
-        />
-
-        <KpiCard
-          title="APs degradados"
-          value={summary.apsDegraded}
-        />
-
-        <KpiCard
-          title="APs saturados"
-          value={summary.apsSaturated}
-        />
-
-        <KpiCard
-          title="APs caídos"
-          value={summary.downAps}
-        />
-
-        <KpiCard
-          title="Tráfico"
-          value={summary.networkTraffic}
-        />
-
-      </div>
-
-      {/* =========================
-           Anomalías
-      ========================= */}
-
-      <h2 style={{ marginTop: '40px' }}>
-        Anomalías detectadas
-      </h2>
-
-      {
-        anomalies.length === 0
-
-          ? <p>No hay anomalías</p>
-
-          : anomalies.map((anomaly, index) => (
-
-            <div
-              key={index}
-
-              style={{
-
-                border: '1px solid red',
-
-                borderRadius: '10px',
-
-                padding: '10px',
-
-                marginTop: '10px',
-
-                width: '300px',
-
-                backgroundColor: '#fff5f5'
-              }}
-            >
-
-              <h3>{anomaly.metric}</h3>
-
-              <p>Valor: {anomaly.value}</p>
-
-              <p>Severidad: {anomaly.severity}</p>
-
-            </div>
-          ))
-      }
-
-      {/* =========================
-           Histórico WiFi
-      ========================= */}
-
-      <h2 style={{ marginTop: '40px' }}>
-        Histórico WiFi Users
-      </h2>
-
-      <KpiChart data={wifiHistory} />
-
-    </div>
+          <section className="kpi-grid">
+            {cards.map(card => (
+              <KpiCard
+                key={card.title}
+                title={card.title}
+                value={card.value}
+              />
+            ))}
+          </section>
+        </>
+      )}
+    </main>
   )
 }
 

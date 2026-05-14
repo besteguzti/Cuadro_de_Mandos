@@ -2,34 +2,31 @@ package com.tfg.dashboard.service;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
-
 import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.tfg.dashboard.client.ArubaApiClient;
 import com.tfg.dashboard.dto.ApInfo;
-import com.tfg.dashboard.model.AccessPointHistory;
+import com.tfg.dashboard.model.AccessPoint;
 import com.tfg.dashboard.model.ArubaSummary;
-import com.tfg.dashboard.repository.AccessPointHistoryRepository;
+import com.tfg.dashboard.repository.AccessPointRepository;
 
 @Service
 public class ArubaService {
 
     private final ArubaApiClient client;
 
-    private final AccessPointHistoryRepository
-            accessPointHistoryRepository;
+    private final AccessPointRepository
+            accessPointRepository;
 
     public ArubaService(
             ArubaApiClient client,
-            AccessPointHistoryRepository accessPointHistoryRepository
+            AccessPointRepository accessPointRepository
     ) {
 
         this.client = client;
-        this.accessPointHistoryRepository =
-                accessPointHistoryRepository;
+        this.accessPointRepository =
+                accessPointRepository;
     }
 
     // =========================================
@@ -40,6 +37,10 @@ public class ArubaService {
 
         List<ApInfo> aps =
                 client.getApsList();
+
+        syncAccessPoints(
+                aps
+        );
 
 
         
@@ -176,8 +177,8 @@ public class ArubaService {
                              .minusMonths(3);
 
         long inactiveAps =
-                accessPointHistoryRepository
-                        .countInactiveSince(
+                accessPointRepository
+                        .countBySerialIsNotNullAndLastSeenAtBefore(
                                 limitDate
                         );
 
@@ -230,19 +231,47 @@ public class ArubaService {
         return client.getApsList();
     }
 
+    public List<AccessPoint> getStoredAccessPoints() {
+
+        return accessPointRepository.findAll();
+    }
+
     // =========================================
-    // SNAPSHOT HISTÓRICO
+    // SINCRONIZAR APS
     // =========================================
 
-    public void saveAccessPointSnapshot() {
+    public void syncAccessPoints() {
 
         List<ApInfo> aps =
                 client.getApsList();
 
+        syncAccessPoints(
+                aps
+        );
+    }
+
+    private void syncAccessPoints(
+            List<ApInfo> aps
+    ) {
+
+        LocalDateTime now =
+                LocalDateTime.now();
+
         for (ApInfo ap : aps) {
 
-            AccessPointHistory entity =
-                    new AccessPointHistory();
+            String serial =
+                    ap.getSerial();
+
+            if (serial == null
+                    || serial.isBlank()) {
+
+                continue;
+            }
+
+            AccessPoint entity =
+                    accessPointRepository
+                            .findBySerial(serial)
+                            .orElseGet(AccessPoint::new);
 
             entity.setName(
                     ap.getName()
@@ -252,21 +281,47 @@ public class ArubaService {
                     ap.getStatus()
             );
 
+            entity.setIpAddress(
+                    ap.getIpAddress()
+            );
+
+            entity.setPublicIpAddress(
+                    ap.getPublicIpAddress()
+            );
+
+            entity.setSerial(
+                    serial
+            );
+
             entity.setSite(
                     ap.getSite()
+            );
+
+            entity.setFirmwareVersion(
+                    ap.getFirmwareVersion()
+            );
+
+            entity.setMacaddr(
+                    ap.getMacaddr()
             );
 
             entity.setSwarmName(
                     ap.getSwarmName()
             );
 
-            entity.setCollectedAt(
-                    LocalDateTime.now()
+            if (entity.getFirstSeenAt() == null) {
+
+                entity.setFirstSeenAt(
+                        now
+                );
+            }
+
+            entity.setLastSeenAt(
+                    now
             );
 
-            accessPointHistoryRepository
+            accessPointRepository
                     .save(entity);
         }
-
     }
 }

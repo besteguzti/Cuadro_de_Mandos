@@ -1,27 +1,32 @@
 package com.tfg.dashboard.scheduler;
 
-
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.tfg.dashboard.service.ArubaService;
 
 @Component
 public class ArubaScheduler {
 
-    // Service reutilizado
+    private static final Logger log =
+            LoggerFactory.getLogger(ArubaScheduler.class);
+
     private final ArubaService arubaService;
 
-    // Inyección dependencias
     public ArubaScheduler(ArubaService arubaService) {
         this.arubaService = arubaService;
     }
 
-    // Ejecutar automáticamente cada 30 segundos
-    //@Scheduled(fixedRate = 30000)
-    public void collectMetrics() {
+    @Scheduled(
+            initialDelayString = "${aruba.sync.initial-delay-ms:60000}",
+            fixedRateString = "${aruba.sync.fixed-rate-ms:3600000}"
+    )
+    public void syncAccessPoints() {
 
-        System.out.println("Recogiendo métricas Aruba...");
+        log.info("Sincronizando APs de Aruba en MySQL");
 
-        arubaService.getSummary();
+        arubaService.syncAccessPoints();
     }
 }
