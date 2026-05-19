@@ -8,7 +8,8 @@ Cuadro de mandos para visualizar el estado de los puntos de acceso Aruba y mante
 - `frontend`: interfaz React + Vite.
 - `dashboard.access_points`: tabla MySQL con una fila por AP, identificada por numero de serie.
 - `dashboard.aruba_switches`: tabla MySQL con una fila por switch Aruba, identificado por numero de serie.
-- `dashboard.aruba_switch_client_usage`: tabla MySQL con clientes cableados agrupados por switch.
+- `dashboard.aruba_switch_client_usage`: tabla MySQL con interfaces en down agrupadas por switch.
+- `dashboard.aruba_switch_interface_usage_history`: historico de interfaces en down por switch.
 - Aruba Central: fuente de datos de APs y firmware.
 
 ## Requisitos
@@ -99,7 +100,7 @@ Listado de switches guardado en MySQL:
 GET http://localhost:8080/aruba/stored-switches
 ```
 
-Uso de clientes cableados por switch guardado en MySQL:
+Uso de interfaces en down por switch guardado en MySQL:
 
 ```http
 GET http://localhost:8080/aruba/switch-client-usage
@@ -109,12 +110,6 @@ Listado de clientes WiFi conectado en vivo desde Aruba. No se guarda en MySQL:
 
 ```http
 GET http://localhost:8080/aruba/wifi-clients
-```
-
-Listado de clientes cableados conectado en vivo desde Aruba:
-
-```http
-GET http://localhost:8080/aruba/wired-clients
 ```
 
 Sincronizacion manual de APs en MySQL:
@@ -129,7 +124,7 @@ Sincronizacion manual de switches en MySQL:
 POST http://localhost:8080/aruba/sync-switches
 ```
 
-Sincronizacion manual de uso de clientes cableados por switch:
+Sincronizacion manual de interfaces en down por switch:
 
 ```http
 POST http://localhost:8080/aruba/sync-switch-client-usage
@@ -137,7 +132,7 @@ POST http://localhost:8080/aruba/sync-switch-client-usage
 
 ## Sincronizacion Automatica
 
-El backend sincroniza APs, switches y uso de clientes cableados automaticamente con `ArubaScheduler`:
+El backend sincroniza APs, switches e interfaces en down automaticamente con `ArubaScheduler`:
 
 - Primera ejecucion: configurable con `aruba.sync.initial-delay-ms`.
 - Frecuencia: configurable con `aruba.sync.fixed-rate-ms`.
@@ -146,7 +141,7 @@ Ademas, `GET /aruba/summary` tambien sincroniza los APs usando la misma lista qu
 
 Cada AP se guarda en `access_points` usando el numero de serie como clave logica. Cada switch se guarda en `aruba_switches` con el mismo criterio. `firstSeenAt` guarda cuando se vio por primera vez y no se sobrescribe; `lastSeenAt` se actualiza en cada sincronizacion.
 
-Los clientes cableados se consultan en `GET /monitoring/v2/clients` con `client_type=WIRED`, se agrupan por `associated_device` y se guardan en `aruba_switch_client_usage` con `associated_device`, `associated_device_name`, `associated_device_mac` y `wired_clients`.
+Los switches se consultan en `GET /monitoring/v1/switches` y se guardan por numero de serie. Despues, para cada serial se consulta `GET /monitoring/v1/switches/{serial}/ports`, se cuentan los puertos con `status` igual a `down` y se guarda el ultimo estado en `aruba_switch_client_usage`. Cada sincronizacion tambien inserta una muestra en `aruba_switch_interface_usage_history`. En el dashboard solo se muestran como infrautilizados los switches que en los ultimos 30 dias han estado siempre `Up` y siempre con mas de 17 interfaces en `down`.
 
 ## Comprobar Flujo Real con MySQL
 
@@ -191,7 +186,7 @@ El frontend muestra:
 - Total switches.
 - Switches apagados.
 - Switches que necesitan upgrade de firmware.
-- Switches infrautilizados con menos de 10 clientes cableados.
+- Switches infrautilizados con mas de 17 interfaces en `down` en los ultimos 30 dias.
 - Clientes conectados en `MUTUALIA-APs`.
 - Clientes conectados en `MUTUALIA-WIFI`.
 - Clientes de `MUTUALIA-WIFI` separados por SSID:

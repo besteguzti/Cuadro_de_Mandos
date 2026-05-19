@@ -3,6 +3,8 @@ package com.tfg.dashboard.client;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -419,6 +421,138 @@ public class ArubaApiClient {
         return result;
     }
 
+    public List<ArubaSwitchInfo> getMonitoringSwitchesList() {
+
+        List<ArubaSwitchInfo> result =
+                new ArrayList<>();
+
+        try {
+
+            String token =
+                    authService.getAccessToken();
+
+            RestTemplate restTemplate =
+                    new RestTemplate();
+
+            HttpHeaders headers =
+                    new HttpHeaders();
+
+            headers.setBearerAuth(token);
+
+            HttpEntity<String> entity =
+                    new HttpEntity<>(headers);
+
+            ObjectMapper mapper =
+                    new ObjectMapper();
+
+            int offset = 0;
+
+            int limit = 100;
+
+            while (true) {
+
+                String url =
+                        baseUrl
+                        + "/monitoring/v1/switches"
+                        + "?offset=" + offset
+                        + "&limit=" + limit;
+
+                ResponseEntity<String> response =
+                        restTemplate.exchange(
+                                url,
+                                HttpMethod.GET,
+                                entity,
+                                String.class
+                        );
+
+                JsonNode root =
+                        mapper.readTree(
+                                response.getBody()
+                        );
+
+                JsonNode switches =
+                        findArray(
+                                root,
+                                "switches",
+                                "devices",
+                                "items",
+                                "data"
+                        );
+
+                if (switches == null
+                        || switches.size() == 0) {
+
+                    if (offset == 0) {
+
+                        log.warn(
+                                "La respuesta de monitoring switches no contiene switches. Campos raiz: {}",
+                                fieldNames(root)
+                        );
+                    }
+
+                    break;
+                }
+
+                for (JsonNode switchNode : switches) {
+
+                    ArubaSwitchInfo info =
+                            new ArubaSwitchInfo();
+
+                    info.setSerial(
+                            text(
+                                    switchNode,
+                                    "serial",
+                                    "serial_number"
+                            )
+                    );
+
+                    info.setMacAddress(
+                            text(
+                                    switchNode,
+                                    "macaddr",
+                                    "mac_address",
+                                    "mac"
+                            )
+                    );
+
+                    info.setHostname(
+                            text(
+                                    switchNode,
+                                    "name",
+                                    "hostname",
+                                    "device_name"
+                            )
+                    );
+
+                    info.setModel(
+                            text(switchNode, "model")
+                    );
+
+                    info.setDeviceStatus(
+                            text(
+                                    switchNode,
+                                    "status",
+                                    "device_status"
+                            )
+                    );
+
+                    result.add(info);
+                }
+
+                offset += limit;
+            }
+
+        } catch (Exception e) {
+
+            log.error(
+                    "Error obteniendo switches desde Aruba monitoring",
+                    e
+            );
+        }
+
+        return result;
+    }
+
     // =========================
     // Obtener clientes WiFi Aruba
     // =========================
@@ -428,14 +562,6 @@ public class ArubaApiClient {
         return getClientsList(
                 "WIRELESS",
                 "clientes WiFi"
-        );
-    }
-
-    public List<ArubaWifiClientInfo> getWiredClientsList() {
-
-        return getClientsList(
-                "WIRED",
-                "clientes cableados"
         );
     }
 
@@ -600,6 +726,111 @@ public class ArubaApiClient {
         );
 
         return result;
+    }
+
+    public int countSwitchPortsDown(String serial) {
+
+        if (serial == null
+                || serial.isBlank()) {
+
+            return 0;
+        }
+
+        try {
+
+            String token =
+                    authService.getAccessToken();
+
+            RestTemplate restTemplate =
+                    new RestTemplate();
+
+            HttpHeaders headers =
+                    new HttpHeaders();
+
+            headers.setBearerAuth(token);
+
+            HttpEntity<String> entity =
+                    new HttpEntity<>(headers);
+
+            ObjectMapper mapper =
+                    new ObjectMapper();
+
+            String encodedSerial =
+                    URLEncoder.encode(
+                            serial,
+                            StandardCharsets.UTF_8
+                    );
+
+            String url =
+                    baseUrl
+                    + "/monitoring/v1/switches/"
+                    + encodedSerial
+                    + "/ports";
+
+            ResponseEntity<String> response =
+                    restTemplate.exchange(
+                            url,
+                            HttpMethod.GET,
+                            entity,
+                            String.class
+                    );
+
+            JsonNode root =
+                    mapper.readTree(
+                            response.getBody()
+                    );
+
+            return countPortsByStatus(
+                    root,
+                    "down"
+            );
+
+        } catch (Exception e) {
+
+            log.error(
+                    "Error obteniendo puertos del switch {} desde Aruba",
+                    serial,
+                    e
+            );
+
+            return 0;
+        }
+    }
+
+    private int countPortsByStatus(
+            JsonNode root,
+            String expectedStatus
+    ) {
+
+        JsonNode ports =
+                findArray(
+                        root,
+                        "ports",
+                        "interfaces",
+                        "items",
+                        "data"
+                );
+
+        if (ports == null
+                || !ports.isArray()) {
+
+            return 0;
+        }
+
+        int count = 0;
+
+        for (JsonNode port : ports) {
+
+            String status =
+                    text(port, "status");
+
+            if (expectedStatus.equalsIgnoreCase(status)) {
+
+                count++;
+            }
+        }
+
+        return count;
     }
 
     private JsonNode findArray(

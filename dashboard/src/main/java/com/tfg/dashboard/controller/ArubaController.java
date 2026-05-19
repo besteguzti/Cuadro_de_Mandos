@@ -71,12 +71,6 @@ public class ArubaController {
         return service.getWifiClientsList();
     }
 
-    @GetMapping("/wired-clients")
-    public List<ArubaWifiClientInfo> getWiredClients() {
-
-        return service.getWiredClientsList();
-    }
-
     @GetMapping("/wifi-clients/diagnostics")
     public Map<String, Object> getWifiClientDiagnostics() {
 
@@ -104,6 +98,6 @@ public class ArubaController {
 
             service.syncSwitchClientUsage();
 
-            return "Uso de clientes cableados sincronizado";
+            return "Uso de interfaces down sincronizado";
     }
 }

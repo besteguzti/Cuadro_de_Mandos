@@ -2,6 +2,7 @@ package com.tfg.dashboard.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -27,8 +28,10 @@ import com.tfg.dashboard.model.AccessPoint;
 import com.tfg.dashboard.model.ArubaSummary;
 import com.tfg.dashboard.model.ArubaSwitch;
 import com.tfg.dashboard.model.ArubaSwitchClientUsage;
+import com.tfg.dashboard.model.ArubaSwitchInterfaceUsageHistory;
 import com.tfg.dashboard.repository.AccessPointRepository;
 import com.tfg.dashboard.repository.ArubaSwitchClientUsageRepository;
+import com.tfg.dashboard.repository.ArubaSwitchInterfaceUsageHistoryRepository;
 import com.tfg.dashboard.repository.ArubaSwitchRepository;
 
 @ExtendWith(MockitoExtension.class)
@@ -46,6 +49,10 @@ class ArubaServiceTest {
     @Mock
     private ArubaSwitchClientUsageRepository switchClientUsageRepository;
 
+    @Mock
+    private ArubaSwitchInterfaceUsageHistoryRepository
+            switchInterfaceUsageHistoryRepository;
+
     @InjectMocks
     private ArubaService arubaService;
 
@@ -62,6 +69,11 @@ class ArubaServiceTest {
                 firmwareSwarms()
         );
 
+        when(client.getMonitoringSwitchesList()).thenReturn(List.of(
+                arubaSwitch("SW-1", "Up", false),
+                arubaSwitch("SW-2", "Down", true)
+        ));
+
         when(client.getSwitchesList()).thenReturn(List.of(
                 arubaSwitch("SW-1", "Up", false),
                 arubaSwitch("SW-2", "Down", true)
@@ -76,10 +88,8 @@ class ArubaServiceTest {
                 wifiClient("MUTUALIA-WIFI", "MUT_VIDEO")
         ));
 
-        when(client.getWiredClientsList()).thenReturn(List.of(
-                wiredClient("SW-LOW", "Switch bajo", "00:aa:bb:cc:dd:01"),
-                wiredClient("SW-LOW", "Switch bajo", "00:aa:bb:cc:dd:01")
-        ));
+        when(client.countSwitchPortsDown("SW-1")).thenReturn(4);
+        when(client.countSwitchPortsDown("SW-2")).thenReturn(12);
 
         when(accessPointRepository.findBySerial(any()))
                 .thenReturn(Optional.empty());
@@ -94,8 +104,16 @@ class ArubaServiceTest {
                 .thenReturn(Optional.empty());
 
         when(switchClientUsageRepository
-                .findByWiredClientsLessThanOrderByWiredClientsAscAssociatedDeviceAsc(10))
-                .thenReturn(List.of(switchUsage("SW-LOW", "Switch bajo", 2)));
+                .findByAssociatedDeviceInOrderByDownInterfacesDescAssociatedDeviceAsc(
+                        List.of("SW-1")))
+                .thenReturn(List.of(switchUsage("SW-1", "Switch bajo", 18)));
+
+        when(switchInterfaceUsageHistoryRepository
+                .findDevicesAlwaysOverDownInterfaceLimitSince(
+                        eq("Up"),
+                        eq(17),
+                        any()))
+                .thenReturn(List.of("SW-1"));
 
         when(accessPointRepository
                 .countBySerialIsNotNullAndLastSeenAtBefore(any()))
@@ -116,8 +134,8 @@ class ArubaServiceTest {
         assertThat(summary.getDownSwitches()).isEqualTo(1);
         assertThat(summary.getSwitchesFirmwareUpgradeRequired()).isEqualTo(1);
         assertThat(summary.getUnderusedSwitches()).hasSize(1);
-        assertThat(summary.getUnderusedSwitches().get(0).getWiredClients())
-                .isEqualTo(2);
+        assertThat(summary.getUnderusedSwitches().get(0).getDownInterfaces())
+                .isEqualTo(18);
         assertThat(summary.getTotalWifiClients()).isEqualTo(6);
         assertThat(summary.getMutualiaApsClients()).isEqualTo(1);
         assertThat(summary.getMutualiaWifiClients()).isEqualTo(5);
@@ -200,7 +218,7 @@ class ArubaServiceTest {
         existing.setSerial("SW-1");
         existing.setFirstSeenAt(originalFirstSeenAt);
 
-        when(client.getSwitchesList()).thenReturn(List.of(
+        when(client.getMonitoringSwitchesList()).thenReturn(List.of(
                 arubaSwitch("SW-1", "Down", true)
         ));
 
@@ -225,21 +243,21 @@ class ArubaServiceTest {
     }
 
     @Test
-    void syncSwitchClientUsageCountsWiredClientsByAssociatedDevice() {
+    void syncSwitchClientUsageCountsDownInterfacesBySwitchSerial() {
 
-        when(client.getWiredClientsList()).thenReturn(List.of(
-                wiredClient("SW-1", "Switch 1", "00:aa:bb:cc:dd:01"),
-                wiredClient("SW-1", "Switch 1", "00:aa:bb:cc:dd:01"),
-                wiredClient("SW-2", "Switch 2", "00:aa:bb:cc:dd:02")
+        when(client.getMonitoringSwitchesList()).thenReturn(List.of(
+                arubaSwitch("SW-1", "Up", false),
+                arubaSwitch("SW-2", "Up", false)
         ));
-
-        when(client.getSwitchesList()).thenReturn(List.of());
 
         when(switchClientUsageRepository.findAll())
                 .thenReturn(List.of());
 
         when(switchClientUsageRepository.findByAssociatedDevice(any()))
                 .thenReturn(Optional.empty());
+
+        when(client.countSwitchPortsDown("SW-1")).thenReturn(4);
+        when(client.countSwitchPortsDown("SW-2")).thenReturn(9);
 
         arubaService.syncSwitchClientUsage();
 
@@ -249,17 +267,35 @@ class ArubaServiceTest {
         verify(switchClientUsageRepository, times(2))
                 .save(captor.capture());
 
+        ArgumentCaptor<ArubaSwitchInterfaceUsageHistory> historyCaptor =
+                ArgumentCaptor.forClass(
+                        ArubaSwitchInterfaceUsageHistory.class);
+
+        verify(switchInterfaceUsageHistoryRepository, times(2))
+                .save(historyCaptor.capture());
+
         List<ArubaSwitchClientUsage> saved =
                 captor.getAllValues();
 
         assertThat(saved)
                 .extracting(
                         ArubaSwitchClientUsage::getAssociatedDevice,
-                        ArubaSwitchClientUsage::getWiredClients
+                        ArubaSwitchClientUsage::getDeviceStatus,
+                        ArubaSwitchClientUsage::getDownInterfaces
                 )
                 .containsExactlyInAnyOrder(
-                        org.assertj.core.api.Assertions.tuple("SW-1", 2),
-                        org.assertj.core.api.Assertions.tuple("SW-2", 1)
+                        org.assertj.core.api.Assertions.tuple("SW-1", "Up", 4),
+                        org.assertj.core.api.Assertions.tuple("SW-2", "Up", 9)
+                );
+
+        assertThat(historyCaptor.getAllValues())
+                .extracting(
+                        ArubaSwitchInterfaceUsageHistory::getAssociatedDevice,
+                        ArubaSwitchInterfaceUsageHistory::getDownInterfaces
+                )
+                .containsExactlyInAnyOrder(
+                        org.assertj.core.api.Assertions.tuple("SW-1", 4),
+                        org.assertj.core.api.Assertions.tuple("SW-2", 9)
                 );
     }
 
@@ -342,26 +378,10 @@ class ArubaServiceTest {
         return client;
     }
 
-    private ArubaWifiClientInfo wiredClient(
-            String associatedDevice,
-            String associatedDeviceName,
-            String associatedDeviceMac
-    ) {
-
-        ArubaWifiClientInfo client =
-                wifiClient("", "");
-
-        client.setAssociatedDevice(associatedDevice);
-        client.setAssociatedDeviceName(associatedDeviceName);
-        client.setAssociatedDeviceMac(associatedDeviceMac);
-
-        return client;
-    }
-
     private ArubaSwitchClientUsage switchUsage(
             String associatedDevice,
             String associatedDeviceName,
-            int wiredClients
+            int downInterfaces
     ) {
 
         ArubaSwitchClientUsage usage =
@@ -370,7 +390,8 @@ class ArubaServiceTest {
         usage.setAssociatedDevice(associatedDevice);
         usage.setAssociatedDeviceName(associatedDeviceName);
         usage.setAssociatedDeviceMac("00:aa:bb:cc:dd:01");
-        usage.setWiredClients(wiredClients);
+        usage.setDeviceStatus("Up");
+        usage.setDownInterfaces(downInterfaces);
 
         return usage;
     }

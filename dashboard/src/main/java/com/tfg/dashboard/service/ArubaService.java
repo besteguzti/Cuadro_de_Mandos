@@ -18,8 +18,10 @@ import com.tfg.dashboard.model.AccessPoint;
 import com.tfg.dashboard.model.ArubaSummary;
 import com.tfg.dashboard.model.ArubaSwitch;
 import com.tfg.dashboard.model.ArubaSwitchClientUsage;
+import com.tfg.dashboard.model.ArubaSwitchInterfaceUsageHistory;
 import com.tfg.dashboard.repository.AccessPointRepository;
 import com.tfg.dashboard.repository.ArubaSwitchClientUsageRepository;
+import com.tfg.dashboard.repository.ArubaSwitchInterfaceUsageHistoryRepository;
 import com.tfg.dashboard.repository.ArubaSwitchRepository;
 
 @Service
@@ -28,7 +30,9 @@ public class ArubaService {
     private static final Logger log =
             LoggerFactory.getLogger(ArubaService.class);
 
-    private static final int UNDERUSED_SWITCH_CLIENT_LIMIT = 10;
+    private static final int UNDERUSED_SWITCH_DOWN_INTERFACE_LIMIT = 17;
+
+    private static final int UNDERUSED_SWITCH_DAYS = 30;
 
     private final ArubaApiClient client;
 
@@ -41,11 +45,16 @@ public class ArubaService {
     private final ArubaSwitchClientUsageRepository
             switchClientUsageRepository;
 
+    private final ArubaSwitchInterfaceUsageHistoryRepository
+            switchInterfaceUsageHistoryRepository;
+
     public ArubaService(
             ArubaApiClient client,
             AccessPointRepository accessPointRepository,
             ArubaSwitchRepository arubaSwitchRepository,
-            ArubaSwitchClientUsageRepository switchClientUsageRepository
+            ArubaSwitchClientUsageRepository switchClientUsageRepository,
+            ArubaSwitchInterfaceUsageHistoryRepository
+                    switchInterfaceUsageHistoryRepository
     ) {
 
         this.client = client;
@@ -55,6 +64,8 @@ public class ArubaService {
                 arubaSwitchRepository;
         this.switchClientUsageRepository =
                 switchClientUsageRepository;
+        this.switchInterfaceUsageHistoryRepository =
+                switchInterfaceUsageHistoryRepository;
     }
 
     // =========================================
@@ -71,20 +82,19 @@ public class ArubaService {
         );
 
         List<ArubaSwitchInfo> switches =
-                client.getSwitchesList();
+                client.getMonitoringSwitchesList();
 
         syncSwitches(
                 switches
         );
 
+        List<ArubaSwitchInfo> firmwareSwitches =
+                client.getSwitchesList();
+
         List<ArubaWifiClientInfo> wifiClients =
                 client.getWifiClientsList();
 
-        List<ArubaWifiClientInfo> wiredClients =
-                client.getWiredClientsList();
-
         syncSwitchClientUsage(
-                wiredClients,
                 switches
         );
 
@@ -215,7 +225,7 @@ public class ArubaService {
                         .count();
 
         int switchesFirmwareUpgradeRequired =
-                (int) switches.stream()
+                (int) firmwareSwitches.stream()
                         .filter(ArubaSwitchInfo::isUpgradeRequired)
                         .count();
 
@@ -421,7 +431,7 @@ public class ArubaService {
 
     public List<ArubaSwitchInfo> getSwitchesList() {
 
-        return client.getSwitchesList();
+        return client.getMonitoringSwitchesList();
     }
 
     public List<ArubaSwitch> getStoredSwitches() {
@@ -436,20 +446,32 @@ public class ArubaService {
 
     public List<ArubaSwitchClientUsage> getUnderusedSwitches() {
 
+        LocalDateTime limitDate =
+                LocalDateTime.now()
+                             .minusDays(UNDERUSED_SWITCH_DAYS);
+
+        List<String> associatedDevices =
+                switchInterfaceUsageHistoryRepository
+                        .findDevicesAlwaysOverDownInterfaceLimitSince(
+                                "Up",
+                                UNDERUSED_SWITCH_DOWN_INTERFACE_LIMIT,
+                                limitDate
+                        );
+
+        if (associatedDevices.isEmpty()) {
+
+            return List.of();
+        }
+
         return switchClientUsageRepository
-                .findByWiredClientsLessThanOrderByWiredClientsAscAssociatedDeviceAsc(
-                        UNDERUSED_SWITCH_CLIENT_LIMIT
+                .findByAssociatedDeviceInOrderByDownInterfacesDescAssociatedDeviceAsc(
+                        associatedDevices
                 );
     }
 
     public List<ArubaWifiClientInfo> getWifiClientsList() {
 
         return client.getWifiClientsList();
-    }
-
-    public List<ArubaWifiClientInfo> getWiredClientsList() {
-
-        return client.getWiredClientsList();
     }
 
     public Map<String, Object> getWifiClientsDiagnostics() {
@@ -502,7 +524,7 @@ public class ArubaService {
     public void syncSwitches() {
 
         List<ArubaSwitchInfo> switches =
-                client.getSwitchesList();
+                client.getMonitoringSwitchesList();
 
         syncSwitches(
                 switches
@@ -511,12 +533,8 @@ public class ArubaService {
 
     public void syncSwitchClientUsage() {
 
-        List<ArubaWifiClientInfo> wiredClients =
-                client.getWiredClientsList();
-
         syncSwitchClientUsage(
-                wiredClients,
-                client.getSwitchesList()
+                client.getMonitoringSwitchesList()
         );
     }
 
@@ -663,17 +681,6 @@ public class ArubaService {
     }
 
     private void syncSwitchClientUsage(
-            List<ArubaWifiClientInfo> wiredClients
-    ) {
-
-        syncSwitchClientUsage(
-                wiredClients,
-                List.of()
-        );
-    }
-
-    private void syncSwitchClientUsage(
-            List<ArubaWifiClientInfo> wiredClients,
             List<ArubaSwitchInfo> switches
     ) {
 
@@ -705,50 +712,15 @@ public class ArubaService {
                     switchInfo.getMacAddress()
             );
 
+            usage.setDeviceStatus(
+                    switchInfo.getDeviceStatus()
+            );
+
+            usage.setDownInterfaces(
+                    client.countSwitchPortsDown(serial)
+            );
+
             usageByDevice.put(serial, usage);
-        }
-
-        for (ArubaWifiClientInfo wiredClient : wiredClients) {
-
-            String associatedDevice =
-                    wiredClient.getAssociatedDevice();
-
-            if (associatedDevice == null
-                    || associatedDevice.isBlank()) {
-
-                continue;
-            }
-
-            ArubaSwitchClientUsage usage =
-                    usageByDevice.computeIfAbsent(
-                            associatedDevice,
-                            key -> {
-                                ArubaSwitchClientUsage newUsage =
-                                        new ArubaSwitchClientUsage();
-
-                                newUsage.setAssociatedDevice(key);
-
-                                return newUsage;
-                            }
-                    );
-
-            usage.setAssociatedDeviceName(
-                    firstNotBlank(
-                            usage.getAssociatedDeviceName(),
-                            wiredClient.getAssociatedDeviceName()
-                    )
-            );
-
-            usage.setAssociatedDeviceMac(
-                    firstNotBlank(
-                            usage.getAssociatedDeviceMac(),
-                            wiredClient.getAssociatedDeviceMac()
-                    )
-            );
-
-            usage.setWiredClients(
-                    usage.getWiredClients() + 1
-            );
         }
 
         for (ArubaSwitchClientUsage existing
@@ -757,7 +729,7 @@ public class ArubaService {
             if (!usageByDevice.containsKey(
                     existing.getAssociatedDevice())) {
 
-                existing.setWiredClients(0);
+                existing.setDownInterfaces(0);
                 existing.setUpdatedAt(now);
 
                 switchClientUsageRepository.save(existing);
@@ -785,13 +757,44 @@ public class ArubaService {
                     aggregate.getAssociatedDeviceMac()
             );
 
-            entity.setWiredClients(
-                    aggregate.getWiredClients()
+            entity.setDeviceStatus(
+                    aggregate.getDeviceStatus()
+            );
+
+            entity.setDownInterfaces(
+                    aggregate.getDownInterfaces()
             );
 
             entity.setUpdatedAt(now);
 
             switchClientUsageRepository.save(entity);
+
+            ArubaSwitchInterfaceUsageHistory history =
+                    new ArubaSwitchInterfaceUsageHistory();
+
+            history.setAssociatedDevice(
+                    aggregate.getAssociatedDevice()
+            );
+
+            history.setAssociatedDeviceName(
+                    aggregate.getAssociatedDeviceName()
+            );
+
+            history.setAssociatedDeviceMac(
+                    aggregate.getAssociatedDeviceMac()
+            );
+
+            history.setDeviceStatus(
+                    aggregate.getDeviceStatus()
+            );
+
+            history.setDownInterfaces(
+                    aggregate.getDownInterfaces()
+            );
+
+            history.setObservedAt(now);
+
+            switchInterfaceUsageHistoryRepository.save(history);
         }
     }
 

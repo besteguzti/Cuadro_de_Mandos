@@ -66,11 +66,16 @@ function App() {
       { title: 'Total APs', value: summary.totalAps },
       { title: 'APs activos', value: summary.upAps },
       { title: 'APs caidos', value: summary.downAps },
-      { title: 'Sites', value: summary.totalSites },
-      { title: 'Swarms', value: summary.totalSwarms },
-      { title: 'Firmware pendiente', value: summary.firmwareOutdated },
-      { title: 'APs sin IP publica', value: summary.apsWithoutPublicIp },
-      { title: 'APs inactivos', value: summary.inactiveAps }
+      {
+        title: 'Firmware pendiente',
+        value: summary.firmwareOutdated,
+        critical: summary.firmwareOutdated > 0
+      },
+      {
+        title: 'APs inactivos',
+        value: summary.inactiveAps,
+        critical: summary.inactiveAps > 0
+      }
     ]
     : []
 
@@ -93,8 +98,8 @@ function App() {
   const underusedSwitchCards = summary
     ? (summary.underusedSwitches ?? []).map(switchUsage => ({
       title: switchUsage.associatedDeviceName || switchUsage.associatedDevice,
-      value: `${switchUsage.wiredClients} clientes`,
-      critical: switchUsage.wiredClients === 0
+      value: `${switchUsage.downInterfaces} interfaces down`,
+      critical: switchUsage.downInterfaces > 0
     }))
     : []
 
@@ -155,6 +160,35 @@ function App() {
                   key={card.title}
                   title={card.title}
                   value={card.value}
+                  critical={card.critical}
+                />
+              ))}
+            </div>
+          </section>
+
+          <section className="dashboard-section">
+            <h2>Clientes WiFi por grupo</h2>
+
+            <div className="kpi-grid">
+              {wifiGroupCards.map(card => (
+                <KpiCard
+                  key={card.title}
+                  title={card.title}
+                  value={card.value}
+                />
+              ))}
+            </div>
+          </section>
+
+          <section className="dashboard-section">
+            <h2>Clientes MUTUALIA-WIFI por red</h2>
+
+            <div className="kpi-grid">
+              {wifiNetworkCards.map(card => (
+                <KpiCard
+                  key={card.title}
+                  title={card.title}
+                  value={card.value}
                 />
               ))}
             </div>
@@ -194,34 +228,6 @@ function App() {
                   value="0"
                 />
               )}
-            </div>
-          </section>
-
-          <section className="dashboard-section">
-            <h2>Clientes WiFi por grupo</h2>
-
-            <div className="kpi-grid">
-              {wifiGroupCards.map(card => (
-                <KpiCard
-                  key={card.title}
-                  title={card.title}
-                  value={card.value}
-                />
-              ))}
-            </div>
-          </section>
-
-          <section className="dashboard-section">
-            <h2>Clientes MUTUALIA-WIFI por red</h2>
-
-            <div className="kpi-grid">
-              {wifiNetworkCards.map(card => (
-                <KpiCard
-                  key={card.title}
-                  title={card.title}
-                  value={card.value}
-                />
-              ))}
             </div>
           </section>
         </>

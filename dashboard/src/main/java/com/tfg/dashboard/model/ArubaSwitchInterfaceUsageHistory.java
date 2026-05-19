@@ -8,17 +8,10 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
 
 @Entity
-@Table(
-        name = "aruba_switch_client_usage",
-        uniqueConstraints = @UniqueConstraint(
-                name = "uk_switch_client_usage_associated_device",
-                columnNames = "associated_device"
-        )
-)
-public class ArubaSwitchClientUsage {
+@Table(name = "aruba_switch_interface_usage_history")
+public class ArubaSwitchInterfaceUsageHistory {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -39,8 +32,8 @@ public class ArubaSwitchClientUsage {
     @Column(name = "down_interfaces")
     private Integer downInterfaces;
 
-    @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
+    @Column(name = "observed_at", nullable = false)
+    private LocalDateTime observedAt;
 
     public Long getId() {
         return id;
@@ -66,8 +59,8 @@ public class ArubaSwitchClientUsage {
         return downInterfaces == null ? 0 : downInterfaces;
     }
 
-    public LocalDateTime getUpdatedAt() {
-        return updatedAt;
+    public LocalDateTime getObservedAt() {
+        return observedAt;
     }
 
     public void setAssociatedDevice(String associatedDevice) {
@@ -90,7 +83,7 @@ public class ArubaSwitchClientUsage {
         this.downInterfaces = downInterfaces;
     }
 
-    public void setUpdatedAt(LocalDateTime updatedAt) {
-        this.updatedAt = updatedAt;
+    public void setObservedAt(LocalDateTime observedAt) {
+        this.observedAt = observedAt;
     }
 }
