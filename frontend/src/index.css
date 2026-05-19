@@ -41,3 +41,13 @@ body {
   font-size: 34px;
   font-weight: 800;
 }
+
+.kpi-card-critical {
+  border-color: #ef9a9a;
+  background: #fff5f5;
+}
+
+.kpi-card-critical h2,
+.kpi-card-critical p {
+  color: #b42318;
+}

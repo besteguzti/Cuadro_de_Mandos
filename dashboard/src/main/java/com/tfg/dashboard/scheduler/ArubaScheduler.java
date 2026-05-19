@@ -25,8 +25,10 @@ public class ArubaScheduler {
     )
     public void syncAccessPoints() {
 
-        log.info("Sincronizando APs de Aruba en MySQL");
+        log.info("Sincronizando APs, switches y uso cableado de Aruba en MySQL");
 
         arubaService.syncAccessPoints();
+        arubaService.syncSwitches();
+        arubaService.syncSwitchClientUsage();
     }
 }

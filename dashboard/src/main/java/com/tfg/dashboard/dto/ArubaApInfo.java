@@ -2,7 +2,7 @@ package com.tfg.dashboard.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-public class ApInfo {
+public class ArubaApInfo {
 
     private String name;
 

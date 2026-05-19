@@ -1,5 +1,7 @@
 package com.tfg.dashboard.model;
 
+import java.util.List;
+
 public class ArubaSummary {
 
     private int totalAps;
@@ -19,6 +21,34 @@ public class ArubaSummary {
     private String networkStatus;
 
     private int inactiveAps;
+
+    private int totalSwitches;
+
+    private int downSwitches;
+
+    private int switchesFirmwareUpgradeRequired;
+
+    private List<ArubaSwitchClientUsage> underusedSwitches;
+
+    private int totalWifiClients;
+
+    private int mutualiaApsClients;
+
+    private int mutualiaWifiClients;
+
+    private int mutualiaLangileakClients;
+
+    private int mutualiaClients;
+
+    private int mutualiaRedInternaClients;
+
+    private int mutualiaRedExternaClients;
+
+    private int mutualiaKorporatiboaClients;
+
+    private int wifiPacsClients;
+
+    private int mutVideoClients;
 
     // =========================
     // GETTERS
@@ -60,6 +90,62 @@ public class ArubaSummary {
         return inactiveAps;
     }
 
+    public int getTotalSwitches() {
+        return totalSwitches;
+    }
+
+    public int getDownSwitches() {
+        return downSwitches;
+    }
+
+    public int getSwitchesFirmwareUpgradeRequired() {
+        return switchesFirmwareUpgradeRequired;
+    }
+
+    public List<ArubaSwitchClientUsage> getUnderusedSwitches() {
+        return underusedSwitches;
+    }
+
+    public int getTotalWifiClients() {
+        return totalWifiClients;
+    }
+
+    public int getMutualiaApsClients() {
+        return mutualiaApsClients;
+    }
+
+    public int getMutualiaWifiClients() {
+        return mutualiaWifiClients;
+    }
+
+    public int getMutualiaLangileakClients() {
+        return mutualiaLangileakClients;
+    }
+
+    public int getMutualiaClients() {
+        return mutualiaClients;
+    }
+
+    public int getMutualiaRedInternaClients() {
+        return mutualiaRedInternaClients;
+    }
+
+    public int getMutualiaRedExternaClients() {
+        return mutualiaRedExternaClients;
+    }
+
+    public int getMutualiaKorporatiboaClients() {
+        return mutualiaKorporatiboaClients;
+    }
+
+    public int getWifiPacsClients() {
+        return wifiPacsClients;
+    }
+
+    public int getMutVideoClients() {
+        return mutVideoClients;
+    }
+
     // =========================
     // SETTERS
     // =========================
@@ -98,5 +184,75 @@ public class ArubaSummary {
 
     public void setInactiveAps(int inactiveAps) {
         this.inactiveAps = inactiveAps;
+    }
+
+    public void setTotalSwitches(int totalSwitches) {
+        this.totalSwitches = totalSwitches;
+    }
+
+    public void setDownSwitches(int downSwitches) {
+        this.downSwitches = downSwitches;
+    }
+
+    public void setSwitchesFirmwareUpgradeRequired(
+            int switchesFirmwareUpgradeRequired
+    ) {
+        this.switchesFirmwareUpgradeRequired =
+                switchesFirmwareUpgradeRequired;
+    }
+
+    public void setUnderusedSwitches(
+            List<ArubaSwitchClientUsage> underusedSwitches
+    ) {
+        this.underusedSwitches = underusedSwitches;
+    }
+
+    public void setTotalWifiClients(int totalWifiClients) {
+        this.totalWifiClients = totalWifiClients;
+    }
+
+    public void setMutualiaApsClients(int mutualiaApsClients) {
+        this.mutualiaApsClients = mutualiaApsClients;
+    }
+
+    public void setMutualiaWifiClients(int mutualiaWifiClients) {
+        this.mutualiaWifiClients = mutualiaWifiClients;
+    }
+
+    public void setMutualiaLangileakClients(int mutualiaLangileakClients) {
+        this.mutualiaLangileakClients = mutualiaLangileakClients;
+    }
+
+    public void setMutualiaClients(int mutualiaClients) {
+        this.mutualiaClients = mutualiaClients;
+    }
+
+    public void setMutualiaRedInternaClients(
+            int mutualiaRedInternaClients
+    ) {
+        this.mutualiaRedInternaClients =
+                mutualiaRedInternaClients;
+    }
+
+    public void setMutualiaRedExternaClients(
+            int mutualiaRedExternaClients
+    ) {
+        this.mutualiaRedExternaClients =
+                mutualiaRedExternaClients;
+    }
+
+    public void setMutualiaKorporatiboaClients(
+            int mutualiaKorporatiboaClients
+    ) {
+        this.mutualiaKorporatiboaClients =
+                mutualiaKorporatiboaClients;
+    }
+
+    public void setWifiPacsClients(int wifiPacsClients) {
+        this.wifiPacsClients = wifiPacsClients;
+    }
+
+    public void setMutVideoClients(int mutVideoClients) {
+        this.mutVideoClients = mutVideoClients;
     }
 }

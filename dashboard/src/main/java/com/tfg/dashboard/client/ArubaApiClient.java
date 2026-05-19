@@ -1,6 +1,7 @@
 package com.tfg.dashboard.client;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 import org.slf4j.Logger;
@@ -17,7 +18,9 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.tfg.dashboard.dto.ApInfo;
+import com.tfg.dashboard.dto.ArubaApInfo;
+import com.tfg.dashboard.dto.ArubaSwitchInfo;
+import com.tfg.dashboard.dto.ArubaWifiClientInfo;
 import com.tfg.dashboard.service.ArubaAuthService;
 
 @Component
@@ -88,9 +91,9 @@ public class ArubaApiClient {
     // Obtener lista APs parseada
     // =========================
 
-    public List<ApInfo> getApsList() {
+    public List<ArubaApInfo> getApsList() {
 
-    List<ApInfo> result =
+    List<ArubaApInfo> result =
             new ArrayList<>();
 
     try {
@@ -149,8 +152,8 @@ public class ArubaApiClient {
 
             for (JsonNode ap : aps) {
 
-                ApInfo info =
-                        new ApInfo();
+                ArubaApInfo info =
+                        new ArubaApInfo();
 
                 info.setName(
                         ap.path("name").asText()
@@ -298,4 +301,360 @@ public class ArubaApiClient {
         return null;
     }
 }
+
+    // =========================
+    // Obtener switches Aruba
+    // =========================
+
+    public List<ArubaSwitchInfo> getSwitchesList() {
+
+        List<ArubaSwitchInfo> result =
+                new ArrayList<>();
+
+        try {
+
+            String token =
+                    authService.getAccessToken();
+
+            RestTemplate restTemplate =
+                    new RestTemplate();
+
+            HttpHeaders headers =
+                    new HttpHeaders();
+
+            headers.setBearerAuth(token);
+
+            HttpEntity<String> entity =
+                    new HttpEntity<>(headers);
+
+            ObjectMapper mapper =
+                    new ObjectMapper();
+
+            int offset = 0;
+
+            int limit = 100;
+
+            while (true) {
+
+                String url =
+                        baseUrl
+                        + "/firmware/v1/devices"
+                        + "?device_type=HP"
+                        + "&offset="
+                        + offset
+                        + "&limit=100";
+
+                ResponseEntity<String> response =
+                        restTemplate.exchange(
+                                url,
+                                HttpMethod.GET,
+                                entity,
+                                String.class
+                        );
+
+                JsonNode root =
+                        mapper.readTree(
+                                response.getBody()
+                        );
+
+                JsonNode devices =
+                        root.get("devices");
+
+                if (devices == null
+                        || !devices.isArray()
+                        || devices.size() == 0) {
+
+                    break;
+                }
+
+                for (JsonNode device : devices) {
+
+                    ArubaSwitchInfo info =
+                            new ArubaSwitchInfo();
+
+                    info.setSerial(
+                            device.path("serial").asText()
+                    );
+
+                    info.setMacAddress(
+                            device.path("mac_address").asText()
+                    );
+
+                    info.setHostname(
+                            device.path("hostname").asText()
+                    );
+
+                    info.setModel(
+                            device.path("model").asText()
+                    );
+
+                    info.setDeviceStatus(
+                            device.path("device_status").asText()
+                    );
+
+                    info.setUpgradeRequired(
+                            device.path("upgrade_required").asBoolean(false)
+                    );
+
+                    info.setStatusState(
+                            device.path("status")
+                                    .path("state")
+                                    .asText()
+                    );
+
+                    result.add(info);
+                }
+
+                offset += limit;
+            }
+
+        } catch (Exception e) {
+
+            log.error(
+                    "Error obteniendo switches desde Aruba",
+                    e
+            );
+        }
+
+        return result;
+    }
+
+    // =========================
+    // Obtener clientes WiFi Aruba
+    // =========================
+
+    public List<ArubaWifiClientInfo> getWifiClientsList() {
+
+        return getClientsList(
+                "WIRELESS",
+                "clientes WiFi"
+        );
+    }
+
+    public List<ArubaWifiClientInfo> getWiredClientsList() {
+
+        return getClientsList(
+                "WIRED",
+                "clientes cableados"
+        );
+    }
+
+    private List<ArubaWifiClientInfo> getClientsList(
+            String clientType,
+            String logLabel
+    ) {
+
+        List<ArubaWifiClientInfo> result =
+                new ArrayList<>();
+
+        try {
+
+            String token =
+                    authService.getAccessToken();
+
+            RestTemplate restTemplate =
+                    new RestTemplate();
+
+            HttpHeaders headers =
+                    new HttpHeaders();
+
+            headers.setBearerAuth(token);
+
+            HttpEntity<String> entity =
+                    new HttpEntity<>(headers);
+
+            ObjectMapper mapper =
+                    new ObjectMapper();
+
+            int offset = 0;
+
+            int limit = 1000;
+
+            while (true) {
+
+                String url =
+                        baseUrl
+                        + "/monitoring/v2/clients"
+                        + "?client_type=" + clientType
+                        + "&client_status=CONNECTED"
+                        + "&calculate_total=true"
+                        + "&timerange=3H"
+                        + "&offset=" + offset
+                        + "&limit=" + limit;
+
+                ResponseEntity<String> response =
+                        restTemplate.exchange(
+                                url,
+                                HttpMethod.GET,
+                                entity,
+                                String.class
+                        );
+
+                JsonNode root =
+                        mapper.readTree(
+                                response.getBody()
+                        );
+
+                JsonNode clients =
+                        findArray(
+                                root,
+                                "clients",
+                                "client",
+                                "items",
+                                "data"
+                        );
+
+                if (clients == null
+                        || clients.size() == 0) {
+
+                    if (offset == 0) {
+
+                        log.warn(
+                                "La respuesta de Aruba clients {} no contiene clientes. Campos raiz: {}, total={}, count={}, client_count={}",
+                                clientType,
+                                fieldNames(root),
+                                root.path("total").asText(""),
+                                root.path("count").asText(""),
+                                root.path("client_count").asText("")
+                        );
+                    }
+
+                    break;
+                }
+
+                for (JsonNode client : clients) {
+
+                    ArubaWifiClientInfo info =
+                            new ArubaWifiClientInfo();
+
+                    info.setAssociatedDevice(
+                            text(client, "associated_device")
+                    );
+
+                    info.setAssociatedDeviceMac(
+                            text(client, "associated_device_mac")
+                    );
+
+                    info.setAssociatedDeviceName(
+                            text(client, "associated_device_name")
+                    );
+
+                    info.setGroupName(
+                            text(
+                                    client,
+                                    "group_name",
+                                    "groupName",
+                                    "group"
+                            )
+                    );
+
+                    info.setHostname(
+                            text(client, "hostname")
+                    );
+
+                    info.setIpAddress(
+                            text(client, "ip_address")
+                    );
+
+                    info.setLastConnectionTime(
+                            client.path("last_connection_time").asLong(0)
+                    );
+
+                    info.setMacaddr(
+                            text(client, "macaddr", "mac_address")
+                    );
+
+                    info.setNetwork(
+                            text(
+                                    client,
+                                    "network",
+                                    "network_name",
+                                    "networkName",
+                                    "ssid",
+                                    "ssid_name"
+                            )
+                    );
+
+                    info.setOsType(
+                            text(client, "os_type")
+                    );
+
+                    result.add(info);
+                }
+
+                offset += limit;
+            }
+
+        } catch (Exception e) {
+
+            log.error(
+                    "Error obteniendo " + logLabel + " desde Aruba",
+                    e
+            );
+        }
+
+        log.info(
+                "{} obtenidos desde Aruba: {}",
+                logLabel,
+                result.size()
+        );
+
+        return result;
+    }
+
+    private JsonNode findArray(
+            JsonNode root,
+            String... names
+    ) {
+
+        for (String name : names) {
+
+            JsonNode node =
+                    root.get(name);
+
+            if (node != null
+                    && node.isArray()) {
+
+                return node;
+            }
+        }
+
+        return null;
+    }
+
+    private String text(
+            JsonNode node,
+            String... names
+    ) {
+
+        for (String name : names) {
+
+            JsonNode value =
+                    node.get(name);
+
+            if (value != null
+                    && !value.isNull()) {
+
+                return value.asText().trim();
+            }
+        }
+
+        return "";
+    }
+
+    private List<String> fieldNames(JsonNode node) {
+
+        List<String> names =
+                new ArrayList<>();
+
+        Iterator<String> iterator =
+                node.fieldNames();
+
+        while (iterator.hasNext()) {
+
+            names.add(iterator.next());
+        }
+
+        return names;
+    }
 }

@@ -7,6 +7,8 @@ Cuadro de mandos para visualizar el estado de los puntos de acceso Aruba y mante
 - `dashboard`: backend Spring Boot.
 - `frontend`: interfaz React + Vite.
 - `dashboard.access_points`: tabla MySQL con una fila por AP, identificada por numero de serie.
+- `dashboard.aruba_switches`: tabla MySQL con una fila por switch Aruba, identificado por numero de serie.
+- `dashboard.aruba_switch_client_usage`: tabla MySQL con clientes cableados agrupados por switch.
 - Aruba Central: fuente de datos de APs y firmware.
 
 ## Requisitos
@@ -85,22 +87,66 @@ Listado guardado en MySQL:
 GET http://localhost:8080/aruba/stored-aps
 ```
 
+Listado de switches directo desde Aruba:
+
+```http
+GET http://localhost:8080/aruba/switches
+```
+
+Listado de switches guardado en MySQL:
+
+```http
+GET http://localhost:8080/aruba/stored-switches
+```
+
+Uso de clientes cableados por switch guardado en MySQL:
+
+```http
+GET http://localhost:8080/aruba/switch-client-usage
+```
+
+Listado de clientes WiFi conectado en vivo desde Aruba. No se guarda en MySQL:
+
+```http
+GET http://localhost:8080/aruba/wifi-clients
+```
+
+Listado de clientes cableados conectado en vivo desde Aruba:
+
+```http
+GET http://localhost:8080/aruba/wired-clients
+```
+
 Sincronizacion manual de APs en MySQL:
 
 ```http
 POST http://localhost:8080/aruba/sync-aps
 ```
 
+Sincronizacion manual de switches en MySQL:
+
+```http
+POST http://localhost:8080/aruba/sync-switches
+```
+
+Sincronizacion manual de uso de clientes cableados por switch:
+
+```http
+POST http://localhost:8080/aruba/sync-switch-client-usage
+```
+
 ## Sincronizacion Automatica
 
-El backend sincroniza APs automaticamente con `ArubaScheduler`:
+El backend sincroniza APs, switches y uso de clientes cableados automaticamente con `ArubaScheduler`:
 
 - Primera ejecucion: configurable con `aruba.sync.initial-delay-ms`.
 - Frecuencia: configurable con `aruba.sync.fixed-rate-ms`.
 
 Ademas, `GET /aruba/summary` tambien sincroniza los APs usando la misma lista que obtiene para calcular los KPIs.
 
-Cada AP se guarda en `access_points` usando el numero de serie como clave logica. `firstSeenAt` guarda cuando se vio por primera vez y no se sobrescribe; `lastSeenAt` se actualiza en cada sincronizacion.
+Cada AP se guarda en `access_points` usando el numero de serie como clave logica. Cada switch se guarda en `aruba_switches` con el mismo criterio. `firstSeenAt` guarda cuando se vio por primera vez y no se sobrescribe; `lastSeenAt` se actualiza en cada sincronizacion.
+
+Los clientes cableados se consultan en `GET /monitoring/v2/clients` con `client_type=WIRED`, se agrupan por `associated_device` y se guardan en `aruba_switch_client_usage` con `associated_device`, `associated_device_name`, `associated_device_mac` y `wired_clients`.
 
 ## Comprobar Flujo Real con MySQL
 
@@ -142,6 +188,20 @@ El frontend muestra:
 - Firmware pendiente.
 - APs sin IP publica.
 - APs inactivos.
+- Total switches.
+- Switches apagados.
+- Switches que necesitan upgrade de firmware.
+- Switches infrautilizados con menos de 10 clientes cableados.
+- Clientes conectados en `MUTUALIA-APs`.
+- Clientes conectados en `MUTUALIA-WIFI`.
+- Clientes de `MUTUALIA-WIFI` separados por SSID:
+  - `MUTUALIA_LANGILEAK`
+  - `MUTUALIA`
+  - `MUTUALIA_RED_INTERNA`
+  - `MUTUALIA_RED_EXTERNA`
+  - `MUTUALIA_KORPORATIBOA`
+  - `WIFI_PACs`
+  - `MUT_VIDEO`
 - Estado general de red.
 
 ## Verificacion
