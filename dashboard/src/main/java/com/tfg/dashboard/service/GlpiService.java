@@ -271,11 +271,10 @@ public class GlpiService {
 
     private GlpiSummary noDataSummary() {
 
-        // GlpiSummary no tiene campo de
-        // estado o frescura. Devolvemos
-        // un DTO vacío para no inventar
-        // datos simulados cuando MySQL
-        // todavía no tiene snapshots.
+       // GLPI dispone de dataStatus.
+       // Si no hay snapshot en MySQL,
+       // se devuelve NO_DATA para evitar
+       // mostrar métricas simuladas falsas.
         GlpiSummary summary =
                 new GlpiSummary();
 
