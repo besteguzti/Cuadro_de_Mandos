@@ -18,18 +18,18 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tfg.dashboard.client.ArubaApiClient;
 import com.tfg.dashboard.dto.ArubaApInfo;
 import com.tfg.dashboard.dto.ArubaSwitchInfo;
 import com.tfg.dashboard.dto.ArubaWifiClientInfo;
 import com.tfg.dashboard.model.AccessPoint;
+import com.tfg.dashboard.model.ArubaDashboardMetrics;
 import com.tfg.dashboard.model.ArubaSummary;
 import com.tfg.dashboard.model.ArubaSwitch;
 import com.tfg.dashboard.model.ArubaSwitchClientUsage;
 import com.tfg.dashboard.model.ArubaSwitchInterfaceUsageHistory;
 import com.tfg.dashboard.repository.AccessPointRepository;
+import com.tfg.dashboard.repository.ArubaDashboardMetricsRepository;
 import com.tfg.dashboard.repository.ArubaSwitchClientUsageRepository;
 import com.tfg.dashboard.repository.ArubaSwitchInterfaceUsageHistoryRepository;
 import com.tfg.dashboard.repository.ArubaSwitchRepository;
@@ -53,55 +53,28 @@ class ArubaServiceTest {
     private ArubaSwitchInterfaceUsageHistoryRepository
             switchInterfaceUsageHistoryRepository;
 
+    @Mock
+    private ArubaDashboardMetricsRepository dashboardMetricsRepository;
+
     @InjectMocks
     private ArubaService arubaService;
 
     @Test
     void getSummaryCalculatesArubaKpis() throws Exception {
 
-        when(client.getApsList()).thenReturn(List.of(
-                ap("AP-1", "Up", "SER-1", "Site A", "Swarm A", "1.1.1.1"),
-                ap("AP-2", "Down", "SER-2", "Site A", "Swarm A", ""),
-                ap("AP-3", "Up", "SER-3", "Site B", "Swarm B", null)
+        when(accessPointRepository.findAll()).thenReturn(List.of(
+                storedAp("AP-1", "Up", "SER-1", "Site A", "Swarm A", "1.1.1.1"),
+                storedAp("AP-2", "Down", "SER-2", "Site A", "Swarm A", ""),
+                storedAp("AP-3", "Up", "SER-3", "Site B", "Swarm B", null)
         ));
 
-        when(client.getFirmwareSwarms()).thenReturn(
-                firmwareSwarms()
-        );
-
-        when(client.getMonitoringSwitchesList()).thenReturn(List.of(
-                arubaSwitch("SW-1", "Up", false),
-                arubaSwitch("SW-2", "Down", true)
+        when(arubaSwitchRepository.findAll()).thenReturn(List.of(
+                storedSwitch("SW-1", "Up", false),
+                storedSwitch("SW-2", "Down", true)
         ));
 
-        when(client.getSwitchesList()).thenReturn(List.of(
-                arubaSwitch("SW-1", "Up", false),
-                arubaSwitch("SW-2", "Down", true)
-        ));
-
-        when(client.getWifiClientsList()).thenReturn(List.of(
-                wifiClient("MUTUALIA-APs", "MUTUALIA_AP"),
-                wifiClient("MUTUALIA-WIFI", "MUTUALIA"),
-                wifiClient("MUTUALIA-WIFI", "MUTUALIA"),
-                wifiClient("MUTUALIA-WIFI", "MUTUALIA_RED_INTERNA"),
-                wifiClient("MUTUALIA-WIFI", "WIFI_PACs"),
-                wifiClient("MUTUALIA-WIFI", "MUT_VIDEO")
-        ));
-
-        when(client.countSwitchPortsDown("SW-1")).thenReturn(4);
-        when(client.countSwitchPortsDown("SW-2")).thenReturn(12);
-
-        when(accessPointRepository.findBySerial(any()))
-                .thenReturn(Optional.empty());
-
-        when(arubaSwitchRepository.findBySerial(any()))
-                .thenReturn(Optional.empty());
-
-        when(switchClientUsageRepository.findAll())
-                .thenReturn(List.of());
-
-        when(switchClientUsageRepository.findByAssociatedDevice(any()))
-                .thenReturn(Optional.empty());
+        when(dashboardMetricsRepository.findById(1L))
+                .thenReturn(Optional.of(metrics()));
 
         when(switchClientUsageRepository
                 .findByAssociatedDeviceInOrderByDownInterfacesDescAssociatedDeviceAsc(
@@ -144,6 +117,8 @@ class ArubaServiceTest {
         assertThat(summary.getWifiPacsClients()).isEqualTo(1);
         assertThat(summary.getMutVideoClients()).isEqualTo(1);
         assertThat(summary.getNetworkStatus()).isEqualTo("RED");
+        assertThat(summary.getLastUpdated()).isNotNull();
+        assertThat(summary.getDataStatus()).isEqualTo("OK");
     }
 
     @Test
@@ -324,16 +299,69 @@ class ArubaServiceTest {
         return ap;
     }
 
-    private JsonNode firmwareSwarms() throws Exception {
+    private AccessPoint storedAp(
+            String name,
+            String status,
+            String serial,
+            String site,
+            String swarm,
+            String publicIp
+    ) {
 
-        return new ObjectMapper().readTree("""
-                {
-                  "swarms": [
-                    { "swarm_name": "Swarm A", "status": { "state": "UPGRADE_REQUIRED" } },
-                    { "swarm_name": "Swarm B", "status": { "state": "UP_TO_DATE" } }
-                  ]
-                }
-                """);
+        AccessPoint ap =
+                new AccessPoint();
+
+        ap.setName(name);
+        ap.setStatus(status);
+        ap.setSerial(serial);
+        ap.setSite(site);
+        ap.setSwarmName(swarm);
+        ap.setIpAddress(publicIp);
+        ap.setPublicIpAddress(publicIp);
+        ap.setFirmwareVersion("8.13.0");
+        ap.setMacaddr("00:11:22:33:44:55");
+
+        return ap;
+    }
+
+    private ArubaSwitch storedSwitch(
+            String serial,
+            String deviceStatus,
+            boolean upgradeRequired
+    ) {
+
+        ArubaSwitch switchInfo =
+                new ArubaSwitch();
+
+        switchInfo.setSerial(serial);
+        switchInfo.setMacAddress("00:aa:bb:cc:dd:ee");
+        switchInfo.setHostname("switch-" + serial);
+        switchInfo.setModel("Aruba 6300");
+        switchInfo.setDeviceStatus(deviceStatus);
+        switchInfo.setUpgradeRequired(upgradeRequired);
+        switchInfo.setStatusState(
+                upgradeRequired ? "UPGRADE_REQUIRED" : "UP_TO_DATE");
+
+        return switchInfo;
+    }
+
+    private ArubaDashboardMetrics metrics() {
+
+        ArubaDashboardMetrics metrics =
+                new ArubaDashboardMetrics();
+
+        metrics.setId(1L);
+        metrics.setFirmwareOutdated(1);
+        metrics.setTotalWifiClients(6);
+        metrics.setMutualiaApsClients(1);
+        metrics.setMutualiaWifiClients(5);
+        metrics.setMutualiaClients(2);
+        metrics.setMutualiaRedInternaClients(1);
+        metrics.setWifiPacsClients(1);
+        metrics.setMutVideoClients(1);
+        metrics.setUpdatedAt(LocalDateTime.now());
+
+        return metrics;
     }
 
     private ArubaSwitchInfo arubaSwitch(

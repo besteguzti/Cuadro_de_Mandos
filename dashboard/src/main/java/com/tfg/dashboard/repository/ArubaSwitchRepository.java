@@ -10,4 +10,7 @@ public interface ArubaSwitchRepository
         extends JpaRepository<ArubaSwitch, Long> {
 
     Optional<ArubaSwitch> findBySerial(String serial);
+
+    Optional<ArubaSwitch>
+            findTopByLastSeenAtIsNotNullOrderByLastSeenAtDesc();
 }

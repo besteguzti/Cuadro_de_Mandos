@@ -15,11 +15,13 @@ import com.tfg.dashboard.dto.ArubaApInfo;
 import com.tfg.dashboard.dto.ArubaSwitchInfo;
 import com.tfg.dashboard.dto.ArubaWifiClientInfo;
 import com.tfg.dashboard.model.AccessPoint;
+import com.tfg.dashboard.model.ArubaDashboardMetrics;
 import com.tfg.dashboard.model.ArubaSummary;
 import com.tfg.dashboard.model.ArubaSwitch;
 import com.tfg.dashboard.model.ArubaSwitchClientUsage;
 import com.tfg.dashboard.model.ArubaSwitchInterfaceUsageHistory;
 import com.tfg.dashboard.repository.AccessPointRepository;
+import com.tfg.dashboard.repository.ArubaDashboardMetricsRepository;
 import com.tfg.dashboard.repository.ArubaSwitchClientUsageRepository;
 import com.tfg.dashboard.repository.ArubaSwitchInterfaceUsageHistoryRepository;
 import com.tfg.dashboard.repository.ArubaSwitchRepository;
@@ -33,6 +35,10 @@ public class ArubaService {
     private static final int UNDERUSED_SWITCH_DOWN_INTERFACE_LIMIT = 17;
 
     private static final int UNDERUSED_SWITCH_DAYS = 30;
+
+    private static final long METRICS_ID = 1L;
+
+    private static final int ARUBA_FRESHNESS_MINUTES = 10;
 
     private final ArubaApiClient client;
 
@@ -48,13 +54,17 @@ public class ArubaService {
     private final ArubaSwitchInterfaceUsageHistoryRepository
             switchInterfaceUsageHistoryRepository;
 
+    private final ArubaDashboardMetricsRepository
+            dashboardMetricsRepository;
+
     public ArubaService(
             ArubaApiClient client,
             AccessPointRepository accessPointRepository,
             ArubaSwitchRepository arubaSwitchRepository,
             ArubaSwitchClientUsageRepository switchClientUsageRepository,
             ArubaSwitchInterfaceUsageHistoryRepository
-                    switchInterfaceUsageHistoryRepository
+                    switchInterfaceUsageHistoryRepository,
+            ArubaDashboardMetricsRepository dashboardMetricsRepository
     ) {
 
         this.client = client;
@@ -66,6 +76,8 @@ public class ArubaService {
                 switchClientUsageRepository;
         this.switchInterfaceUsageHistoryRepository =
                 switchInterfaceUsageHistoryRepository;
+        this.dashboardMetricsRepository =
+                dashboardMetricsRepository;
     }
 
     // =========================================
@@ -74,144 +86,61 @@ public class ArubaService {
 
     public ArubaSummary getSummary() {
 
-        List<ArubaApInfo> aps =
-                client.getApsList();
+        return getStoredSummary();
+    }
 
-        syncAccessPoints(
-                aps
-        );
+    private ArubaSummary getStoredSummary() {
 
-        List<ArubaSwitchInfo> switches =
-                client.getMonitoringSwitchesList();
+        List<AccessPoint> aps =
+                accessPointRepository.findAll();
 
-        syncSwitches(
-                switches
-        );
+        List<ArubaSwitch> switches =
+                arubaSwitchRepository.findAll();
 
-        List<ArubaSwitchInfo> firmwareSwitches =
-                client.getSwitchesList();
-
-        List<ArubaWifiClientInfo> wifiClients =
-                client.getWifiClientsList();
-
-        syncSwitchClientUsage(
-                switches
-        );
-
-        List<ArubaSwitchClientUsage> underusedSwitches =
-                getUnderusedSwitches();
-
-        logWifiClientBreakdown(
-                wifiClients
-        );
-
-        
-        // =========================
-        // KPIs básicos
-        // =========================
+        ArubaDashboardMetrics metrics =
+                dashboardMetricsRepository
+                        .findById(METRICS_ID)
+                        .orElseGet(ArubaDashboardMetrics::new);
 
         int totalAps =
                 aps.size();
 
         int upAps =
                 (int) aps.stream()
-
-                .filter(ap ->
-                        ap.getStatus() != null
-                        && ap.getStatus()
-                                .equalsIgnoreCase("Up"))
-
-                .count();
+                        .filter(ap ->
+                                ap.getStatus() != null
+                                && ap.getStatus()
+                                        .equalsIgnoreCase("Up"))
+                        .count();
 
         int downAps =
                 totalAps - upAps;
 
-
-
         int totalSites =
                 (int) aps.stream()
-
-                .map(ArubaApInfo::getSite)
-
-                .filter(site ->
-                        site != null
-                        && !site.isBlank())
-
-                .distinct()
-
-                .count();
+                        .map(AccessPoint::getSite)
+                        .filter(site ->
+                                site != null
+                                && !site.isBlank())
+                        .distinct()
+                        .count();
 
         int totalSwarms =
                 (int) aps.stream()
-
-                .map(ArubaApInfo::getSwarmName)
-
-                .filter(sw ->
-                        sw != null
-                        && !sw.isBlank())
-
-                .distinct()
-
-                .count();
-
-        // =========================
-        // Firmware swarms
-        // =========================
-
-        JsonNode firmwareSwarms = client.getFirmwareSwarms();
-
-        int firmwareOutdated = 0;
-
-        if (firmwareSwarms != null) {
-
-            JsonNode swarms =
-                    firmwareSwarms.get("swarms");
-
-            if (swarms != null
-                    && swarms.isArray()) {
-
-                for (JsonNode swarm : swarms) {
-
-                    String swarmName =
-                            swarm.path("swarm_name")
-                                 .asText();
-
-                    String state =
-                            swarm.path("status")
-                                 .path("state")
-                                 .asText();
-
-                    
-
-                    boolean upgradeRequired =
-                            state.trim()
-                                 .equalsIgnoreCase(
-                                        "UPGRADE_REQUIRED"
-                                 );
-
-                    if (upgradeRequired) {
-
-                        firmwareOutdated++;
-                    }
-                }
-
-               
-            }
-        }
-
-        // =========================
-        // APs sin IP pública
-        // =========================
+                        .map(AccessPoint::getSwarmName)
+                        .filter(swarm ->
+                                swarm != null
+                                && !swarm.isBlank())
+                        .distinct()
+                        .count();
 
         int apsWithoutPublicIp =
                 (int) aps.stream()
-
-                .filter(ap ->
-                        ap.getPublicIpAddress() == null
-                        || ap.getPublicIpAddress()
-                                .isBlank())
-
-                .count();
+                        .filter(ap ->
+                                ap.getPublicIpAddress() == null
+                                || ap.getPublicIpAddress()
+                                        .isBlank())
+                        .count();
 
         int totalSwitches =
                 switches.size();
@@ -225,89 +154,9 @@ public class ArubaService {
                         .count();
 
         int switchesFirmwareUpgradeRequired =
-                (int) firmwareSwitches.stream()
-                        .filter(ArubaSwitchInfo::isUpgradeRequired)
+                (int) switches.stream()
+                        .filter(ArubaSwitch::isUpgradeRequired)
                         .count();
-
-        int totalWifiClients =
-                wifiClients.size();
-
-        int mutualiaApsClients =
-                countClientsByGroup(
-                        wifiClients,
-                        "MUTUALIA-APs"
-                );
-
-        int mutualiaWifiClients =
-                countClientsByGroup(
-                        wifiClients,
-                        "MUTUALIA-WIFI"
-                );
-
-        int mutualiaLangileakClients =
-                countClientsByWifiNetwork(
-                        wifiClients,
-                        "MUTUALIA_LANGILEAK"
-                );
-
-        int mutualiaClients =
-                countClientsByWifiNetwork(
-                        wifiClients,
-                        "MUTUALIA"
-                );
-
-        int mutualiaRedInternaClients =
-                countClientsByWifiNetwork(
-                        wifiClients,
-                        "MUTUALIA_RED_INTERNA"
-                );
-
-        int mutualiaRedExternaClients =
-                countClientsByWifiNetwork(
-                        wifiClients,
-                        "MUTUALIA_RED_EXTERNA"
-                );
-
-        int mutualiaKorporatiboaClients =
-                countClientsByWifiNetwork(
-                        wifiClients,
-                        "MUTUALIA_KORPORATIBOA"
-                );
-
-        int wifiPacsClients =
-                countClientsByWifiNetwork(
-                        wifiClients,
-                        "WIFI_PACs"
-                );
-
-        int mutVideoClients =
-                countClientsByWifiNetwork(
-                        wifiClients,
-                        "MUT_VIDEO"
-                );
-
-        // =========================
-        // Estado global red
-        // =========================
-
-        String networkStatus = "GREEN";
-
-        if (downAps > 10
-                || firmwareOutdated > 5
-                || downSwitches > 0
-                || switchesFirmwareUpgradeRequired > 0) {
-
-            networkStatus = "RED";
-
-        } else if (downAps > 0
-                || firmwareOutdated > 0) {
-
-            networkStatus = "YELLOW";
-        }
-
-        // =========================
-        // APs inactivos 3 meses
-        // =========================
 
         LocalDateTime limitDate =
                 LocalDateTime.now()
@@ -319,98 +168,69 @@ public class ArubaService {
                                 limitDate
                         );
 
-        // =========================
-        // Construcción summary
-        // =========================
+        String networkStatus =
+                buildNetworkStatus(
+                        downAps,
+                        metrics.getFirmwareOutdated(),
+                        downSwitches,
+                        switchesFirmwareUpgradeRequired
+                );
+
+        LocalDateTime lastUpdated =
+                resolveArubaLastUpdated();
+
+        String dataStatus =
+                calculateDataStatus(lastUpdated);
+
+        if ("NO_DATA".equalsIgnoreCase(dataStatus)) {
+
+            // Si no existe ninguna fecha
+            // Aruba persistida, el resumen
+            // no debe quedar como GREEN.
+            // UNKNOWN evita ocultar que no
+            // hay datos suficientes sin
+            // modificar los cálculos de KPIs.
+            networkStatus = "UNKNOWN";
+        }
 
         ArubaSummary summary =
                 new ArubaSummary();
 
         summary.setTotalAps(totalAps);
-
         summary.setUpAps(upAps);
-
         summary.setDownAps(downAps);
-
         summary.setTotalSites(totalSites);
-
         summary.setTotalSwarms(totalSwarms);
-
-        summary.setFirmwareOutdated(
-                firmwareOutdated
-        );
-
-        summary.setApsWithoutPublicIp(
-                apsWithoutPublicIp
-        );
-
-        summary.setDownAps(
-                (int) downAps
-        );
-
-        summary.setInactiveAps(
-                (int) inactiveAps
-        );
-
-        summary.setNetworkStatus(
-                networkStatus
-        );
-
-        summary.setTotalSwitches(
-                totalSwitches
-        );
-
-        summary.setDownSwitches(
-                downSwitches
-        );
-
+        summary.setFirmwareOutdated(metrics.getFirmwareOutdated());
+        summary.setApsWithoutPublicIp(apsWithoutPublicIp);
+        summary.setInactiveAps((int) inactiveAps);
+        summary.setNetworkStatus(networkStatus);
+        summary.setTotalSwitches(totalSwitches);
+        summary.setDownSwitches(downSwitches);
         summary.setSwitchesFirmwareUpgradeRequired(
                 switchesFirmwareUpgradeRequired
         );
-
-        summary.setUnderusedSwitches(
-                underusedSwitches
-        );
-
-        summary.setTotalWifiClients(
-                totalWifiClients
-        );
-
-        summary.setMutualiaApsClients(
-                mutualiaApsClients
-        );
-
-        summary.setMutualiaWifiClients(
-                mutualiaWifiClients
-        );
-
+        summary.setUnderusedSwitches(getUnderusedSwitches());
+        summary.setTotalWifiClients(metrics.getTotalWifiClients());
+        summary.setMutualiaApsClients(metrics.getMutualiaApsClients());
+        summary.setMutualiaWifiClients(metrics.getMutualiaWifiClients());
         summary.setMutualiaLangileakClients(
-                mutualiaLangileakClients
+                metrics.getMutualiaLangileakClients()
         );
-
-        summary.setMutualiaClients(
-                mutualiaClients
-        );
-
+        summary.setMutualiaClients(metrics.getMutualiaClients());
         summary.setMutualiaRedInternaClients(
-                mutualiaRedInternaClients
+                metrics.getMutualiaRedInternaClients()
         );
-
         summary.setMutualiaRedExternaClients(
-                mutualiaRedExternaClients
+                metrics.getMutualiaRedExternaClients()
         );
-
         summary.setMutualiaKorporatiboaClients(
-                mutualiaKorporatiboaClients
+                metrics.getMutualiaKorporatiboaClients()
         );
-
-        summary.setWifiPacsClients(
-                wifiPacsClients
-        );
-
-        summary.setMutVideoClients(
-                mutVideoClients
-        );
+        summary.setWifiPacsClients(metrics.getWifiPacsClients());
+        summary.setMutVideoClients(metrics.getMutVideoClients());
+        summary.setLastUpdated(lastUpdated);
+        summary.setDataStatus(dataStatus);
 
         return summary;
     }
@@ -519,6 +339,10 @@ public class ArubaService {
         syncAccessPoints(
                 aps
         );
+
+        syncFirmwareMetrics(
+                client.getFirmwareSwarms()
+        );
     }
 
     public void syncSwitches() {
@@ -529,6 +353,10 @@ public class ArubaService {
         syncSwitches(
                 switches
         );
+
+        syncSwitchFirmwareState(
+                client.getSwitchesList()
+        );
     }
 
     public void syncSwitchClientUsage() {
@@ -536,6 +364,30 @@ public class ArubaService {
         syncSwitchClientUsage(
                 client.getMonitoringSwitchesList()
         );
+    }
+
+    public void syncAll() {
+
+        List<ArubaApInfo> aps =
+                client.getApsList();
+
+        JsonNode firmwareSwarms =
+                client.getFirmwareSwarms();
+
+        List<ArubaSwitchInfo> switches =
+                client.getMonitoringSwitchesList();
+
+        List<ArubaSwitchInfo> firmwareSwitches =
+                client.getSwitchesList();
+
+        List<ArubaWifiClientInfo> wifiClients =
+                client.getWifiClientsList();
+
+        syncAccessPoints(aps);
+        syncSwitches(switches);
+        syncSwitchFirmwareState(firmwareSwitches);
+        syncSwitchClientUsage(switches);
+        syncDashboardMetrics(firmwareSwarms, wifiClients);
     }
 
     private void syncAccessPoints(
@@ -678,6 +530,122 @@ public class ArubaService {
             arubaSwitchRepository
                     .save(entity);
         }
+    }
+
+    private void syncSwitchFirmwareState(
+            List<ArubaSwitchInfo> firmwareSwitches
+    ) {
+
+        for (ArubaSwitchInfo firmwareSwitch : firmwareSwitches) {
+
+            String serial =
+                    firmwareSwitch.getSerial();
+
+            if (serial == null
+                    || serial.isBlank()) {
+
+                continue;
+            }
+
+            arubaSwitchRepository
+                    .findBySerial(serial)
+                    .ifPresent(entity -> {
+                        entity.setUpgradeRequired(
+                                firmwareSwitch.isUpgradeRequired()
+                        );
+                        entity.setStatusState(
+                                firmwareSwitch.getStatusState()
+                        );
+                        arubaSwitchRepository.save(entity);
+                    });
+        }
+    }
+
+    private void syncFirmwareMetrics(JsonNode firmwareSwarms) {
+
+        ArubaDashboardMetrics metrics =
+                dashboardMetricsRepository
+                        .findById(METRICS_ID)
+                        .orElseGet(() -> {
+                            ArubaDashboardMetrics newMetrics =
+                                    new ArubaDashboardMetrics();
+                            newMetrics.setId(METRICS_ID);
+                            return newMetrics;
+                        });
+
+        metrics.setFirmwareOutdated(
+                countFirmwareOutdated(firmwareSwarms)
+        );
+        metrics.setUpdatedAt(LocalDateTime.now());
+
+        dashboardMetricsRepository.save(metrics);
+    }
+
+    private void syncDashboardMetrics(
+            JsonNode firmwareSwarms,
+            List<ArubaWifiClientInfo> wifiClients
+    ) {
+
+        ArubaDashboardMetrics metrics =
+                dashboardMetricsRepository
+                        .findById(METRICS_ID)
+                        .orElseGet(() -> {
+                            ArubaDashboardMetrics newMetrics =
+                                    new ArubaDashboardMetrics();
+                            newMetrics.setId(METRICS_ID);
+                            return newMetrics;
+                        });
+
+        metrics.setFirmwareOutdated(
+                countFirmwareOutdated(firmwareSwarms)
+        );
+        metrics.setTotalWifiClients(
+                wifiClients.size()
+        );
+        metrics.setMutualiaApsClients(
+                countClientsByGroup(wifiClients, "MUTUALIA-APs")
+        );
+        metrics.setMutualiaWifiClients(
+                countClientsByGroup(wifiClients, "MUTUALIA-WIFI")
+        );
+        metrics.setMutualiaLangileakClients(
+                countClientsByWifiNetwork(
+                        wifiClients,
+                        "MUTUALIA_LANGILEAK"
+                )
+        );
+        metrics.setMutualiaClients(
+                countClientsByWifiNetwork(wifiClients, "MUTUALIA")
+        );
+        metrics.setMutualiaRedInternaClients(
+                countClientsByWifiNetwork(
+                        wifiClients,
+                        "MUTUALIA_RED_INTERNA"
+                )
+        );
+        metrics.setMutualiaRedExternaClients(
+                countClientsByWifiNetwork(
+                        wifiClients,
+                        "MUTUALIA_RED_EXTERNA"
+                )
+        );
+        metrics.setMutualiaKorporatiboaClients(
+                countClientsByWifiNetwork(
+                        wifiClients,
+                        "MUTUALIA_KORPORATIBOA"
+                )
+        );
+        metrics.setWifiPacsClients(
+                countClientsByWifiNetwork(wifiClients, "WIFI_PACs")
+        );
+        metrics.setMutVideoClients(
+                countClientsByWifiNetwork(wifiClients, "MUT_VIDEO")
+        );
+        metrics.setUpdatedAt(LocalDateTime.now());
+
+        dashboardMetricsRepository.save(metrics);
+
+        logWifiClientBreakdown(wifiClients);
     }
 
     private void syncSwitchClientUsage(
@@ -843,6 +811,160 @@ public class ArubaService {
         );
     }
 
+    private String buildNetworkStatus(
+            int downAps,
+            int firmwareOutdated,
+            int downSwitches,
+            int switchesFirmwareUpgradeRequired
+    ) {
+
+        if (downAps > 10
+                || firmwareOutdated > 5
+                || downSwitches > 0
+                || switchesFirmwareUpgradeRequired > 0) {
+
+            return "RED";
+        }
+
+        if (downAps > 0
+                || firmwareOutdated > 0) {
+
+            return "YELLOW";
+        }
+
+        return "GREEN";
+    }
+
+    private LocalDateTime resolveArubaLastUpdated() {
+
+        // Se prioriza la tabla agregada
+        // del dashboard Aruba porque resume
+        // firmware y clientes WiFi. Si aún
+        // no existe, se usa la fecha más
+        // reciente de los datos Aruba
+        // persistidos.
+
+        LocalDateTime latest =
+                dashboardMetricsRepository
+                        .findById(METRICS_ID)
+                        .map(ArubaDashboardMetrics::getUpdatedAt)
+                        .orElse(null);
+
+        latest = newer(
+                latest,
+                accessPointRepository
+                        .findTopByLastSeenAtIsNotNullOrderByLastSeenAtDesc()
+                        .map(AccessPoint::getLastSeenAt)
+                        .orElse(null)
+        );
+
+        latest = newer(
+                latest,
+                arubaSwitchRepository
+                        .findTopByLastSeenAtIsNotNullOrderByLastSeenAtDesc()
+                        .map(ArubaSwitch::getLastSeenAt)
+                        .orElse(null)
+        );
+
+        latest = newer(
+                latest,
+                switchClientUsageRepository
+                        .findTopByUpdatedAtIsNotNullOrderByUpdatedAtDesc()
+                        .map(ArubaSwitchClientUsage::getUpdatedAt)
+                        .orElse(null)
+        );
+
+        latest = newer(
+                latest,
+                switchInterfaceUsageHistoryRepository
+                        .findTopByObservedAtIsNotNullOrderByObservedAtDesc()
+                        .map(ArubaSwitchInterfaceUsageHistory::getObservedAt)
+                        .orElse(null)
+        );
+
+        return latest;
+    }
+
+    private String calculateDataStatus(
+            LocalDateTime lastUpdated
+    ) {
+
+        // Aruba usa APIs reales y su
+        // sincronización puede ser menos
+        // frecuente que el scheduler de
+        // datos simulados. Por eso se
+        // considera fresco durante 10
+        // minutos.
+
+        if (lastUpdated == null) {
+
+            return "NO_DATA";
+        }
+
+        if (lastUpdated.isBefore(
+                LocalDateTime.now().minusMinutes(ARUBA_FRESHNESS_MINUTES)
+        )) {
+
+            return "STALE";
+        }
+
+        return "OK";
+    }
+
+    private LocalDateTime newer(
+            LocalDateTime current,
+            LocalDateTime candidate
+    ) {
+
+        if (candidate == null) {
+
+            return current;
+        }
+
+        if (current == null
+                || candidate.isAfter(current)) {
+
+            return candidate;
+        }
+
+        return current;
+    }
+
+    private int countFirmwareOutdated(JsonNode firmwareSwarms) {
+
+        int firmwareOutdated = 0;
+
+        if (firmwareSwarms == null) {
+
+            return firmwareOutdated;
+        }
+
+        JsonNode swarms =
+                firmwareSwarms.get("swarms");
+
+        if (swarms == null
+                || !swarms.isArray()) {
+
+            return firmwareOutdated;
+        }
+
+        for (JsonNode swarm : swarms) {
+
+            String state =
+                    swarm.path("status")
+                            .path("state")
+                            .asText();
+
+            if (state.trim()
+                    .equalsIgnoreCase("UPGRADE_REQUIRED")) {
+
+                firmwareOutdated++;
+            }
+        }
+
+        return firmwareOutdated;
+    }
+
     private String normalize(String value) {
 
         if (value == null) {
@@ -851,20 +973,6 @@ public class ArubaService {
         }
 
         return value.trim().toUpperCase();
-    }
-
-    private String firstNotBlank(
-            String currentValue,
-            String newValue
-    ) {
-
-        if (currentValue != null
-                && !currentValue.isBlank()) {
-
-            return currentValue;
-        }
-
-        return newValue;
     }
 
     private Map<String, Long> countByGroup(

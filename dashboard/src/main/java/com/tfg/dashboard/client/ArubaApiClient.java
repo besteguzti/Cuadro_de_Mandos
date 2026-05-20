@@ -55,41 +55,6 @@ public class ArubaApiClient {
     }
 
     // =========================
-    // Obtener APs RAW
-    // =========================
-
-    public String getAccessPoints() {
-
-        String token =
-                authService.getAccessToken();
-
-        RestTemplate restTemplate =
-                new RestTemplate();
-
-        String url =
-                baseUrl
-                + "/monitoring/v2/aps";
-
-        HttpHeaders headers =
-                new HttpHeaders();
-
-        headers.setBearerAuth(token);
-
-        HttpEntity<String> entity =
-                new HttpEntity<>(headers);
-
-        ResponseEntity<String> response =
-                restTemplate.exchange(
-                        url,
-                        HttpMethod.GET,
-                        entity,
-                        String.class
-                );
-
-        return response.getBody();
-    }
-
-    // =========================
     // Obtener lista APs parseada
     // =========================
 

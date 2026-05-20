@@ -51,3 +51,13 @@ body {
 .kpi-card-critical p {
   color: #b42318;
 }
+
+.kpi-card-warning {
+  border-color: #f0c36a;
+  background: #fffbeb;
+}
+
+.kpi-card-warning h2,
+.kpi-card-warning p {
+  color: #9a5b00;
+}

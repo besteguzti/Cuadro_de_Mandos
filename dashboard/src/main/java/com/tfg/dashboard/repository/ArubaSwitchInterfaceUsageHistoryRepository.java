@@ -2,6 +2,7 @@ package com.tfg.dashboard.repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -11,6 +12,9 @@ import com.tfg.dashboard.model.ArubaSwitchInterfaceUsageHistory;
 
 public interface ArubaSwitchInterfaceUsageHistoryRepository
         extends JpaRepository<ArubaSwitchInterfaceUsageHistory, Long> {
+
+    Optional<ArubaSwitchInterfaceUsageHistory>
+            findTopByObservedAtIsNotNullOrderByObservedAtDesc();
 
     @Query("""
             select h.associatedDevice

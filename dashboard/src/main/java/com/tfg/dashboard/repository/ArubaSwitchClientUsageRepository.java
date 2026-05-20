@@ -14,6 +14,9 @@ public interface ArubaSwitchClientUsageRepository
             String associatedDevice
     );
 
+    Optional<ArubaSwitchClientUsage>
+            findTopByUpdatedAtIsNotNullOrderByUpdatedAtDesc();
+
     List<ArubaSwitchClientUsage>
             findByAssociatedDeviceInOrderByDownInterfacesDescAssociatedDeviceAsc(
                     List<String> associatedDevices

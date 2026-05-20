@@ -12,6 +12,9 @@ public interface AccessPointRepository
 
     Optional<AccessPoint> findBySerial(String serial);
 
+    Optional<AccessPoint>
+            findTopByLastSeenAtIsNotNullOrderByLastSeenAtDesc();
+
     Long countBySerialIsNotNullAndLastSeenAtBefore(
             LocalDateTime date);
 }

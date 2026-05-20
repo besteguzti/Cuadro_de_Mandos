@@ -22,3 +22,22 @@
 # virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
 hs_err_pid*
 replay_pid*
+
+# Generated dependencies and build artifacts
+node_modules/
+target/
+dist/
+build/
+
+# Temporary files and logs
+*.log
+*.tmp
+
+# Environment and local OS/editor files
+.env
+.DS_Store
+.idea/
+.vscode/
+
+# Archives
+*.zip

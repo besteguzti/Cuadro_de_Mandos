@@ -1,239 +1,149 @@
-import { useEffect, useState } from 'react'
+import { useState } from "react";
 
-import './App.css'
-import KpiCard from './components/KpiCard'
+import MainPage
+from "./Pages/MainPage";
 
-const API_BASE_URL = 'http://localhost:8080'
+import ArubaPage
+from "./Pages/ArubaPage";
+
+import CitrixPage
+from "./Pages/CitrixPage";
+
+import Microsoft365Page
+from "./Pages/Microsoft365Page";
+
+import GlpiPage
+from "./Pages/GlpiPage";
 
 function App() {
 
-  const [summary, setSummary] = useState(null)
-  const [lastUpdated, setLastUpdated] = useState(null)
-  const [error, setError] = useState(null)
+    // =========================
+    // Vista activa
+    // =========================
 
-  const loadDashboard = () => {
+    const [
 
-    fetch(`${API_BASE_URL}/aruba/summary`)
-      .then(response => {
+        activePage,
 
-        if (!response.ok) {
+        setActivePage
 
-          throw new Error('No se pudo cargar el resumen Aruba')
+    ] =
+
+    useState(
+
+        "main"
+
+    );
+
+    // =========================
+    // Selección página
+    // =========================
+
+    const renderPage =
+    () => {
+
+        switch (
+            activePage
+        ) {
+
+            case "aruba":
+
+                return (
+                    <ArubaPage />
+                );
+
+            case "citrix":
+
+                return (
+                    <CitrixPage />
+                );
+
+            case "m365":
+
+                return (
+                    <Microsoft365Page />
+                );
+
+            case "glpi":
+
+                return (
+                    <GlpiPage />
+                );
+
+            default:
+
+                return (
+                    <MainPage />
+                );
         }
-
-        return response.json()
-      })
-      .then(data => {
-
-        setSummary(data)
-        setLastUpdated(new Date())
-        setError(null)
-      })
-      .catch(() => {
-
-        setError('No se pudo conectar con el backend o Aruba Central.')
-      })
-  }
-
-  useEffect(() => {
-
-    loadDashboard()
-
-    const interval = setInterval(() => {
-
-      loadDashboard()
-
-    }, 30000)
-
-    return () => clearInterval(interval)
-
-  }, [])
-
-  if (!summary && !error) {
+    };
 
     return (
-      <main className="dashboard">
-        <h1>TFG Dashboard</h1>
-        <p className="loading">Cargando dashboard...</p>
-      </main>
-    )
-  }
 
-  const status = summary?.networkStatus ?? 'UNKNOWN'
-
-  const apCards = summary
-    ? [
-      { title: 'Total APs', value: summary.totalAps },
-      { title: 'APs activos', value: summary.upAps },
-      { title: 'APs caidos', value: summary.downAps },
-      {
-        title: 'Firmware pendiente',
-        value: summary.firmwareOutdated,
-        critical: summary.firmwareOutdated > 0
-      },
-      {
-        title: 'APs inactivos',
-        value: summary.inactiveAps,
-        critical: summary.inactiveAps > 0
-      }
-    ]
-    : []
-
-  const switchCards = summary
-    ? [
-      { title: 'Total switches', value: summary.totalSwitches },
-      {
-        title: 'Switches apagados',
-        value: summary.downSwitches,
-        critical: summary.downSwitches > 0
-      },
-      {
-        title: 'Switches con upgrade',
-        value: summary.switchesFirmwareUpgradeRequired,
-        critical: summary.switchesFirmwareUpgradeRequired > 0
-      }
-    ]
-    : []
-
-  const underusedSwitchCards = summary
-    ? (summary.underusedSwitches ?? []).map(switchUsage => ({
-      title: switchUsage.associatedDeviceName || switchUsage.associatedDevice,
-      value: `${switchUsage.downInterfaces} interfaces down`,
-      critical: switchUsage.downInterfaces > 0
-    }))
-    : []
-
-  const wifiGroupCards = summary
-    ? [
-      { title: 'Total clientes WiFi', value: summary.totalWifiClients },
-      { title: 'Clientes MUTUALIA-APs', value: summary.mutualiaApsClients },
-      { title: 'Clientes MUTUALIA-WIFI', value: summary.mutualiaWifiClients }
-    ]
-    : []
-
-  const wifiNetworkCards = summary
-    ? [
-      { title: 'MUTUALIA_LANGILEAK', value: summary.mutualiaLangileakClients },
-      { title: 'MUTUALIA', value: summary.mutualiaClients },
-      { title: 'MUTUALIA_RED_INTERNA', value: summary.mutualiaRedInternaClients },
-      { title: 'MUTUALIA_RED_EXTERNA', value: summary.mutualiaRedExternaClients },
-      { title: 'MUTUALIA_KORPORATIBOA', value: summary.mutualiaKorporatiboaClients },
-      { title: 'WIFI_PACs', value: summary.wifiPacsClients },
-      { title: 'MUT_VIDEO', value: summary.mutVideoClients }
-    ]
-    : []
-
-  return (
-    <main className="dashboard">
-      <header className="dashboard-header">
         <div>
-          <p className="eyebrow">Monitorizacion Aruba</p>
-          <h1>TFG Dashboard</h1>
+
+            <nav>
+
+                <button
+                    onClick={() =>
+                        setActivePage(
+                            "main"
+                        )
+                    }
+                >
+                    Principal
+                </button>
+
+                <button
+                    onClick={() =>
+                        setActivePage(
+                            "aruba"
+                        )
+                    }
+                >
+                    Aruba
+                </button>
+
+                <button
+                    onClick={() =>
+                        setActivePage(
+                            "citrix"
+                        )
+                    }
+                >
+                    Citrix
+                </button>
+
+                <button
+                    onClick={() =>
+                        setActivePage(
+                            "m365"
+                        )
+                    }
+                >
+                    Microsoft 365
+                </button>
+
+                <button
+                    onClick={() =>
+                        setActivePage(
+                            "glpi"
+                        )
+                    }
+                >
+                    GLPI
+                </button>
+
+            </nav>
+
+            <hr />
+
+            {renderPage()}
+
         </div>
 
-        {lastUpdated && (
-          <p className="updated">
-            Ultima actualizacion: {lastUpdated.toLocaleTimeString()}
-          </p>
-        )}
-      </header>
+    );
 
-      {error && (
-        <section className="alert" role="alert">
-          {error}
-        </section>
-      )}
-
-      {summary && (
-        <>
-          <section className={`status status-${status.toLowerCase()}`}>
-            <span>Estado red</span>
-            <strong>{status}</strong>
-          </section>
-
-          <section className="dashboard-section">
-            <h2>Access Points</h2>
-
-            <div className="kpi-grid">
-              {apCards.map(card => (
-                <KpiCard
-                  key={card.title}
-                  title={card.title}
-                  value={card.value}
-                  critical={card.critical}
-                />
-              ))}
-            </div>
-          </section>
-
-          <section className="dashboard-section">
-            <h2>Clientes WiFi por grupo</h2>
-
-            <div className="kpi-grid">
-              {wifiGroupCards.map(card => (
-                <KpiCard
-                  key={card.title}
-                  title={card.title}
-                  value={card.value}
-                />
-              ))}
-            </div>
-          </section>
-
-          <section className="dashboard-section">
-            <h2>Clientes MUTUALIA-WIFI por red</h2>
-
-            <div className="kpi-grid">
-              {wifiNetworkCards.map(card => (
-                <KpiCard
-                  key={card.title}
-                  title={card.title}
-                  value={card.value}
-                />
-              ))}
-            </div>
-          </section>
-
-          <section className="dashboard-section">
-            <h2>Switches</h2>
-
-            <div className="kpi-grid">
-              {switchCards.map(card => (
-                <KpiCard
-                  key={card.title}
-                  title={card.title}
-                  value={card.value}
-                  critical={card.critical}
-                />
-              ))}
-            </div>
-          </section>
-
-          <section className="dashboard-section">
-            <h2>Switches infrautilizados</h2>
-
-            <div className="kpi-grid">
-              {underusedSwitchCards.length > 0 ? (
-                underusedSwitchCards.map(card => (
-                  <KpiCard
-                    key={card.title}
-                    title={card.title}
-                    value={card.value}
-                    critical={card.critical}
-                  />
-                ))
-              ) : (
-                <KpiCard
-                  title="Switches infrautilizados"
-                  value="0"
-                />
-              )}
-            </div>
-          </section>
-        </>
-      )}
-    </main>
-  )
 }
 
-export default App
+export default App;

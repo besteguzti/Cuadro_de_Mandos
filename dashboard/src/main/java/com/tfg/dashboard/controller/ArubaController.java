@@ -3,7 +3,6 @@ package com.tfg.dashboard.controller;
 import java.util.List;
 import java.util.Map;
 
-import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -18,7 +17,6 @@ import com.tfg.dashboard.model.ArubaSwitch;
 import com.tfg.dashboard.model.ArubaSwitchClientUsage;
 import com.tfg.dashboard.service.ArubaService;
 
-@CrossOrigin(origins = "http://localhost:5173")
 @RestController
 @RequestMapping("/aruba")
 public class ArubaController {
@@ -99,5 +97,13 @@ public class ArubaController {
             service.syncSwitchClientUsage();
 
             return "Uso de interfaces down sincronizado";
+    }
+
+    @PostMapping("/sync-all")
+        public String syncAll() {
+
+            service.syncAll();
+
+            return "Datos Aruba sincronizados";
     }
 }

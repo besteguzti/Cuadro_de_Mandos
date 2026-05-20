@@ -23,12 +23,10 @@ public class ArubaScheduler {
             initialDelayString = "${aruba.sync.initial-delay-ms:60000}",
             fixedRateString = "${aruba.sync.fixed-rate-ms:3600000}"
     )
-    public void syncAccessPoints() {
+    public void syncAruba() {
 
-        log.info("Sincronizando APs, switches y uso cableado de Aruba en MySQL");
+        log.info("Sincronizando datos Aruba en MySQL");
 
-        arubaService.syncAccessPoints();
-        arubaService.syncSwitches();
-        arubaService.syncSwitchClientUsage();
+        arubaService.syncAll();
     }
 }

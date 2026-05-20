@@ -1,0 +1,290 @@
+package com.tfg.dashboard.service;
+
+import java.time.LocalDateTime;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Service;
+
+import com.tfg.dashboard.model.CitrixMetricsHistory;
+import com.tfg.dashboard.model.CitrixSummary;
+import com.tfg.dashboard.model.GlpiMetricsHistory;
+import com.tfg.dashboard.model.GlpiSummary;
+import com.tfg.dashboard.model.Microsoft365MetricsHistory;
+import com.tfg.dashboard.model.Microsoft365Summary;
+import com.tfg.dashboard.repository.CitrixMetricsHistoryRepository;
+import com.tfg.dashboard.repository.GlpiMetricsHistoryRepository;
+import com.tfg.dashboard.repository.Microsoft365MetricsHistoryRepository;
+
+@Service
+public class MetricsSyncService {
+
+    private static final Logger log =
+            LoggerFactory.getLogger(MetricsSyncService.class);
+
+    private static final int RETENTION_DAYS = 90;
+
+    // =========================
+    // Servicios simulados
+    // =========================
+    //
+    // De momento no conectan APIs
+    // reales. Generan datos dinamicos
+    // que se guardan como historico.
+    //
+
+    private final CitrixService citrixService;
+
+    private final Microsoft365Service microsoft365Service;
+
+    private final GlpiService glpiService;
+
+    private final CitrixMetricsHistoryRepository citrixRepository;
+
+    private final Microsoft365MetricsHistoryRepository microsoft365Repository;
+
+    private final GlpiMetricsHistoryRepository glpiRepository;
+
+    public MetricsSyncService(
+            CitrixService citrixService,
+            Microsoft365Service microsoft365Service,
+            GlpiService glpiService,
+            CitrixMetricsHistoryRepository citrixRepository,
+            Microsoft365MetricsHistoryRepository microsoft365Repository,
+            GlpiMetricsHistoryRepository glpiRepository
+    ) {
+
+        this.citrixService = citrixService;
+        this.microsoft365Service = microsoft365Service;
+        this.glpiService = glpiService;
+        this.citrixRepository = citrixRepository;
+        this.microsoft365Repository = microsoft365Repository;
+        this.glpiRepository = glpiRepository;
+    }
+
+    // =========================
+    // Sincronizacion periodica
+    // =========================
+    //
+    // Guarda una muestra nueva cada
+    // minuto para Citrix, Microsoft
+    // 365 y GLPI. Cada plataforma se
+    // sincroniza de forma independiente
+    // para que un fallo no bloquee las
+    // demas.
+    //
+
+    @Scheduled(fixedRate = 60000)
+    public void syncExternalPlatformMetrics() {
+
+        log.info("Sincronizacion de metricas externas iniciada");
+
+        LocalDateTime collectedAt =
+                LocalDateTime.now();
+
+        try {
+
+            syncCitrixMetrics(collectedAt);
+
+        } catch (Exception exception) {
+
+            log.error("Error sincronizando metricas Citrix", exception);
+        }
+
+        try {
+
+            syncMicrosoft365Metrics(collectedAt);
+
+        } catch (Exception exception) {
+
+            log.error(
+                    "Error sincronizando metricas Microsoft 365",
+                    exception
+            );
+        }
+
+        try {
+
+            syncGlpiMetrics(collectedAt);
+
+        } catch (Exception exception) {
+
+            log.error("Error sincronizando metricas GLPI", exception);
+        }
+
+        cleanOldMetrics();
+
+        log.info("Sincronizacion de metricas externas finalizada");
+    }
+
+    private void syncCitrixMetrics(
+            LocalDateTime collectedAt
+    ) {
+
+        CitrixSummary citrixSummary =
+                citrixService.generateSimulatedSummary();
+        CitrixMetricsHistory citrixHistory =
+                mapCitrix(citrixSummary, collectedAt);
+        citrixRepository.save(citrixHistory);
+        log.info("Datos Citrix guardados");
+    }
+
+    private void syncMicrosoft365Metrics(
+            LocalDateTime collectedAt
+    ) {
+
+        Microsoft365Summary microsoft365Summary =
+                microsoft365Service.generateSimulatedSummary();
+        Microsoft365MetricsHistory microsoft365History =
+                mapMicrosoft365(microsoft365Summary, collectedAt);
+        microsoft365Repository.save(microsoft365History);
+        log.info("Datos Microsoft 365 guardados");
+    }
+
+    private void syncGlpiMetrics(
+            LocalDateTime collectedAt
+    ) {
+
+        GlpiSummary glpiSummary =
+                glpiService.generateSimulatedSummary();
+        GlpiMetricsHistory glpiHistory =
+                mapGlpi(glpiSummary, collectedAt);
+        glpiRepository.save(glpiHistory);
+        log.info("Datos GLPI guardados");
+    }
+
+    private void cleanOldMetrics() {
+
+        // Se aplica retencion de 90 dias
+        // para evitar crecimiento indefinido
+        // de snapshots y mantener historico
+        // suficiente para analisis temporal.
+
+        try {
+
+            LocalDateTime cutoff =
+                    LocalDateTime.now().minusDays(RETENTION_DAYS);
+
+            log.info(
+                    "Limpieza de historicos iniciada. Fecha limite: {}",
+                    cutoff
+            );
+
+            long deletedCitrix =
+                    citrixRepository.deleteByCollectedAtBefore(cutoff);
+            long deletedMicrosoft365 =
+                    microsoft365Repository.deleteByCollectedAtBefore(cutoff);
+            long deletedGlpi =
+                    glpiRepository.deleteByCollectedAtBefore(cutoff);
+
+            log.info(
+                    "Limpieza completada. Eliminados: Citrix={}, Microsoft365={}, GLPI={}",
+                    deletedCitrix,
+                    deletedMicrosoft365,
+                    deletedGlpi
+            );
+
+        } catch (Exception exception) {
+
+            log.error("Error limpiando historicos antiguos", exception);
+        }
+    }
+
+    private CitrixMetricsHistory mapCitrix(
+            CitrixSummary summary,
+            LocalDateTime collectedAt
+    ) {
+
+        CitrixMetricsHistory history =
+                new CitrixMetricsHistory();
+
+        history.setActiveSessions(summary.getActiveSessions());
+        history.setActiveLicenses(summary.getActiveLicenses());
+        history.setAvailableDeliveryControllers(
+                summary.getAvailableDeliveryControllers()
+        );
+        history.setTotalDeliveryControllers(
+                summary.getTotalDeliveryControllers()
+        );
+        history.setDisconnectedSessions(summary.getDisconnectedSessions());
+        history.setAverageLogonDurationSeconds(
+                summary.getAverageLogonDurationSeconds()
+        );
+        history.setServerLoadPercent(summary.getServerLoadPercent());
+        history.setFailedLogons(summary.getFailedLogons());
+        history.setCitrixHealth(summary.getCitrixHealth());
+        history.setCollectedAt(collectedAt);
+
+        return history;
+    }
+
+    private Microsoft365MetricsHistory mapMicrosoft365(
+            Microsoft365Summary summary,
+            LocalDateTime collectedAt
+    ) {
+
+        Microsoft365MetricsHistory history =
+                new Microsoft365MetricsHistory();
+
+        history.setActiveUsers(summary.getActiveUsers());
+        history.setUnassignedLicenses(summary.getUnassignedLicenses());
+        history.setOutlookStatus(summary.getOutlookStatus());
+        history.setTeamsStatus(summary.getTeamsStatus());
+        history.setSharePointStatus(summary.getSharePointStatus());
+        history.setNearlyFullMailboxes(summary.getNearlyFullMailboxes());
+        history.setEmailsQuarantined(summary.getEmailsQuarantined());
+        history.setSharePointStoragePercent(
+                summary.getSharePointStoragePercent()
+        );
+        history.setRiskyUsers(summary.getRiskyUsers());
+        history.setFailedSignIns(summary.getFailedSignIns());
+        history.setUsersWithoutMfa(summary.getUsersWithoutMfa());
+        history.setAppsSecretsExpiringSoon(
+                summary.getAppsSecretsExpiringSoon()
+        );
+        history.setUnusedApplications(summary.getUnusedApplications());
+        history.setHighPrivilegeApplications(
+                summary.getHighPrivilegeApplications()
+        );
+        history.setNonCompliantDevices(summary.getNonCompliantDevices());
+        history.setOutdatedWindowsDevices(
+                summary.getOutdatedWindowsDevices()
+        );
+        history.setDevicesWithoutEncryption(
+                summary.getDevicesWithoutEncryption()
+        );
+        history.setStaleDevices(summary.getStaleDevices());
+        history.setMicrosoft365Health(summary.getMicrosoft365Health());
+        history.setMicrosoft365OperationalRisk(
+                summary.getMicrosoft365OperationalRisk()
+        );
+        history.setCollectedAt(collectedAt);
+
+        return history;
+    }
+
+    private GlpiMetricsHistory mapGlpi(
+            GlpiSummary summary,
+            LocalDateTime collectedAt
+    ) {
+
+        GlpiMetricsHistory history =
+                new GlpiMetricsHistory();
+
+        history.setOpenTickets(summary.getOpenTickets());
+        history.setCriticalOpenTickets(summary.getCriticalOpenTickets());
+        history.setSlaBreachedTickets(summary.getSlaBreachedTickets());
+        history.setAverageResolutionHours(
+                summary.getAverageResolutionHours()
+        );
+        history.setCreatedToday(summary.getCreatedToday());
+        history.setClosedToday(summary.getClosedToday());
+        history.setCreatedThisWeek(summary.getCreatedThisWeek());
+        history.setClosedThisWeek(summary.getClosedThisWeek());
+        history.setOperationalBacklog(summary.getOperationalBacklog());
+        history.setCollectedAt(collectedAt);
+
+        return history;
+    }
+}

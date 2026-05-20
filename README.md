@@ -8,6 +8,7 @@ Cuadro de mandos para visualizar el estado de los puntos de acceso Aruba y mante
 - `frontend`: interfaz React + Vite.
 - `dashboard.access_points`: tabla MySQL con una fila por AP, identificada por numero de serie.
 - `dashboard.aruba_switches`: tabla MySQL con una fila por switch Aruba, identificado por numero de serie.
+- `dashboard.aruba_dashboard_metrics`: ultimos KPIs agregados de firmware y clientes WiFi.
 - `dashboard.aruba_switch_client_usage`: tabla MySQL con interfaces en down agrupadas por switch.
 - `dashboard.aruba_switch_interface_usage_history`: historico de interfaces en down por switch.
 - Aruba Central: fuente de datos de APs y firmware.
@@ -70,7 +71,7 @@ http://localhost:5173
 
 ## Endpoints Principales
 
-Resumen del dashboard. Consulta Aruba, sincroniza APs en MySQL y devuelve KPIs:
+Resumen del dashboard. Lee MySQL y devuelve KPIs sin consultar Aruba:
 
 ```http
 GET http://localhost:8080/aruba/summary
@@ -130,14 +131,20 @@ Sincronizacion manual de interfaces en down por switch:
 POST http://localhost:8080/aruba/sync-switch-client-usage
 ```
 
+Sincronizacion completa de datos Aruba:
+
+```http
+POST http://localhost:8080/aruba/sync-all
+```
+
 ## Sincronizacion Automatica
 
-El backend sincroniza APs, switches e interfaces en down automaticamente con `ArubaScheduler`:
+El backend sincroniza APs, switches, firmware, clientes WiFi agregados e interfaces en down automaticamente con `ArubaScheduler`:
 
 - Primera ejecucion: configurable con `aruba.sync.initial-delay-ms`.
 - Frecuencia: configurable con `aruba.sync.fixed-rate-ms`.
 
-Ademas, `GET /aruba/summary` tambien sincroniza los APs usando la misma lista que obtiene para calcular los KPIs.
+`GET /aruba/summary` no consulta Aruba ni escribe historico; solo lee datos ya sincronizados desde MySQL.
 
 Cada AP se guarda en `access_points` usando el numero de serie como clave logica. Cada switch se guarda en `aruba_switches` con el mismo criterio. `firstSeenAt` guarda cuando se vio por primera vez y no se sobrescribe; `lastSeenAt` se actualiza en cada sincronizacion.
 

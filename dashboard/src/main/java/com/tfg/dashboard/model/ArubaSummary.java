@@ -1,5 +1,6 @@
 package com.tfg.dashboard.model;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 public class ArubaSummary {
@@ -49,6 +50,25 @@ public class ArubaSummary {
     private int wifiPacsClients;
 
     private int mutVideoClients;
+
+    // =========================
+    // Frescura Aruba
+    // =========================
+    //
+    // lastUpdated indica la fecha
+    // y hora del último dato Aruba
+    // usado para construir este
+    // resumen.
+    //
+    // dataStatus indica si los
+    // datos Aruba son recientes,
+    // antiguos o inexistentes:
+    // OK, STALE o NO_DATA.
+    //
+
+    private LocalDateTime lastUpdated;
+
+    private String dataStatus;
 
     // =========================
     // GETTERS
@@ -144,6 +164,14 @@ public class ArubaSummary {
 
     public int getMutVideoClients() {
         return mutVideoClients;
+    }
+
+    public LocalDateTime getLastUpdated() {
+        return lastUpdated;
+    }
+
+    public String getDataStatus() {
+        return dataStatus;
     }
 
     // =========================
@@ -254,5 +282,13 @@ public class ArubaSummary {
 
     public void setMutVideoClients(int mutVideoClients) {
         this.mutVideoClients = mutVideoClients;
+    }
+
+    public void setLastUpdated(LocalDateTime lastUpdated) {
+        this.lastUpdated = lastUpdated;
+    }
+
+    public void setDataStatus(String dataStatus) {
+        this.dataStatus = dataStatus;
     }
 }
