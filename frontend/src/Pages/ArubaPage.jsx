@@ -154,7 +154,9 @@ function ArubaPage() {
     )
   }
 
-  const status = summary?.networkStatus ?? 'UNKNOWN'
+  const networkStatusDetails = summary?.networkStatusDetails
+  const status = networkStatusDetails?.color ?? summary?.networkStatus ?? 'UNKNOWN'
+  const statusReasons = networkStatusDetails?.reasons ?? []
 
   const apCards = summary
     ? [
@@ -255,8 +257,24 @@ function ArubaPage() {
       {summary && (
         <>
           <section className={`status status-${status.toLowerCase()}`}>
-            <span>Estado red</span>
-            <strong>{status}</strong>
+            <div className="status-main">
+              <span>Estado de red</span>
+              <strong>Afectacion: {networkStatusDetails?.percentage ?? 0} %</strong>
+              <p>Estado: {formatNetworkStatus(status)}</p>
+            </div>
+
+            <div className="status-reasons">
+              <span>Motivos</span>
+              {statusReasons.length > 0 ? (
+                <ul>
+                  {statusReasons.slice(0, 4).map(reason => (
+                    <li key={reason}>{reason}</li>
+                  ))}
+                </ul>
+              ) : (
+                <p>Sin motivos activos</p>
+              )}
+            </div>
           </section>
 
           <section className="dashboard-section">
@@ -356,6 +374,22 @@ function formatSnapshotDate(value) {
   }
 
   return new Date(value).toLocaleString();
+}
+
+function formatNetworkStatus(status) {
+  if (status === 'GREEN') {
+    return 'Verde'
+  }
+
+  if (status === 'YELLOW') {
+    return 'Amarillo'
+  }
+
+  if (status === 'RED') {
+    return 'Rojo'
+  }
+
+  return status
 }
 
 export default ArubaPage

@@ -16,6 +16,24 @@ public class MainDashboardSummary {
 
     private String globalHealth;
 
+    private int globalHealthPercentage;
+
+    private int globalCriticality;
+
+    private int globalAvailability;
+
+    private int userImpact;
+
+    private int affectedServicesPercent;
+
+    private int technicalDegradation;
+
+    private int operationalPressure;
+
+    private int operationalBacklog;
+
+    private int slaRisk;
+
     private int globalOperationalRisk;
 
     private int servicesWithAlerts;
@@ -57,6 +75,42 @@ public class MainDashboardSummary {
 
     public String getGlobalHealth() {
         return globalHealth;
+    }
+
+    public int getGlobalHealthPercentage() {
+        return globalHealthPercentage;
+    }
+
+    public int getGlobalCriticality() {
+        return globalCriticality;
+    }
+
+    public int getGlobalAvailability() {
+        return globalAvailability;
+    }
+
+    public int getUserImpact() {
+        return userImpact;
+    }
+
+    public int getAffectedServicesPercent() {
+        return affectedServicesPercent;
+    }
+
+    public int getTechnicalDegradation() {
+        return technicalDegradation;
+    }
+
+    public int getOperationalPressure() {
+        return operationalPressure;
+    }
+
+    public int getOperationalBacklog() {
+        return operationalBacklog;
+    }
+
+    public int getSlaRisk() {
+        return slaRisk;
     }
 
     public int getGlobalOperationalRisk() {
@@ -113,6 +167,42 @@ public class MainDashboardSummary {
 
     public void setGlobalHealth(String globalHealth) {
         this.globalHealth = globalHealth;
+    }
+
+    public void setGlobalHealthPercentage(int globalHealthPercentage) {
+        this.globalHealthPercentage = globalHealthPercentage;
+    }
+
+    public void setGlobalCriticality(int globalCriticality) {
+        this.globalCriticality = globalCriticality;
+    }
+
+    public void setGlobalAvailability(int globalAvailability) {
+        this.globalAvailability = globalAvailability;
+    }
+
+    public void setUserImpact(int userImpact) {
+        this.userImpact = userImpact;
+    }
+
+    public void setAffectedServicesPercent(int affectedServicesPercent) {
+        this.affectedServicesPercent = affectedServicesPercent;
+    }
+
+    public void setTechnicalDegradation(int technicalDegradation) {
+        this.technicalDegradation = technicalDegradation;
+    }
+
+    public void setOperationalPressure(int operationalPressure) {
+        this.operationalPressure = operationalPressure;
+    }
+
+    public void setOperationalBacklog(int operationalBacklog) {
+        this.operationalBacklog = operationalBacklog;
+    }
+
+    public void setSlaRisk(int slaRisk) {
+        this.slaRisk = slaRisk;
     }
 
     public void setGlobalOperationalRisk(int globalOperationalRisk) {

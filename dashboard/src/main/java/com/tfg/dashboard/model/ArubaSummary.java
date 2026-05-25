@@ -3,6 +3,8 @@ package com.tfg.dashboard.model;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import com.tfg.dashboard.dto.ArubaNetworkStatusDto;
+
 public class ArubaSummary {
 
     private int totalAps;
@@ -20,6 +22,13 @@ public class ArubaSummary {
     private int apsWithoutPublicIp;
 
     private String networkStatus;
+
+    // Detalle calculado en backend para
+    // explicar la afectacion de red Aruba.
+    // Se mantiene networkStatus como campo
+    // simple para no romper vistas ni
+    // consumidores existentes.
+    private ArubaNetworkStatusDto networkStatusDetails;
 
     private int inactiveAps;
 
@@ -104,6 +113,10 @@ public class ArubaSummary {
 
     public String getNetworkStatus() {
         return networkStatus;
+    }
+
+    public ArubaNetworkStatusDto getNetworkStatusDetails() {
+        return networkStatusDetails;
     }
 
     public int getInactiveAps() {
@@ -208,6 +221,12 @@ public class ArubaSummary {
 
     public void setNetworkStatus(String networkStatus) {
         this.networkStatus = networkStatus;
+    }
+
+    public void setNetworkStatusDetails(
+            ArubaNetworkStatusDto networkStatusDetails
+    ) {
+        this.networkStatusDetails = networkStatusDetails;
     }
 
     public void setInactiveAps(int inactiveAps) {

@@ -30,9 +30,11 @@ import com.tfg.dashboard.model.ArubaSwitchClientUsage;
 import com.tfg.dashboard.model.ArubaSwitchInterfaceUsageHistory;
 import com.tfg.dashboard.repository.AccessPointRepository;
 import com.tfg.dashboard.repository.ArubaDashboardMetricsRepository;
+import com.tfg.dashboard.repository.ArubaNetworkStatusHistoryRepository;
 import com.tfg.dashboard.repository.ArubaSwitchClientUsageRepository;
 import com.tfg.dashboard.repository.ArubaSwitchInterfaceUsageHistoryRepository;
 import com.tfg.dashboard.repository.ArubaSwitchRepository;
+import com.tfg.dashboard.repository.TransversalKpiHistoryRepository;
 
 @ExtendWith(MockitoExtension.class)
 class ArubaServiceTest {
@@ -55,6 +57,14 @@ class ArubaServiceTest {
 
     @Mock
     private ArubaDashboardMetricsRepository dashboardMetricsRepository;
+
+    @Mock
+    private ArubaNetworkStatusHistoryRepository
+            networkStatusHistoryRepository;
+
+    @Mock
+    private TransversalKpiHistoryRepository
+            transversalKpiHistoryRepository;
 
     @InjectMocks
     private ArubaService arubaService;
@@ -116,7 +126,15 @@ class ArubaServiceTest {
         assertThat(summary.getMutualiaRedInternaClients()).isEqualTo(1);
         assertThat(summary.getWifiPacsClients()).isEqualTo(1);
         assertThat(summary.getMutVideoClients()).isEqualTo(1);
-        assertThat(summary.getNetworkStatus()).isEqualTo("RED");
+        assertThat(summary.getNetworkStatus()).isEqualTo("YELLOW");
+        assertThat(summary.getNetworkStatusDetails().getPercentage())
+                .isEqualTo(50);
+        assertThat(summary.getNetworkStatusDetails()
+                .getAccessPointStatus().getColor())
+                .isEqualTo("YELLOW");
+        assertThat(summary.getNetworkStatusDetails()
+                .getSwitchStatus().getColor())
+                .isEqualTo("YELLOW");
         assertThat(summary.getLastUpdated()).isNotNull();
         assertThat(summary.getDataStatus()).isEqualTo("OK");
     }

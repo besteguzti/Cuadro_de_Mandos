@@ -225,6 +225,11 @@ function Microsoft365Page() {
     );
   }
 
+  const microsoft365HealthDetails = summary.microsoft365HealthDetails;
+  const microsoft365Health =
+    microsoft365HealthDetails?.color ?? summary.microsoft365Health ?? "UNKNOWN";
+  const microsoft365Reasons = microsoft365HealthDetails?.reasons ?? [];
+
   return (
     <main className="dashboard">
       <header className="dashboard-header">
@@ -244,6 +249,27 @@ function Microsoft365Page() {
           </p>
         </div>
       </header>
+
+      <section className={`status status-${microsoft365Health.toLowerCase()}`}>
+        <div className="status-main">
+          <span>Indice de salud Microsoft 365</span>
+          <strong>Afeccion: {microsoft365HealthDetails?.percentage ?? 0} %</strong>
+          <p>Estado: {formatMicrosoft365Status(microsoft365Health)}</p>
+        </div>
+
+        <div className="status-reasons">
+          <span>Motivos</span>
+          {microsoft365Reasons.length > 0 ? (
+            <ul>
+              {microsoft365Reasons.slice(0, 4).map((reason) => (
+                <li key={reason}>{reason}</li>
+              ))}
+            </ul>
+          ) : (
+            <p>Sin motivos activos</p>
+          )}
+        </div>
+      </section>
 
       <section className="dashboard-section">
 
@@ -425,6 +451,7 @@ function Microsoft365Page() {
 
       </section>
 
+      {false && (
       <section className="dashboard-section">
       <h2>KPIs compuestos</h2>
 
@@ -456,6 +483,7 @@ function Microsoft365Page() {
         />
       </div>
       </section>
+      )}
     </main>
   );
 }
@@ -466,6 +494,22 @@ function formatSnapshotDate(value) {
   }
 
   return new Date(value).toLocaleString();
+}
+
+function formatMicrosoft365Status(status) {
+  if (status === "GREEN") {
+    return "Verde";
+  }
+
+  if (status === "YELLOW") {
+    return "Amarillo";
+  }
+
+  if (status === "RED") {
+    return "Rojo";
+  }
+
+  return status;
 }
 
 // =========================

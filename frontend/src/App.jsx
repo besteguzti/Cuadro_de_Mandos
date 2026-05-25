@@ -1,149 +1,144 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
-import MainPage
-from "./Pages/MainPage";
+import MainPage from "./Pages/MainPage";
+import ArubaPage from "./Pages/ArubaPage";
+import CitrixPage from "./Pages/CitrixPage";
+import Microsoft365Page from "./Pages/Microsoft365Page";
+import GlpiPage from "./Pages/GlpiPage";
+import AnalysisPage from "./Pages/AnalysisPage";
 
-import ArubaPage
-from "./Pages/ArubaPage";
-
-import CitrixPage
-from "./Pages/CitrixPage";
-
-import Microsoft365Page
-from "./Pages/Microsoft365Page";
-
-import GlpiPage
-from "./Pages/GlpiPage";
+const pageRoutes = {
+    main: "/",
+    aruba: "/aruba",
+    citrix: "/citrix",
+    m365: "/microsoft365",
+    glpi: "/glpi",
+    analysis: "/analisis"
+};
 
 function App() {
 
-    // =========================
-    // Vista activa
-    // =========================
+    const [activePage, setActivePage] =
+        useState(resolveInitialPage);
 
-    const [
+    useEffect(() => {
 
-        activePage,
+        const handlePopState = () => {
 
-        setActivePage
+            setActivePage(resolveInitialPage());
+        };
 
-    ] =
+        window.addEventListener("popstate", handlePopState);
 
-    useState(
+        return () => window.removeEventListener("popstate", handlePopState);
 
-        "main"
+    }, []);
 
-    );
+    const navigate = (page) => {
 
-    // =========================
-    // Selección página
-    // =========================
+        setActivePage(page);
+        window.history.pushState({}, "", pageRoutes[page]);
+    };
 
-    const renderPage =
-    () => {
+    const renderPage = () => {
 
-        switch (
-            activePage
-        ) {
+        switch (activePage) {
 
             case "aruba":
-
-                return (
-                    <ArubaPage />
-                );
+                return <ArubaPage />;
 
             case "citrix":
-
-                return (
-                    <CitrixPage />
-                );
+                return <CitrixPage />;
 
             case "m365":
-
-                return (
-                    <Microsoft365Page />
-                );
+                return <Microsoft365Page />;
 
             case "glpi":
+                return <GlpiPage />;
 
-                return (
-                    <GlpiPage />
-                );
+            case "analysis":
+                return <AnalysisPage />;
 
             default:
-
-                return (
-                    <MainPage />
-                );
+                return <MainPage />;
         }
     };
 
     return (
-
         <div>
-
-            <nav>
-
+            <nav className="app-nav">
                 <button
-                    onClick={() =>
-                        setActivePage(
-                            "main"
-                        )
-                    }
+                    className={activePage === "main" ? "active" : ""}
+                    onClick={() => navigate("main")}
                 >
                     Principal
                 </button>
 
                 <button
-                    onClick={() =>
-                        setActivePage(
-                            "aruba"
-                        )
-                    }
+                    className={activePage === "aruba" ? "active" : ""}
+                    onClick={() => navigate("aruba")}
                 >
                     Aruba
                 </button>
 
                 <button
-                    onClick={() =>
-                        setActivePage(
-                            "citrix"
-                        )
-                    }
+                    className={activePage === "citrix" ? "active" : ""}
+                    onClick={() => navigate("citrix")}
                 >
                     Citrix
                 </button>
 
                 <button
-                    onClick={() =>
-                        setActivePage(
-                            "m365"
-                        )
-                    }
+                    className={activePage === "m365" ? "active" : ""}
+                    onClick={() => navigate("m365")}
                 >
                     Microsoft 365
                 </button>
 
                 <button
-                    onClick={() =>
-                        setActivePage(
-                            "glpi"
-                        )
-                    }
+                    className={activePage === "glpi" ? "active" : ""}
+                    onClick={() => navigate("glpi")}
                 >
                     GLPI
                 </button>
 
+                <button
+                    className={activePage === "analysis" ? "active" : ""}
+                    onClick={() => navigate("analysis")}
+                >
+                    Análisis
+                </button>
             </nav>
 
-            <hr />
-
             {renderPage()}
-
         </div>
-
     );
+}
 
+function resolveInitialPage() {
+    const pathname = window.location.pathname;
+
+    if (pathname === "/aruba") {
+        return "aruba";
+    }
+
+    if (pathname === "/citrix") {
+        return "citrix";
+    }
+
+    if (pathname === "/microsoft365") {
+        return "m365";
+    }
+
+    if (pathname === "/glpi") {
+        return "glpi";
+    }
+
+    if (pathname === "/analisis" || pathname === "/analysis") {
+        return "analysis";
+    }
+
+    return "main";
 }
 
 export default App;

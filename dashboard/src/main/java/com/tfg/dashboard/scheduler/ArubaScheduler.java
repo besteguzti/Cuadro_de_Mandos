@@ -27,6 +27,18 @@ public class ArubaScheduler {
 
         log.info("Sincronizando datos Aruba en MySQL");
 
-        arubaService.syncAll();
+        try {
+
+            arubaService.syncAll();
+            log.info("Sincronizacion Aruba finalizada");
+        } catch (Exception exception) {
+
+            // El scheduler debe registrar
+            // el fallo completo para poder
+            // diagnosticar tokens, API o
+            // base de datos sin detener la
+            // aplicacion.
+            log.error("Error sincronizando datos Aruba", exception);
+        }
     }
 }

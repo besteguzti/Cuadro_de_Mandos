@@ -2,6 +2,8 @@ package com.tfg.dashboard.model;
 
 import java.time.LocalDateTime;
 
+import com.tfg.dashboard.dto.GlpiHealthStatusDto;
+
 public class GlpiSummary {
 
     // =========================
@@ -67,6 +69,18 @@ public class GlpiSummary {
     //
 
     private int operationalBacklog;
+
+    // =========================
+    // Indice salud GLPI
+    // =========================
+    //
+    // Detalle normalizado del
+    // estado GLPI para mostrar un
+    // semaforo comparable con el
+    // resto de plataformas.
+    //
+
+    private GlpiHealthStatusDto glpiHealthDetails;
 
     // =========================
     // Frescura de datos
@@ -184,11 +198,22 @@ public class GlpiSummary {
         return operationalBacklog;
     }
 
+    public GlpiHealthStatusDto getGlpiHealthDetails() {
+        return glpiHealthDetails;
+    }
+
     public void setOperationalBacklog(
             int operationalBacklog
     ) {
         this.operationalBacklog =
                 operationalBacklog;
+    }
+
+    public void setGlpiHealthDetails(
+            GlpiHealthStatusDto glpiHealthDetails
+    ) {
+        this.glpiHealthDetails =
+                glpiHealthDetails;
     }
 
     public LocalDateTime getLastUpdated() {

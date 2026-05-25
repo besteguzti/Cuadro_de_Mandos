@@ -137,6 +137,10 @@ function GlpiPage() {
     );
   }
 
+  const glpiHealthDetails = summary.glpiHealthDetails;
+  const glpiHealth = glpiHealthDetails?.color ?? "UNKNOWN";
+  const glpiReasons = glpiHealthDetails?.reasons ?? [];
+
   return (
     <main className="dashboard">
       <header className="dashboard-header">
@@ -156,6 +160,27 @@ function GlpiPage() {
           </p>
         </div>
       </header>
+
+      <section className={`status status-${glpiHealth.toLowerCase()}`}>
+        <div className="status-main">
+          <span>Indice de salud GLPI</span>
+          <strong>Afeccion: {glpiHealthDetails?.percentage ?? 0} %</strong>
+          <p>Estado: {formatGlpiStatus(glpiHealth)}</p>
+        </div>
+
+        <div className="status-reasons">
+          <span>Motivos</span>
+          {glpiReasons.length > 0 ? (
+            <ul>
+              {glpiReasons.slice(0, 4).map((reason) => (
+                <li key={reason}>{reason}</li>
+              ))}
+            </ul>
+          ) : (
+            <p>Sin motivos activos</p>
+          )}
+        </div>
+      </section>
 
       <p>
         Supervisión simulada de tickets, actividad semanal, SLA y backlog
@@ -281,6 +306,22 @@ function formatSnapshotDate(value) {
   }
 
   return new Date(value).toLocaleString();
+}
+
+function formatGlpiStatus(status) {
+  if (status === "GREEN") {
+    return "Verde";
+  }
+
+  if (status === "YELLOW") {
+    return "Amarillo";
+  }
+
+  if (status === "RED") {
+    return "Rojo";
+  }
+
+  return status;
 }
 
 export default GlpiPage;

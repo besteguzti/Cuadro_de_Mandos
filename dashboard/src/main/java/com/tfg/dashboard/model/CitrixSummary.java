@@ -2,6 +2,8 @@ package com.tfg.dashboard.model;
 
 import java.time.LocalDateTime;
 
+import com.tfg.dashboard.dto.CitrixHealthStatusDto;
+
 public class CitrixSummary {
 
     private int activeSessions;
@@ -21,6 +23,12 @@ public class CitrixSummary {
     private int failedLogons;
 
     private String citrixHealth;
+
+    // Detalle normalizado del indice
+    // Citrix. Mantiene citrixHealth
+    // como semaforo simple para no
+    // romper consumidores actuales.
+    private CitrixHealthStatusDto citrixHealthDetails;
 
     // =========================
     // Frescura de datos
@@ -108,6 +116,16 @@ public class CitrixSummary {
 
     public void setCitrixHealth(String citrixHealth) {
         this.citrixHealth = citrixHealth;
+    }
+
+    public CitrixHealthStatusDto getCitrixHealthDetails() {
+        return citrixHealthDetails;
+    }
+
+    public void setCitrixHealthDetails(
+            CitrixHealthStatusDto citrixHealthDetails
+    ) {
+        this.citrixHealthDetails = citrixHealthDetails;
     }
 
     public LocalDateTime getLastUpdated() {

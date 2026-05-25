@@ -1,17 +1,28 @@
-# Cuadro de Mandos
+# Cuadro de Mandos TFG
 
-Cuadro de mandos para visualizar el estado de los puntos de acceso Aruba y mantener una copia actualizada en MySQL.
+Dashboard multiproveedor para monitorizar Aruba, Citrix, Microsoft 365 y GLPI.
+
+El proyecto combina un backend Spring Boot, una base de datos MySQL y un frontend React/Vite. Aruba se integra con datos reales de Aruba Central. Citrix, Microsoft 365 y GLPI usan datos simulados dinamicos que se guardan como snapshots en MySQL para alimentar historicos y KPIs transversales.
 
 ## Arquitectura
 
 - `dashboard`: backend Spring Boot.
 - `frontend`: interfaz React + Vite.
-- `dashboard.access_points`: tabla MySQL con una fila por AP, identificada por numero de serie.
-- `dashboard.aruba_switches`: tabla MySQL con una fila por switch Aruba, identificado por numero de serie.
-- `dashboard.aruba_dashboard_metrics`: ultimos KPIs agregados de firmware y clientes WiFi.
-- `dashboard.aruba_switch_client_usage`: tabla MySQL con interfaces en down agrupadas por switch.
-- `dashboard.aruba_switch_interface_usage_history`: historico de interfaces en down por switch.
-- Aruba Central: fuente de datos de APs y firmware.
+- MySQL: persistencia de inventario, snapshots e historicos.
+- Aruba Central: fuente real para APs, switches, firmware, clientes WiFi y puertos.
+- Citrix, Microsoft 365 y GLPI: datos simulados dinamicos persistidos cada minuto.
+
+## Tablas principales
+
+- `access_points`: APs Aruba, una fila por numero de serie.
+- `aruba_switches`: switches Aruba, una fila por numero de serie.
+- `aruba_dashboard_metrics`: KPIs agregados Aruba, como firmware y clientes WiFi.
+- `aruba_switch_client_usage`: ultimo recuento de interfaces down por switch.
+- `aruba_switch_interface_usage_history`: historico de interfaces down por switch.
+- `citrix_metrics_history`: snapshots historicos Citrix.
+- `microsoft365_metrics_history`: snapshots historicos Microsoft 365.
+- `glpi_metrics_history`: snapshots historicos GLPI.
+- `oauth_tokens`: token OAuth usado para Aruba Central.
 
 ## Requisitos
 
@@ -19,11 +30,11 @@ Cuadro de mandos para visualizar el estado de los puntos de acceso Aruba y mante
 - Maven.
 - Node.js y npm.
 - MySQL con una base de datos llamada `dashboard`.
-- Token OAuth de Aruba guardado en la tabla `oauth_tokens`.
+- Credenciales Aruba Central.
 
-## Variables de Entorno
+## Variables de entorno
 
-El backend usa estas variables:
+Backend:
 
 ```powershell
 $env:DB_USERNAME="usuario_mysql"
@@ -32,179 +43,259 @@ $env:ARUBA_CLIENT_ID="client_id_aruba"
 $env:ARUBA_CLIENT_SECRET="client_secret_aruba"
 ```
 
-La URL base de Aruba esta configurada en `dashboard/src/main/resources/application.properties`:
+Frontend:
+
+```powershell
+$env:VITE_API_BASE_URL="http://localhost:8080"
+```
+
+Si no se define `VITE_API_BASE_URL`, el frontend usa `http://localhost:8080` por defecto. Hay un ejemplo en `frontend/.env.example`.
+
+## Configuracion relevante
+
+`dashboard/src/main/resources/application.properties`:
 
 ```properties
+spring.datasource.url=jdbc:mysql://localhost:3306/dashboard
+spring.datasource.username=${DB_USERNAME}
+spring.datasource.password=${DB_PASSWORD}
+
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.show-sql=false
+spring.jpa.properties.hibernate.format_sql=false
+
 aruba.base.url=https://apigw-eucentral3.central.arubanetworks.com
 aruba.sync.initial-delay-ms=60000
 aruba.sync.fixed-rate-ms=3600000
 ```
 
-## Arrancar Backend
+CORS se gestiona de forma global con `CorsConfig`.
 
-Desde la carpeta `dashboard`:
+## Arrancar backend
+
+Desde `dashboard`:
 
 ```powershell
 mvn spring-boot:run
 ```
 
-El backend queda disponible en:
+Backend:
 
 ```text
 http://localhost:8080
 ```
 
-## Arrancar Frontend
+## Arrancar frontend
 
-Desde la carpeta `frontend`:
+Desde `frontend`:
 
 ```powershell
 npm install
 npm run dev
 ```
 
-El frontend queda disponible en:
+Frontend:
 
 ```text
 http://localhost:5173
 ```
 
-## Endpoints Principales
+## Sincronizacion automatica
 
-Resumen del dashboard. Lee MySQL y devuelve KPIs sin consultar Aruba:
+El proyecto tiene scheduling habilitado con `@EnableScheduling`.
+
+### Aruba
+
+`ArubaScheduler` ejecuta `arubaService.syncAll()` con estos parametros:
+
+- `aruba.sync.initial-delay-ms`
+- `aruba.sync.fixed-rate-ms`
+
+La sincronizacion de Aruba:
+
+- Guarda APs por numero de serie.
+- Guarda switches por numero de serie.
+- Actualiza firmware pendiente.
+- Agrega clientes WiFi por grupo y red.
+- Consulta puertos por switch y guarda interfaces en down.
+- Inserta historico de interfaces down.
+
+`GET /aruba/summary` no consulta Aruba directamente; lee datos ya sincronizados desde MySQL.
+
+### Citrix, Microsoft 365 y GLPI
+
+`MetricsSyncService` guarda un snapshot por plataforma cada minuto:
+
+- Citrix.
+- Microsoft 365.
+- GLPI.
+
+Cada plataforma se sincroniza de forma independiente. Si una falla, las demas siguen guardando snapshots.
+
+Tambien aplica retencion de 90 dias sobre:
+
+- `citrix_metrics_history`
+- `microsoft365_metrics_history`
+- `glpi_metrics_history`
+
+## Frescura de datos
+
+Los summaries exponen:
+
+- `lastUpdated`
+- `dataStatus`
+
+Valores de `dataStatus`:
+
+- `OK`: datos recientes.
+- `STALE`: datos antiguos.
+- `NO_DATA`: no existen datos.
+
+Criterios actuales:
+
+- Citrix, Microsoft 365 y GLPI: 2 minutos.
+- Aruba: 10 minutos.
+
+El dashboard principal no debe aparecer como `GREEN` si alguna fuente esta `STALE` o `NO_DATA`.
+
+## Endpoints principales
+
+Dashboard principal:
 
 ```http
-GET http://localhost:8080/aruba/summary
+GET http://localhost:8080/dashboard/summary
 ```
 
-Listado directo desde Aruba:
+Aruba:
 
 ```http
-GET http://localhost:8080/aruba/aps
-```
-
-Listado guardado en MySQL:
-
-```http
-GET http://localhost:8080/aruba/stored-aps
-```
-
-Listado de switches directo desde Aruba:
-
-```http
-GET http://localhost:8080/aruba/switches
-```
-
-Listado de switches guardado en MySQL:
-
-```http
-GET http://localhost:8080/aruba/stored-switches
-```
-
-Uso de interfaces en down por switch guardado en MySQL:
-
-```http
-GET http://localhost:8080/aruba/switch-client-usage
-```
-
-Listado de clientes WiFi conectado en vivo desde Aruba. No se guarda en MySQL:
-
-```http
-GET http://localhost:8080/aruba/wifi-clients
-```
-
-Sincronizacion manual de APs en MySQL:
-
-```http
+GET  http://localhost:8080/aruba/summary
+GET  http://localhost:8080/aruba/aps
+GET  http://localhost:8080/aruba/stored-aps
+GET  http://localhost:8080/aruba/switches
+GET  http://localhost:8080/aruba/stored-switches
+GET  http://localhost:8080/aruba/switch-client-usage
+GET  http://localhost:8080/aruba/wifi-clients
+GET  http://localhost:8080/aruba/wifi-clients/diagnostics
 POST http://localhost:8080/aruba/sync-aps
-```
-
-Sincronizacion manual de switches en MySQL:
-
-```http
 POST http://localhost:8080/aruba/sync-switches
-```
-
-Sincronizacion manual de interfaces en down por switch:
-
-```http
 POST http://localhost:8080/aruba/sync-switch-client-usage
-```
-
-Sincronizacion completa de datos Aruba:
-
-```http
 POST http://localhost:8080/aruba/sync-all
 ```
 
-## Sincronizacion Automatica
+Citrix, Microsoft 365 y GLPI:
 
-El backend sincroniza APs, switches, firmware, clientes WiFi agregados e interfaces en down automaticamente con `ArubaScheduler`:
-
-- Primera ejecucion: configurable con `aruba.sync.initial-delay-ms`.
-- Frecuencia: configurable con `aruba.sync.fixed-rate-ms`.
-
-`GET /aruba/summary` no consulta Aruba ni escribe historico; solo lee datos ya sincronizados desde MySQL.
-
-Cada AP se guarda en `access_points` usando el numero de serie como clave logica. Cada switch se guarda en `aruba_switches` con el mismo criterio. `firstSeenAt` guarda cuando se vio por primera vez y no se sobrescribe; `lastSeenAt` se actualiza en cada sincronizacion.
-
-Los switches se consultan en `GET /monitoring/v1/switches` y se guardan por numero de serie. Despues, para cada serial se consulta `GET /monitoring/v1/switches/{serial}/ports`, se cuentan los puertos con `status` igual a `down` y se guarda el ultimo estado en `aruba_switch_client_usage`. Cada sincronizacion tambien inserta una muestra en `aruba_switch_interface_usage_history`. En el dashboard solo se muestran como infrautilizados los switches que en los ultimos 30 dias han estado siempre `Up` y siempre con mas de 17 interfaces en `down`.
-
-## Comprobar Flujo Real con MySQL
-
-1. Arranca MySQL y comprueba que existe la base de datos:
-
-```sql
-CREATE DATABASE IF NOT EXISTS dashboard;
+```http
+GET http://localhost:8080/citrix/summary
+GET http://localhost:8080/microsoft365/summary
+GET http://localhost:8080/glpi/summary
 ```
 
-2. Arranca el backend.
+## Vistas React
 
-3. Fuerza una sincronizacion manual:
+El frontend tiene estas paginas:
 
-```powershell
-curl.exe -X POST http://localhost:8080/aruba/sync-aps
+- Principal: KPIs transversales.
+- Analisis: comparacion exploratoria entre KPIs transversales.
+- Aruba: APs, clientes WiFi, switches y switches infrautilizados.
+- Citrix: KPIs simulados persistidos.
+- Microsoft 365: KPIs simulados persistidos.
+- GLPI: KPIs simulados persistidos.
+
+Las tarjetas KPI pueden mostrar informacion explicativa desplegable cuando tienen configurada la prop `info`.
+
+## Modulo de analisis exploratorio
+
+La pagina `Análisis` permite seleccionar un KPI transversal como eje X y despues un KPI relacionado como eje Y. Los KPIs no relacionados se opacan y no se pueden seleccionar. Cuando hay dos KPIs seleccionados, se muestra una grafica de dispersion, correlacion de Pearson e interpretacion automatica.
+
+Endpoints:
+
+```http
+GET http://localhost:8080/api/analytics/transversal-kpis
+GET http://localhost:8080/api/analytics/compare?kpiX=global_criticality&kpiY=global_health&period=30d
 ```
 
-4. Comprueba la tabla:
+Los snapshots transversales se guardan en:
 
-```sql
-SELECT * FROM dashboard.access_points;
+```text
+transversal_kpi_history
 ```
 
-5. Comprueba tambien el endpoint que lee desde MySQL:
+## KPIs principales
 
-```powershell
-curl.exe http://localhost:8080/aruba/stored-aps
-```
+### Dashboard principal
 
-## KPIs del Dashboard
+- Estado global.
+- Riesgo operativo global.
+- Servicios con alerta.
+- Actividad agregada observada.
+- Elementos que requieren accion.
+- Tickets criticos abiertos.
+- Riesgos de seguridad.
+- Presion de capacidad.
 
-El frontend muestra:
+### Aruba
 
 - Total APs.
 - APs activos.
 - APs caidos.
-- Sites.
-- Swarms.
 - Firmware pendiente.
-- APs sin IP publica.
 - APs inactivos.
+- Clientes WiFi por grupo.
+- Clientes `MUTUALIA-WIFI` por red.
 - Total switches.
 - Switches apagados.
-- Switches que necesitan upgrade de firmware.
-- Switches infrautilizados con mas de 17 interfaces en `down` en los ultimos 30 dias.
-- Clientes conectados en `MUTUALIA-APs`.
-- Clientes conectados en `MUTUALIA-WIFI`.
-- Clientes de `MUTUALIA-WIFI` separados por SSID:
-  - `MUTUALIA_LANGILEAK`
-  - `MUTUALIA`
-  - `MUTUALIA_RED_INTERNA`
-  - `MUTUALIA_RED_EXTERNA`
-  - `MUTUALIA_KORPORATIBOA`
-  - `WIFI_PACs`
-  - `MUT_VIDEO`
-- Estado general de red.
+- Switches con upgrade.
+- Switches infrautilizados.
+
+Los switches infrautilizados son los que han estado `Up` y con mas de 17 interfaces en `down` durante los ultimos 30 dias disponibles.
+
+### Citrix
+
+- Sesiones activas.
+- Licencias activas.
+- Delivery Controllers disponibles.
+- Sesiones desconectadas.
+- Average Logon Duration.
+- Carga de servidores.
+- Errores de inicio.
+- Indice salud Citrix.
+
+### Microsoft 365
+
+- Usuarios activos.
+- Licencias no asignadas.
+- Estado Outlook, Teams y SharePoint.
+- Buzones casi llenos.
+- Emails en cuarentena.
+- Almacenamiento SharePoint.
+- Riesgos de identidad, MFA, aplicaciones y dispositivos.
+- Indice salud Microsoft 365.
+- Riesgo operativo Microsoft.
+
+### GLPI
+
+- Tickets abiertos.
+- Tickets criticos abiertos.
+- Tickets vencidos SLA.
+- Tiempo medio de resolucion.
+- Backlog operativo.
+- Tickets creados/cerrados hoy.
+- Tickets creados/cerrados semana.
+
+## Comprobaciones MySQL
+
+```sql
+SELECT * FROM dashboard.access_points;
+SELECT * FROM dashboard.aruba_switches;
+SELECT * FROM dashboard.aruba_dashboard_metrics;
+SELECT * FROM dashboard.aruba_switch_client_usage;
+SELECT * FROM dashboard.aruba_switch_interface_usage_history ORDER BY observed_at DESC;
+
+SELECT * FROM dashboard.citrix_metrics_history ORDER BY collected_at DESC;
+SELECT * FROM dashboard.microsoft365_metrics_history ORDER BY collected_at DESC;
+SELECT * FROM dashboard.glpi_metrics_history ORDER BY collected_at DESC;
+```
 
 ## Verificacion
 
@@ -212,13 +303,37 @@ Backend:
 
 ```powershell
 cd dashboard
-mvn -q -DskipTests compile
-mvn test
+mvn clean test
+mvn clean install
 ```
 
 Frontend:
 
 ```powershell
 cd frontend
+npm install
 npm run build
 ```
+
+Comprobaciones utiles:
+
+```powershell
+curl.exe http://localhost:8080/dashboard/summary
+curl.exe http://localhost:8080/aruba/summary
+curl.exe http://localhost:8080/citrix/summary
+curl.exe http://localhost:8080/microsoft365/summary
+curl.exe http://localhost:8080/glpi/summary
+```
+
+## Notas para repositorio
+
+No subir artefactos generados ni dependencias descargadas:
+
+- `node_modules/`
+- `target/`
+- `dist/`
+- `build/`
+- `.env`
+- `*.log`
+- `*.tmp`
+- `*.zip`

@@ -44,6 +44,9 @@ class MetricsSyncServiceTest {
     @Mock
     private GlpiMetricsHistoryRepository glpiRepository;
 
+    @Mock
+    private TransversalKpiAnalyticsService analyticsService;
+
     private MetricsSyncService service;
 
     @BeforeEach
@@ -55,7 +58,8 @@ class MetricsSyncServiceTest {
                 glpiService,
                 citrixRepository,
                 microsoft365Repository,
-                glpiRepository
+                glpiRepository,
+                analyticsService
         );
     }
 
@@ -86,6 +90,7 @@ class MetricsSyncServiceTest {
         assertThat(citrixCaptor.getValue().getCollectedAt()).isNotNull();
         assertThat(microsoftCaptor.getValue().getCollectedAt()).isNotNull();
         assertThat(glpiCaptor.getValue().getCollectedAt()).isNotNull();
+        verify(analyticsService).saveCurrentSnapshot(any());
     }
 
     @Test

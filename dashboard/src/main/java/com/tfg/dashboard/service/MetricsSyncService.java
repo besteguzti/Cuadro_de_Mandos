@@ -46,13 +46,16 @@ public class MetricsSyncService {
 
     private final GlpiMetricsHistoryRepository glpiRepository;
 
+    private final TransversalKpiAnalyticsService analyticsService;
+
     public MetricsSyncService(
             CitrixService citrixService,
             Microsoft365Service microsoft365Service,
             GlpiService glpiService,
             CitrixMetricsHistoryRepository citrixRepository,
             Microsoft365MetricsHistoryRepository microsoft365Repository,
-            GlpiMetricsHistoryRepository glpiRepository
+            GlpiMetricsHistoryRepository glpiRepository,
+            TransversalKpiAnalyticsService analyticsService
     ) {
 
         this.citrixService = citrixService;
@@ -61,6 +64,7 @@ public class MetricsSyncService {
         this.citrixRepository = citrixRepository;
         this.microsoft365Repository = microsoft365Repository;
         this.glpiRepository = glpiRepository;
+        this.analyticsService = analyticsService;
     }
 
     // =========================
@@ -111,6 +115,16 @@ public class MetricsSyncService {
         } catch (Exception exception) {
 
             log.error("Error sincronizando metricas GLPI", exception);
+        }
+
+        try {
+
+            analyticsService.saveCurrentSnapshot(collectedAt);
+            log.info("Snapshot transversal guardado");
+
+        } catch (Exception exception) {
+
+            log.error("Error guardando snapshot transversal", exception);
         }
 
         cleanOldMetrics();

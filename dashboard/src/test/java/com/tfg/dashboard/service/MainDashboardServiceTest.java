@@ -50,20 +50,34 @@ class MainDashboardServiceTest {
     }
 
     @Test
-    void globalHealthIsRedWhenAnySourceIsRed() {
+    void globalHealthIsRedWhenWeightedAffectationIsHigh() {
 
         baseHealthyData();
+
+        ArubaSummary aruba =
+                healthyAruba();
+        aruba.setNetworkStatus("RED");
 
         CitrixMetricsHistory citrix =
                 healthyCitrix(LocalDateTime.now());
         citrix.setCitrixHealth("RED");
 
+        Microsoft365MetricsHistory microsoft365 =
+                healthyMicrosoft365(LocalDateTime.now());
+        microsoft365.setMicrosoft365Health("RED");
+
+        when(arubaService.getSummary())
+                .thenReturn(aruba);
         when(citrixRepository.findTopByOrderByCollectedAtDesc())
                 .thenReturn(Optional.of(citrix));
+        when(microsoft365Repository.findTopByOrderByCollectedAtDesc())
+                .thenReturn(Optional.of(microsoft365));
 
         MainDashboardSummary summary =
                 service.getSummary();
 
+        assertThat(summary.getGlobalHealthPercentage())
+                .isGreaterThanOrEqualTo(67);
         assertThat(summary.getGlobalHealth()).isEqualTo("RED");
     }
 
@@ -107,7 +121,7 @@ class MainDashboardServiceTest {
 
         ArubaSummary aruba =
                 healthyAruba();
-        aruba.setDownAps(1);
+        aruba.setNetworkStatus("YELLOW");
 
         when(arubaService.getSummary())
                 .thenReturn(aruba);

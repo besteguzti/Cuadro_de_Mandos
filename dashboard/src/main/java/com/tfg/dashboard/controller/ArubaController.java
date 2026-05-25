@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.tfg.dashboard.dto.ArubaApInfo;
+import com.tfg.dashboard.dto.ArubaNetworkStatusDto;
 import com.tfg.dashboard.dto.ArubaSwitchInfo;
 import com.tfg.dashboard.dto.ArubaWifiClientInfo;
 import com.tfg.dashboard.model.AccessPoint;
@@ -31,6 +32,12 @@ public class ArubaController {
     public ArubaSummary getSummary() {
 
         return service.getSummary();
+    }
+
+    @GetMapping("/network-status")
+    public ArubaNetworkStatusDto getNetworkStatus() {
+
+        return service.getNetworkStatus();
     }
 
     @GetMapping("/aps")

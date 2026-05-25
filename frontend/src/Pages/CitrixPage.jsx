@@ -117,7 +117,10 @@ function CitrixPage() {
     );
   }
 
-  const citrixHealth = summary?.citrixHealth ?? "UNKNOWN";
+  const citrixHealthDetails = summary?.citrixHealthDetails;
+  const citrixHealth =
+    citrixHealthDetails?.color ?? summary?.citrixHealth ?? "UNKNOWN";
+  const citrixReasons = citrixHealthDetails?.reasons ?? [];
 
   return (
     <main className="dashboard">
@@ -149,6 +152,28 @@ function CitrixPage() {
       )}
 
       {summary ? (
+        <>
+        <section className={`status status-${citrixHealth.toLowerCase()}`}>
+          <div className="status-main">
+            <span>Indice de salud Citrix</span>
+            <strong>Afeccion: {citrixHealthDetails?.percentage ?? 0} %</strong>
+            <p>Estado: {formatCitrixStatus(citrixHealth)}</p>
+          </div>
+
+          <div className="status-reasons">
+            <span>Motivos</span>
+            {citrixReasons.length > 0 ? (
+              <ul>
+                {citrixReasons.slice(0, 4).map((reason) => (
+                  <li key={reason}>{reason}</li>
+                ))}
+              </ul>
+            ) : (
+              <p>Sin motivos activos</p>
+            )}
+          </div>
+        </section>
+
         <section className="dashboard-section">
           <div className="kpi-grid">
             <KpiCard
@@ -221,20 +246,9 @@ function CitrixPage() {
               info={citrixKpiInfo.failedLogons}
             />
 
-            <KpiCard
-              title="Indice salud Citrix"
-              value={citrixHealth}
-              status={
-                citrixHealth === "RED"
-                  ? "danger"
-                  : citrixHealth === "YELLOW"
-                    ? "warning"
-                    : "ok"
-              }
-              info={citrixKpiInfo.citrixHealth}
-            />
           </div>
         </section>
+        </>
       ) : (
         <p className="loading">No se han podido cargar los datos Citrix.</p>
       )}
@@ -248,6 +262,22 @@ function formatSnapshotDate(value) {
   }
 
   return new Date(value).toLocaleString();
+}
+
+function formatCitrixStatus(status) {
+  if (status === "GREEN") {
+    return "Verde";
+  }
+
+  if (status === "YELLOW") {
+    return "Amarillo";
+  }
+
+  if (status === "RED") {
+    return "Rojo";
+  }
+
+  return status;
 }
 
 export default CitrixPage;

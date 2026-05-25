@@ -2,6 +2,8 @@ package com.tfg.dashboard.model;
 
 import java.time.LocalDateTime;
 
+import com.tfg.dashboard.dto.Microsoft365HealthStatusDto;
+
 public class Microsoft365Summary {
 
     // =========================
@@ -69,6 +71,13 @@ public class Microsoft365Summary {
     // =========================
 
     private String microsoft365Health;
+
+    // Detalle normalizado del indice
+    // Microsoft 365. Se mantiene
+    // microsoft365Health como semaforo
+    // simple para no romper consumidores
+    // existentes.
+    private Microsoft365HealthStatusDto microsoft365HealthDetails;
 
     private int microsoft365OperationalRisk;
 
@@ -238,6 +247,16 @@ public class Microsoft365Summary {
 
     public void setMicrosoft365Health(String microsoft365Health) {
         this.microsoft365Health = microsoft365Health;
+    }
+
+    public Microsoft365HealthStatusDto getMicrosoft365HealthDetails() {
+        return microsoft365HealthDetails;
+    }
+
+    public void setMicrosoft365HealthDetails(
+            Microsoft365HealthStatusDto microsoft365HealthDetails
+    ) {
+        this.microsoft365HealthDetails = microsoft365HealthDetails;
     }
 
     public int getMicrosoft365OperationalRisk() {

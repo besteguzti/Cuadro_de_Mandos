@@ -8,67 +8,75 @@ import { API_BASE_URL } from "../config/api";
 const mainKpiInfo = {
     globalHealth: {
         description:
-            "Resume el estado general de la plataforma combinando señales de Aruba, Citrix, Microsoft 365 y GLPI.",
+            "Resume la afeccion general de la plataforma combinando Aruba, Citrix, Microsoft 365 y GLPI.",
         algorithm:
-            "Se calcula aplicando reglas de prioridad: si alguna plataforma presenta estado crítico se muestra RED; si existe alguna degradación o alerta moderada se muestra YELLOW; si no existen alertas se muestra GREEN.",
+            "Se calcula como Aruba 40%, Citrix 30%, Microsoft 365 20% y GLPI 10%, usando una escala comun de afeccion 0-100.",
         interpretation:
-            "Permite obtener una visión rápida del estado global de la infraestructura sin consultar cada plataforma por separado."
+            "0-33 es verde, 34-66 amarillo y 67-100 rojo. Cuanto mas alto, mayor afeccion global."
     },
-    globalOperationalRisk: {
+    globalCriticality: {
         description:
-            "Índice agregado que resume el nivel de riesgo operativo observado en las distintas plataformas.",
+            "Mide la presencia de condiciones criticas en rojo dentro de las plataformas.",
         algorithm:
-            "Combina señales como riesgo Microsoft 365, tickets críticos y SLA de GLPI, carga y errores de Citrix, y caídas o firmware pendiente de Aruba. El resultado se limita a una escala de 0 a 100.",
+            "Promedia indicadores normalizados: correcto 0, advertencia 50 y critico 100.",
         interpretation:
-            "Valores bajos indican situación estable. Valores medios indican degradación o riesgo moderado. Valores altos indican necesidad de revisión prioritaria."
+            "Un valor alto indica que existen senales criticas repartidas por varias plataformas."
     },
-    servicesWithAlerts: {
+    globalAvailability: {
         description:
-            "Cuenta cuántas áreas o plataformas presentan alguna alerta activa.",
+            "Mide la afeccion sobre la disponibilidad de los servicios principales.",
         algorithm:
-            "Se incrementa si Aruba, Citrix, Microsoft 365 o GLPI presentan estado distinto de correcto o tienen incidencias relevantes.",
+            "Combina disponibilidad Aruba 45%, Citrix 35%, Microsoft 365 15% y GLPI 5%.",
         interpretation:
-            "Permite saber rápidamente cuántos dominios tecnológicos requieren atención."
+            "Cuanto mas alto, mayor riesgo de que los servicios no esten disponibles."
     },
-    totalActiveUsers: {
+    operationalPressure: {
         description:
-            "Representa la actividad agregada observada en las plataformas integradas.",
+            "Mide la carga de trabajo tecnica y operativa acumulada.",
         algorithm:
-            "Suma métricas de actividad como sesiones activas Citrix, usuarios activos Microsoft 365 y, si existe, clientes WiFi Aruba.",
+            "Combina GLPI 50%, Citrix 20%, Microsoft 365 20% y Aruba 10%.",
         interpretation:
-            "No representa usuarios únicos reales, ya que un mismo usuario puede aparecer en varias plataformas. Sirve como indicador agregado de actividad."
+            "Un valor alto indica mas presion sobre el area tecnica."
     },
-    itemsRequiringAction: {
+    technicalDegradation: {
         description:
-            "Cuenta elementos técnicos u operativos que requieren intervención.",
+            "Mide deterioro tecnico aunque no exista una caida total.",
         algorithm:
-            "Suma señales como firmware pendiente, equipos no conformes, dispositivos obsoletos, secretos próximos a caducar, SLA vencidos o componentes no disponibles.",
+            "Combina Aruba, Citrix y Microsoft 365 al 30% cada uno, y GLPI al 10%.",
         interpretation:
-            "Un valor elevado indica mayor carga de acciones correctivas pendientes."
+            "Valores altos indican degradacion tecnica que conviene revisar."
     },
-    criticalOpenTickets: {
+    slaRisk: {
         description:
-            "Indica el número de tickets críticos abiertos registrados en GLPI.",
+            "Mide el riesgo de incumplir niveles de servicio.",
         algorithm:
-            "Se obtiene del último snapshot de métricas GLPI almacenado en MySQL.",
+            "Combina Citrix 35%, Aruba 30%, GLPI 25% y Microsoft 365 10%.",
         interpretation:
-            "Un valor mayor que cero indica incidencias de alta prioridad que pueden afectar al servicio."
+            "Un valor alto indica mayor probabilidad de incumplimiento o degradacion percibida."
     },
-    securityRiskItems: {
+    operationalBacklog: {
         description:
-            "Agrega señales de seguridad principalmente procedentes de Microsoft 365.",
+            "Mide el trabajo pendiente acumulado.",
         algorithm:
-            "Suma usuarios en riesgo, usuarios sin MFA, aplicaciones con permisos elevados y secretos próximos a caducar.",
+            "Combina GLPI 70%, Microsoft 365 15%, Aruba 10% y Citrix 5%.",
         interpretation:
-            "Un valor elevado indica mayor exposición de seguridad o necesidad de revisión."
+            "Un valor alto indica acumulacion de trabajo pendiente o acciones tecnicas."
     },
-    capacityPressure: {
+    userImpact: {
         description:
-            "Índice que resume la presión sobre recursos y operación.",
+            "Mide la afeccion que pueden percibir los usuarios.",
         algorithm:
-            "Combina carga de servidores Citrix, almacenamiento SharePoint y backlog operativo GLPI, normalizando el resultado en una escala de 0 a 100.",
+            "Combina Citrix 35%, Aruba 35%, Microsoft 365 20% y GLPI 10%.",
         interpretation:
-            "Valores altos indican mayor presión operativa o riesgo de saturación."
+            "Un valor alto indica mayor probabilidad de impacto visible para usuarios."
+    },
+    affectedServices: {
+        description:
+            "Mide cuantas plataformas estan afectadas.",
+        algorithm:
+            "Cada plataforma en amarillo o rojo suma un 25%: Aruba, Citrix, Microsoft 365 y GLPI.",
+        interpretation:
+            "0% significa ninguna plataforma afectada. 100% significa las cuatro plataformas afectadas."
     }
 };
 
@@ -148,76 +156,61 @@ function MainPage() {
         );
     }
 
-    const healthStatus =
-        summary?.globalHealth === "RED"
-            ? "danger"
-            : summary?.globalHealth === "YELLOW"
-                ? "warning"
-                : "ok";
-
-    const riskStatus =
-        summary?.globalOperationalRisk >= 60
-            ? "danger"
-            : summary?.globalOperationalRisk >= 30
-                ? "warning"
-                : "ok";
-
-    const capacityStatus =
-        summary?.capacityPressure >= 80
-            ? "danger"
-            : summary?.capacityPressure >= 60
-                ? "warning"
-                : "ok";
-
     const cards = summary
         ? [
             {
                 title: "Estado global",
-                value: summary.globalHealth,
-                status: healthStatus,
+                value: `${summary.globalHealthPercentage}%`,
+                status: statusFromPercentage(summary.globalHealthPercentage),
                 info: mainKpiInfo.globalHealth
             },
             {
-                title: "Riesgo operativo global",
-                value: `${summary.globalOperationalRisk}%`,
-                status: riskStatus,
-                info: mainKpiInfo.globalOperationalRisk
+                title: "Criticidad global",
+                value: `${summary.globalCriticality}%`,
+                status: statusFromPercentage(summary.globalCriticality),
+                info: mainKpiInfo.globalCriticality
             },
             {
-                title: "Servicios con alerta",
-                value: summary.servicesWithAlerts,
-                status: summary.servicesWithAlerts > 0 ? "warning" : "ok",
-                info: mainKpiInfo.servicesWithAlerts
+                title: "Disponibilidad global",
+                value: `${summary.globalAvailability}%`,
+                status: statusFromPercentage(summary.globalAvailability),
+                info: mainKpiInfo.globalAvailability
             },
             {
-                title: "Actividad agregada observada",
-                value: summary.totalActiveUsers,
-                status: "ok",
-                info: mainKpiInfo.totalActiveUsers
+                title: "Presion operativa",
+                value: `${summary.operationalPressure}%`,
+                status: statusFromPercentage(summary.operationalPressure),
+                info: mainKpiInfo.operationalPressure
             },
             {
-                title: "Elementos que requieren accion",
-                value: summary.itemsRequiringAction,
-                status: summary.itemsRequiringAction > 0 ? "warning" : "ok",
-                info: mainKpiInfo.itemsRequiringAction
+                title: "Degradacion tecnica",
+                value: `${summary.technicalDegradation}%`,
+                status: statusFromPercentage(summary.technicalDegradation),
+                info: mainKpiInfo.technicalDegradation
             },
             {
-                title: "Tickets criticos abiertos",
-                value: summary.criticalOpenTickets,
-                status: summary.criticalOpenTickets > 0 ? "danger" : "ok",
-                info: mainKpiInfo.criticalOpenTickets
+                title: "Riesgo SLA",
+                value: `${summary.slaRisk}%`,
+                status: statusFromPercentage(summary.slaRisk),
+                info: mainKpiInfo.slaRisk
             },
             {
-                title: "Riesgos de seguridad",
-                value: summary.securityRiskItems,
-                status: summary.securityRiskItems > 0 ? "warning" : "ok",
-                info: mainKpiInfo.securityRiskItems
+                title: "Backlog operativo",
+                value: `${summary.operationalBacklog}%`,
+                status: statusFromPercentage(summary.operationalBacklog),
+                info: mainKpiInfo.operationalBacklog
             },
             {
-                title: "Presion de capacidad",
-                value: `${summary.capacityPressure}%`,
-                status: capacityStatus,
-                info: mainKpiInfo.capacityPressure
+                title: "Impacto en usuarios",
+                value: `${summary.userImpact}%`,
+                status: statusFromPercentage(summary.userImpact),
+                info: mainKpiInfo.userImpact
+            },
+            {
+                title: "Servicios afectados",
+                value: `${summary.affectedServicesPercent}%`,
+                status: statusFromPercentage(summary.affectedServicesPercent),
+                info: mainKpiInfo.affectedServices
             }
         ]
         : [];
@@ -276,6 +269,18 @@ function formatSnapshotDate(value) {
     }
 
     return new Date(value).toLocaleString();
+}
+
+function statusFromPercentage(value) {
+    if (value >= 67) {
+        return "danger";
+    }
+
+    if (value >= 34) {
+        return "warning";
+    }
+
+    return "ok";
 }
 
 export default MainPage;
