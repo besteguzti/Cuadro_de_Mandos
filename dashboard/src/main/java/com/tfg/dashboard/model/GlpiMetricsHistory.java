@@ -9,40 +9,27 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
+/**
+ * Snapshot histórico de métricas GLPI simuladas.
+ *
+ * Conserva tickets, SLA y capacidad de cierre para calcular presión operativa,
+ * frescura y análisis transversal.
+ */
 @Entity
 @Table(name = "glpi_metrics_history")
 public class GlpiMetricsHistory {
 
-    // =========================
-    // Snapshot temporal GLPI
-    // =========================
-    //
-    // Esta tabla almacena muestras
-    // simuladas para disponer de
-    // histórico y poder construir
-    // KPIs transversales.
-    //
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
     private Integer openTickets;
-
     private Integer criticalOpenTickets;
-
     private Integer slaBreachedTickets;
-
     private Integer averageResolutionHours;
-
     private Integer createdToday;
-
     private Integer closedToday;
-
     private Integer createdThisWeek;
-
     private Integer closedThisWeek;
-
     private Integer operationalBacklog;
 
     @Column(name = "collected_at")
@@ -113,11 +100,8 @@ public class GlpiMetricsHistory {
         this.slaBreachedTickets = slaBreachedTickets;
     }
 
-    public void setAverageResolutionHours(
-            Integer averageResolutionHours
-    ) {
-        this.averageResolutionHours =
-                averageResolutionHours;
+    public void setAverageResolutionHours(Integer averageResolutionHours) {
+        this.averageResolutionHours = averageResolutionHours;
     }
 
     public void setCreatedToday(Integer createdToday) {

@@ -8,8 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.tfg.dashboard.model.Microsoft365MetricsHistory;
 
-public interface Microsoft365MetricsHistoryRepository
-        extends JpaRepository<Microsoft365MetricsHistory, Long> {
+public interface Microsoft365MetricsHistoryRepository extends JpaRepository<Microsoft365MetricsHistory, Long> {
 
     Optional<Microsoft365MetricsHistory> findTopByOrderByCollectedAtDesc();
 

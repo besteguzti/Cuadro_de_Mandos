@@ -1,33 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 
-function KpiCard({ title, value, critical = false, status = 'ok', info }) {
-    // =========================
-    // Información opcional KPI
-    // =========================
-    //
-    // La prop info es opcional.
-    // Permite documentar KPIs sin
-    // cambiar el comportamiento de
-    // las tarjetas que no la usan.
-    // Esto mejora la comprensión del
-    // dashboard sin tocar cálculos.
-    //
+function KpiCard({ title, value, critical = false, status, info }) {
     const [isInfoOpen, setIsInfoOpen] = useState(false)
     const cardRef = useRef(null)
     const hasInfo = Boolean(info)
-    const tone = critical ? 'danger' : status
+    const tone = critical ? 'danger' : normalizeStatus(status)
     const classNames = ['kpi-card']
 
-    // =========================
-    // Cierre por click externo
-    // =========================
-    //
-    // useRef permite saber si el
-    // click ocurre fuera de la
-    // tarjeta y del popover.
-    // El listener se elimina para
-    // evitar fugas de memoria.
-    //
+    // Cierra el popover informativo al hacer click fuera de la tarjeta.
     useEffect(() => {
         if (!isInfoOpen) {
             return undefined
@@ -53,12 +33,20 @@ function KpiCard({ title, value, critical = false, status = 'ok', info }) {
         classNames.push('kpi-card-with-info')
     }
 
+    if (tone === 'ok') {
+        classNames.push('kpi-card-ok')
+    }
+
     if (tone === 'danger') {
         classNames.push('kpi-card-critical')
     }
 
     if (tone === 'warning') {
         classNames.push('kpi-card-warning')
+    }
+
+    if (tone === 'no-data') {
+        classNames.push('kpi-card-no-data')
     }
 
     return (
@@ -107,6 +95,61 @@ function KpiCard({ title, value, critical = false, status = 'ok', info }) {
 
         </article>
     )
+}
+
+function normalizeStatus(status) {
+    // El backend decide el estado; la tarjeta solo traduce estados explícitos a clases CSS.
+    // Null o vacío se tratan como neutro para no pintar como GREEN ni como RED una tarjeta informativa.
+    const normalized =
+        status === null || status === undefined
+            ? 'NEUTRAL'
+            : String(status).trim().toUpperCase()
+
+    if (normalized === '') {
+        return 'neutral'
+    }
+
+    if (
+        normalized === 'RED'
+        || normalized === 'DANGER'
+        || normalized === 'INCIDENT'
+    ) {
+        return 'danger'
+    }
+
+    if (
+        normalized === 'NO_DATA'
+        || normalized === 'STALE'
+    ) {
+        return 'no-data'
+    }
+
+    if (
+        normalized === 'YELLOW'
+        || normalized === 'WARNING'
+        || normalized === 'WARN'
+        || normalized === 'DEGRADED'
+    ) {
+        return 'warning'
+    }
+
+    if (
+        normalized === 'GREEN'
+        || normalized === 'OK'
+        || normalized === 'HEALTHY'
+    ) {
+        return 'ok'
+    }
+
+    if (
+        normalized === 'NEUTRAL'
+        || normalized === 'INFO'
+        || normalized === 'UNKNOWN'
+    ) {
+        return 'neutral'
+    }
+
+    return 'neutral'
 }
 
 export default KpiCard

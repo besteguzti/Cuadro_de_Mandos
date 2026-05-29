@@ -3,23 +3,14 @@ package com.tfg.dashboard.dto;
 public class ArubaWifiClientInfo {
 
     private String associatedDevice;
-
     private String associatedDeviceMac;
-
     private String associatedDeviceName;
-
     private String groupName;
-
     private String hostname;
-
     private String ipAddress;
-
     private Long lastConnectionTime;
-
     private String macaddr;
-
     private String network;
-
     private String osType;
 
     public String getAssociatedDevice() {

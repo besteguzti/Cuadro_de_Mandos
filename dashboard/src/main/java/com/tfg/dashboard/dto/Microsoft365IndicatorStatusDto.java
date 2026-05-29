@@ -3,11 +3,8 @@ package com.tfg.dashboard.dto;
 public class Microsoft365IndicatorStatusDto {
 
     private String name;
-
     private String color;
-
     private int affectionPercent;
-
     private String reason;
 
     public String getName() {

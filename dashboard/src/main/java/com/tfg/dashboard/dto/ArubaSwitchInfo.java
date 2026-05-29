@@ -3,17 +3,11 @@ package com.tfg.dashboard.dto;
 public class ArubaSwitchInfo {
 
     private String serial;
-
     private String macAddress;
-
     private String hostname;
-
     private String model;
-
     private String deviceStatus;
-
     private boolean upgradeRequired;
-
     private String statusState;
 
     public String getSerial() {

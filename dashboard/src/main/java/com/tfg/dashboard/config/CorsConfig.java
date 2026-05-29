@@ -5,25 +5,14 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
+/**
+ * Configura CORS de forma global para todos los controladores REST.
+ *
+ * Evita repetir @CrossOrigin en cada controller y permite que el frontend Vite
+ * local consuma el backend durante el desarrollo.
+ */
 @Configuration
 public class CorsConfig {
-
-    // =========================
-    // Configuración CORS global
-    // =========================
-    //
-    // Permite que el frontend React
-    // ejecutado con Vite en localhost:5173
-    // pueda consumir los endpoints REST
-    // del backend Spring Boot.
-    //
-    // Esto aplica a:
-    // - Aruba
-    // - Citrix
-    // - Microsoft 365
-    // - GLPI
-    // - Vista principal
-    //
 
     @Bean
     public WebMvcConfigurer corsConfigurer() {
@@ -31,25 +20,14 @@ public class CorsConfig {
         return new WebMvcConfigurer() {
 
             @Override
-            public void addCorsMappings(
-                    CorsRegistry registry
-            ) {
+            public void addCorsMappings(CorsRegistry registry) {
 
-                registry.addMapping("/**")
-
-                        .allowedOrigins(
-                                "http://localhost:5173"
-                        )
-
-                        .allowedMethods(
-                                "GET",
-                                "POST",
-                                "PUT",
-                                "DELETE",
-                                "OPTIONS"
-                        )
-
-                        .allowedHeaders("*");
+                registry.addMapping("/**").allowedOrigins("http://localhost:5173").allowedMethods(
+                    "GET",
+                    "POST",
+                    "PUT",
+                    "DELETE",
+                    "OPTIONS").allowedHeaders("*");
             }
         };
     }

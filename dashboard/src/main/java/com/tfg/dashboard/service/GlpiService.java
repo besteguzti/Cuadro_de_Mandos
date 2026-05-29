@@ -6,577 +6,457 @@ import java.util.Random;
 
 import org.springframework.stereotype.Service;
 
+import com.tfg.dashboard.config.properties.KpiProperties;
 import com.tfg.dashboard.dto.GlpiHealthStatusDto;
 import com.tfg.dashboard.dto.GlpiIndicatorStatusDto;
+import com.tfg.dashboard.dto.KpiResultDto;
+import com.tfg.dashboard.dto.KpiStatus;
 import com.tfg.dashboard.model.GlpiMetricsHistory;
-import com.tfg.dashboard.model.GlpiSummary;
+import com.tfg.dashboard.dto.summary.GlpiSummary;
 import com.tfg.dashboard.repository.GlpiMetricsHistoryRepository;
 
+/**
+ * Servicio GLPI simulado.
+ *
+ * GLPI se usa como señal de consecuencia operativa: genera y lee snapshots de
+ * tickets, SLA y capacidad de cierre para alimentar tanto su página como el
+ * análisis transversal.
+ */
 @Service
 public class GlpiService {
 
-    // =========================
-    // Generador temporal MOCK
-    // =========================
-    //
-    // En esta fase no se conecta
-    // con la API real de GLPI.
-    //
-    // Se generan datos dinámicos
-    // para validar la arquitectura
-    // multiproveedor del dashboard.
-    //
-    private final Random random =
-            new Random();
+        private final Random random = new Random();
 
-    private static final String GREEN = "GREEN";
+        private static final String GREEN = "GREEN";
 
-    private static final String YELLOW = "YELLOW";
+        private static final String YELLOW = "YELLOW";
 
-    private static final String RED = "RED";
+        private static final String RED = "RED";
 
-    private final GlpiMetricsHistoryRepository metricsHistoryRepository;
+        private final GlpiMetricsHistoryRepository metricsHistoryRepository;
+        private final KpiProperties kpiProperties;
 
-    public GlpiService(
-            GlpiMetricsHistoryRepository metricsHistoryRepository
-    ) {
+        public GlpiService(
+                        GlpiMetricsHistoryRepository metricsHistoryRepository,
+                        KpiProperties kpiProperties) {
 
-        this.metricsHistoryRepository =
-                metricsHistoryRepository;
-    }
-
-    // =========================
-    // Resumen persistido GLPI
-    // =========================
-    //
-    // El endpoint /glpi/summary
-    // devuelve el último snapshot
-    // almacenado en MySQL.
-    //
-    public GlpiSummary getSummary() {
-
-        return metricsHistoryRepository
-                .findTopByOrderByCollectedAtDesc()
-                .map(this::mapHistoryToSummary)
-                .orElseGet(this::noDataSummary);
-    }
-
-    // =========================
-    // Generación resumen GLPI
-    // =========================
-    //
-    // Devuelve KPIs simulados
-    // relacionados con operación,
-    // SLA, actividad diaria,
-    // actividad semanal y backlog.
-    //
-    public GlpiSummary generateSimulatedSummary() {
-
-        GlpiSummary summary =
-                new GlpiSummary();
-
-        // =========================
-        // Tickets abiertos
-        // =========================
-        //
-        // Representa la carga actual
-        // pendiente del departamento IT.
-        //
-
-        int openTickets =
-                80
-                +
-                random.nextInt(120);
-
-        // =========================
-        // Tickets críticos abiertos
-        // =========================
-        //
-        // Regla:
-        // nunca puede ser mayor que
-        // el número total de tickets
-        // abiertos.
-        //
-
-        int criticalOpenTickets =
-                random.nextInt(
-                        Math.max(
-                                1,
-                                openTickets / 10
-                        )
-                );
-
-        // =========================
-        // Tickets vencidos SLA
-        // =========================
-        //
-        // Regla:
-        // nunca puede superar
-        // los tickets abiertos.
-        //
-
-        int slaBreachedTickets =
-                random.nextInt(
-                        Math.max(
-                                1,
-                                openTickets / 4
-                        )
-                );
-
-        // =========================
-        // Tiempo medio resolución
-        // =========================
-        //
-        // Expresado en horas.
-        //
-
-        int averageResolutionHours =
-                4
-                +
-                random.nextInt(30);
-
-        // =========================
-        // Actividad diaria
-        // =========================
-        //
-        // Tickets creados hoy.
-        //
-
-        int createdToday =
-                10
-                +
-                random.nextInt(40);
-
-        // Tickets cerrados hoy.
-        //
-        // Regla:
-        // puede ser mayor que
-        // los creados hoy, porque se
-        // pueden cerrar tickets antiguos,
-        // pero lo limitamos para mantener
-        // valores coherentes en demo.
-        //
-
-        int closedToday =
-                random.nextInt(
-                        createdToday + 10
-                );
-
-        // =========================
-        // Actividad semanal
-        // =========================
-        //
-        // Tickets creados durante
-        // la semana en curso.
-        //
-
-        int createdThisWeek =
-                createdToday
-                +
-                50
-                +
-                random.nextInt(120);
-
-        // Tickets cerrados durante
-        // la semana en curso.
-        //
-        // Regla:
-        // se mantiene menor o igual
-        // que creados de la semana
-        // para evitar datos absurdos
-        // en esta simulación.
-        //
-
-        int closedThisWeek =
-                random.nextInt(
-                        createdThisWeek + 1
-                );
-
-        // =========================
-        // Backlog operativo
-        // =========================
-        //
-        // Carga pendiente estimada.
-        //
-        // En este mock lo aproximamos
-        // a tickets abiertos menos
-        // parte de los cierres recientes.
-        //
-
-        int operationalBacklog =
-                Math.max(
-                        0,
-                        openTickets
-                );
-
-        // =========================
-        // Construcción respuesta
-        // =========================
-
-        summary.setOpenTickets(
-                openTickets
-        );
-
-        summary.setCriticalOpenTickets(
-                criticalOpenTickets
-        );
-
-        summary.setSlaBreachedTickets(
-                slaBreachedTickets
-        );
-
-        summary.setAverageResolutionHours(
-                averageResolutionHours
-        );
-
-        summary.setCreatedToday(
-                createdToday
-        );
-
-        summary.setClosedToday(
-                closedToday
-        );
-
-        summary.setCreatedThisWeek(
-                createdThisWeek
-        );
-
-        summary.setClosedThisWeek(
-                closedThisWeek
-        );
-
-        summary.setOperationalBacklog(
-                operationalBacklog
-        );
-        summary.setGlpiHealthDetails(
-                calculateGlpiHealthDetails(
-                        openTickets,
-                        criticalOpenTickets,
-                        createdToday,
-                        closedToday,
-                        createdThisWeek,
-                        closedThisWeek
-                )
-        );
-
-        return summary;
-    }
-
-    private GlpiSummary mapHistoryToSummary(
-            GlpiMetricsHistory history
-    ) {
-
-        GlpiSummary summary =
-                new GlpiSummary();
-
-        summary.setOpenTickets(history.getOpenTickets());
-        summary.setCriticalOpenTickets(history.getCriticalOpenTickets());
-        summary.setSlaBreachedTickets(history.getSlaBreachedTickets());
-        summary.setAverageResolutionHours(
-                history.getAverageResolutionHours()
-        );
-        summary.setCreatedToday(history.getCreatedToday());
-        summary.setClosedToday(history.getClosedToday());
-        summary.setCreatedThisWeek(history.getCreatedThisWeek());
-        summary.setClosedThisWeek(history.getClosedThisWeek());
-        summary.setOperationalBacklog(history.getOperationalBacklog());
-        summary.setGlpiHealthDetails(
-                calculateGlpiHealthDetails(
-                        history.getOpenTickets(),
-                        history.getCriticalOpenTickets(),
-                        history.getCreatedToday(),
-                        history.getClosedToday(),
-                        history.getCreatedThisWeek(),
-                        history.getClosedThisWeek()
-                )
-        );
-        summary.setLastUpdated(history.getCollectedAt());
-        summary.setDataStatus(
-                calculateDataStatus(history.getCollectedAt())
-        );
-
-        return summary;
-    }
-
-    private GlpiSummary noDataSummary() {
-
-       // GLPI dispone de dataStatus.
-       // Si no hay snapshot en MySQL,
-       // se devuelve NO_DATA para evitar
-       // mostrar métricas simuladas falsas.
-        GlpiSummary summary =
-                new GlpiSummary();
-
-        summary.setDataStatus("NO_DATA");
-        summary.setGlpiHealthDetails(noDataGlpiHealthDetails());
-
-        return summary;
-    }
-
-    private String calculateDataStatus(
-            LocalDateTime collectedAt
-    ) {
-
-        // OK: snapshot reciente.
-        // STALE: existe, pero supera
-        // el margen esperado.
-        // NO_DATA: no hay snapshot.
-
-        if (collectedAt == null) {
-
-            return "NO_DATA";
+                this.metricsHistoryRepository = metricsHistoryRepository;
+                this.kpiProperties = kpiProperties;
         }
 
-        if (collectedAt.isAfter(
-                LocalDateTime.now().minusMinutes(2)
-        )) {
+        /**
+         * Devuelve el último snapshot GLPI almacenado en MySQL o NO_DATA si
+         * aún no existe histórico.
+         */
+        public GlpiSummary getSummary() {
 
-            return "OK";
+                return metricsHistoryRepository
+                                .findTopByOrderByCollectedAtDesc()
+                                .map(this::mapHistoryToSummary)
+                                .orElseGet(this::noDataSummary);
         }
 
-        return "STALE";
-    }
+        /**
+         * Genera KPIs simulados de operación, SLA, actividad diaria/semanal y
+         * backlog para persistirlos como snapshot.
+         */
+        public GlpiSummary generateSimulatedSummary() {
 
-    // =========================
-    // Indice salud GLPI
-    // =========================
-    //
-    // Convierte los indicadores
-    // principales de operacion en
-    // una afeccion normalizada de
-    // 0 a 100 para usar el mismo
-    // semaforo que Aruba.
-    //
+                GlpiSummary summary = new GlpiSummary();
 
-    private GlpiHealthStatusDto calculateGlpiHealthDetails(
-            int openTickets,
-            int criticalOpenTickets,
-            int createdToday,
-            int closedToday,
-            int createdThisWeek,
-            int closedThisWeek
-    ) {
+                int openTickets = 80
+                                +
+                                random.nextInt(120);
 
-        List<GlpiIndicatorStatusDto> indicators =
-                List.of(
-                        evaluateOpenTickets(openTickets),
-                        evaluateCriticalOpenTickets(
-                                criticalOpenTickets
-                        ),
-                        evaluateClosedPercentage(
-                                "Porcentaje de tickets cerrados",
-                                createdToday,
-                                closedToday,
-                                "diario"
-                        ),
-                        evaluateClosedPercentage(
-                                "Porcentaje de tickets cerrados semana",
-                                createdThisWeek,
-                                closedThisWeek,
-                                "semanal"
-                        )
-                );
+                int criticalOpenTickets = random.nextInt(
+                                Math.max(
+                                                1,
+                                                openTickets / 10));
 
-        int percentage =
-                (int) Math.round(
-                        indicators.stream()
-                                .mapToInt(
-                                        GlpiIndicatorStatusDto
-                                                ::getAffectionPercent
-                                )
-                                .average()
-                                .orElse(100)
-                );
+                int slaBreachedTickets = random.nextInt(
+                                Math.max(
+                                                1,
+                                                openTickets / 4));
 
-        String color =
-                colorByPercentage(percentage);
+                int averageResolutionHours = 4
+                                +
+                                random.nextInt(30);
 
-        List<String> reasons =
-                indicators.stream()
-                        .filter(indicator ->
-                                !GREEN.equals(indicator.getColor()))
-                        .map(GlpiIndicatorStatusDto::getReason)
-                        .toList();
+                int createdToday = 10
+                                +
+                                random.nextInt(40);
 
-        GlpiHealthStatusDto details =
-                new GlpiHealthStatusDto();
+                int closedToday = random.nextInt(
+                                createdToday + 10);
 
-        details.setPercentage(percentage);
-        details.setColor(color);
-        details.setIndicators(indicators);
-        details.setReasons(reasons);
-        details.setAffectedService(!GREEN.equals(color));
-        details.setCriticalCondition(
-                indicators.stream()
-                        .anyMatch(indicator ->
-                                RED.equals(indicator.getColor()))
-        );
-        details.setTechnicalDegradationValue(percentage);
-        details.setTransversalReady(true);
+                int createdThisWeek = createdToday
+                                +
+                                50
+                                +
+                                random.nextInt(120);
 
-        return details;
-    }
+                int closedThisWeek = random.nextInt(
+                                createdThisWeek + 1);
 
-    private GlpiIndicatorStatusDto evaluateOpenTickets(
-            int openTickets
-    ) {
+                int operationalBacklog = Math.max(
+                                0,
+                                openTickets);
 
-        if (openTickets >= 201) {
+                summary.setOpenTickets(
+                                openTickets);
 
-            return indicator(
-                    "Tickets abiertos",
-                    RED,
-                    "Hay 201 tickets abiertos o mas"
-            );
+                summary.setCriticalOpenTickets(
+                                criticalOpenTickets);
+
+                summary.setSlaBreachedTickets(
+                                slaBreachedTickets);
+
+                summary.setAverageResolutionHours(
+                                averageResolutionHours);
+
+                summary.setCreatedToday(
+                                createdToday);
+
+                summary.setClosedToday(
+                                closedToday);
+
+                summary.setCreatedThisWeek(
+                                createdThisWeek);
+
+                summary.setClosedThisWeek(
+                                closedThisWeek);
+
+                summary.setOperationalBacklog(
+                                operationalBacklog);
+                summary.setGlpiHealthDetails(
+                                calculateGlpiHealthDetails(
+                                                openTickets,
+                                                criticalOpenTickets,
+                                                createdToday,
+                                                closedToday,
+                                                createdThisWeek,
+                                                closedThisWeek));
+                summary.setGlpiHealthKpi(
+                                buildGlpiHealthKpi(
+                                                summary.getGlpiHealthDetails(),
+                                                LocalDateTime.now(),
+                                                "SIMULATED"));
+
+                return summary;
         }
 
-        if (openTickets >= 101) {
+        private GlpiSummary mapHistoryToSummary(
+                        GlpiMetricsHistory history) {
 
-            return indicator(
-                    "Tickets abiertos",
-                    YELLOW,
-                    "Hay entre 101 y 200 tickets abiertos"
-            );
+                GlpiSummary summary = new GlpiSummary();
+
+                summary.setOpenTickets(history.getOpenTickets());
+                summary.setCriticalOpenTickets(history.getCriticalOpenTickets());
+                summary.setSlaBreachedTickets(history.getSlaBreachedTickets());
+                summary.setAverageResolutionHours(
+                                history.getAverageResolutionHours());
+                summary.setCreatedToday(history.getCreatedToday());
+                summary.setClosedToday(history.getClosedToday());
+                summary.setCreatedThisWeek(history.getCreatedThisWeek());
+                summary.setClosedThisWeek(history.getClosedThisWeek());
+                summary.setOperationalBacklog(history.getOperationalBacklog());
+                summary.setGlpiHealthDetails(
+                                calculateGlpiHealthDetails(
+                                                history.getOpenTickets(),
+                                                history.getCriticalOpenTickets(),
+                                                history.getCreatedToday(),
+                                                history.getClosedToday(),
+                                                history.getCreatedThisWeek(),
+                                                history.getClosedThisWeek()));
+                summary.setLastUpdated(history.getCollectedAt());
+                summary.setDataStatus(
+                                calculateDataStatus(history.getCollectedAt()));
+                summary.setGlpiHealthKpi(
+                                buildGlpiHealthKpi(
+                                                summary.getGlpiHealthDetails(),
+                                                history.getCollectedAt(),
+                                                summary.getDataStatus()));
+
+                return summary;
         }
 
-        return indicator(
-                "Tickets abiertos",
-                GREEN,
-                "Hay entre 0 y 100 tickets abiertos"
-        );
-    }
+        private GlpiSummary noDataSummary() {
 
-    private GlpiIndicatorStatusDto evaluateCriticalOpenTickets(
-            int criticalOpenTickets
-    ) {
+                // GLPI dispone de dataStatus.
+                // Si no hay snapshot en MySQL,
+                // se devuelve NO_DATA para evitar
+                // mostrar métricas simuladas falsas.
+                GlpiSummary summary = new GlpiSummary();
 
-        if (criticalOpenTickets > 10) {
+                summary.setDataStatus("NO_DATA");
+                summary.setGlpiHealthDetails(noDataGlpiHealthDetails());
+                summary.setGlpiHealthKpi(
+                                buildGlpiHealthKpi(
+                                                summary.getGlpiHealthDetails(),
+                                                null,
+                                                summary.getDataStatus()));
 
-            return indicator(
-                    "Tickets abiertos criticos",
-                    RED,
-                    "Hay mas de 10 tickets criticos abiertos"
-            );
+                return summary;
         }
 
-        if (criticalOpenTickets > 0) {
+        private String calculateDataStatus(
+                        LocalDateTime collectedAt) {
 
-            return indicator(
-                    "Tickets abiertos criticos",
-                    YELLOW,
-                    "Hay entre 1 y 10 tickets criticos abiertos"
-            );
+                // OK: snapshot reciente.
+                // STALE: existe, pero supera
+                // el margen esperado.
+                // NO_DATA: no hay snapshot.
+
+                if (collectedAt == null) {
+
+                        return "NO_DATA";
+                }
+
+                if (collectedAt.isAfter(
+                                LocalDateTime.now().minusMinutes(2))) {
+
+                        return "OK";
+                }
+
+                return "STALE";
         }
 
-        return indicator(
-                "Tickets abiertos criticos",
-                GREEN,
-                "No hay tickets criticos abiertos"
-        );
-    }
+        /**
+         * Convierte los indicadores principales de operación en una afección
+         * normalizada 0-100 para usar el mismo semáforo que el resto de
+         * plataformas.
+         */
+        private GlpiHealthStatusDto calculateGlpiHealthDetails(
+                        int openTickets,
+                        int criticalOpenTickets,
+                        int createdToday,
+                        int closedToday,
+                        int createdThisWeek,
+                        int closedThisWeek) {
 
-    private GlpiIndicatorStatusDto evaluateClosedPercentage(
-            String name,
-            int created,
-            int closed,
-            String periodLabel
-    ) {
+                List<GlpiIndicatorStatusDto> indicators = List.of(
+                                evaluateOpenTickets(openTickets),
+                                evaluateCriticalOpenTickets(
+                                                criticalOpenTickets),
+                                evaluateClosedPercentage(
+                                                "Porcentaje de tickets cerrados",
+                                                createdToday,
+                                                closedToday,
+                                                "diario"),
+                                evaluateClosedPercentage(
+                                                "Porcentaje de tickets cerrados semana",
+                                                createdThisWeek,
+                                                closedThisWeek,
+                                                "semanal"));
 
-        int percentage =
-                created <= 0
-                        ? 100
-                        : Math.min(100, closed * 100 / created);
+                int percentage = (int) Math.round(
+                                indicators.stream()
+                                                .mapToInt(
+                                                                GlpiIndicatorStatusDto::getAffectionPercent)
+                                                .average()
+                                                .orElse(100));
 
-        if (percentage < 50) {
+                String color = colorByPercentage(percentage);
 
-            return indicator(
-                    name,
-                    YELLOW,
-                    "El porcentaje de cierre " + periodLabel
-                            + " es menor del 50 %"
-            );
+                List<String> reasons = indicators.stream()
+                                .filter(indicator -> !GREEN.equals(indicator.getColor()))
+                                .map(GlpiIndicatorStatusDto::getReason)
+                                .toList();
+
+                GlpiHealthStatusDto details = new GlpiHealthStatusDto();
+
+                details.setPercentage(percentage);
+                details.setColor(color);
+                details.setIndicators(indicators);
+                details.setReasons(reasons);
+                details.setAffectedService(!GREEN.equals(color));
+                details.setCriticalCondition(
+                                indicators.stream()
+                                                .anyMatch(indicator -> RED.equals(indicator.getColor())));
+                details.setTechnicalDegradationValue(percentage);
+                details.setTransversalReady(true);
+
+                return details;
         }
 
-        return indicator(
-                name,
-                GREEN,
-                "El porcentaje de cierre " + periodLabel
-                        + " es igual o superior al 50 %"
-        );
-    }
+        private GlpiIndicatorStatusDto evaluateOpenTickets(
+                        int openTickets) {
 
-    private GlpiIndicatorStatusDto indicator(
-            String name,
-            String color,
-            String reason
-    ) {
+                if (openTickets >= kpiProperties.getGlpi().getOpenTicketsRedMin()) {
 
-        GlpiIndicatorStatusDto indicator =
-                new GlpiIndicatorStatusDto();
+                        return indicator(
+                                        "Tickets abiertos",
+                                        RED,
+                                        "Hay 201 tickets abiertos o mas");
+                }
 
-        indicator.setName(name);
-        indicator.setColor(color);
-        indicator.setAffectionPercent(affectionPercent(color));
-        indicator.setReason(reason);
+                if (openTickets >= kpiProperties.getGlpi().getOpenTicketsYellowMin()) {
 
-        return indicator;
-    }
+                        return indicator(
+                                        "Tickets abiertos",
+                                        YELLOW,
+                                        "Hay entre 101 y 200 tickets abiertos");
+                }
 
-    private int affectionPercent(
-            String color
-    ) {
-
-        if (RED.equals(color)) {
-
-            return 100;
+                return indicator(
+                                "Tickets abiertos",
+                                GREEN,
+                                "Hay entre 0 y 100 tickets abiertos");
         }
 
-        if (YELLOW.equals(color)) {
+        private GlpiIndicatorStatusDto evaluateCriticalOpenTickets(
+                        int criticalOpenTickets) {
 
-            return 50;
+                if (criticalOpenTickets > kpiProperties.getGlpi().getCriticalTicketsRedAbove()) {
+
+                        return indicator(
+                                        "Tickets abiertos criticos",
+                                        RED,
+                                        "Hay mas de 10 tickets criticos abiertos");
+                }
+
+                if (criticalOpenTickets > kpiProperties.getGlpi().getCriticalTicketsYellowAbove()) {
+
+                        return indicator(
+                                        "Tickets abiertos criticos",
+                                        YELLOW,
+                                        "Hay entre 1 y 10 tickets criticos abiertos");
+                }
+
+                return indicator(
+                                "Tickets abiertos criticos",
+                                GREEN,
+                                "No hay tickets criticos abiertos");
         }
 
-        return 0;
-    }
+        private GlpiIndicatorStatusDto evaluateClosedPercentage(
+                        String name,
+                        int created,
+                        int closed,
+                        String periodLabel) {
 
-    private String colorByPercentage(
-            int percentage
-    ) {
+                int percentage = created <= 0
+                                ? 100
+                                : Math.min(100, closed * 100 / created);
 
-        if (percentage >= 67) {
+                if (percentage < kpiProperties.getGlpi().getClosedPercentGreenMin()) {
 
-            return RED;
+                        return indicator(
+                                        name,
+                                        YELLOW,
+                                        "El porcentaje de cierre " + periodLabel
+                                                        + " es menor del 50 %");
+                }
+
+                return indicator(
+                                name,
+                                GREEN,
+                                "El porcentaje de cierre " + periodLabel
+                                                + " es igual o superior al 50 %");
         }
 
-        if (percentage >= 34) {
+        private GlpiIndicatorStatusDto indicator(
+                        String name,
+                        String color,
+                        String reason) {
 
-            return YELLOW;
+                GlpiIndicatorStatusDto indicator = new GlpiIndicatorStatusDto();
+
+                indicator.setName(name);
+                indicator.setColor(color);
+                indicator.setAffectionPercent(affectionPercent(color));
+                indicator.setReason(reason);
+
+                return indicator;
         }
 
-        return GREEN;
-    }
+        private int affectionPercent(
+                        String color) {
 
-    private GlpiHealthStatusDto noDataGlpiHealthDetails() {
+                if (RED.equals(color)) {
 
-        GlpiIndicatorStatusDto noData =
-                indicator(
-                        "Datos GLPI",
-                        RED,
-                        "No hay snapshot GLPI disponible"
-                );
+                        return kpiProperties.getAffection().getRed();
+                }
 
-        GlpiHealthStatusDto details =
-                new GlpiHealthStatusDto();
+                if (YELLOW.equals(color)) {
 
-        details.setPercentage(100);
-        details.setColor(RED);
-        details.setIndicators(List.of(noData));
-        details.setReasons(List.of(noData.getReason()));
-        details.setAffectedService(true);
-        details.setCriticalCondition(true);
-        details.setTechnicalDegradationValue(100);
-        details.setTransversalReady(true);
+                        return kpiProperties.getAffection().getYellow();
+                }
 
-        return details;
-    }
+                return kpiProperties.getAffection().getGreen();
+        }
+
+        private String colorByPercentage(
+                        int percentage) {
+
+                if (percentage >= kpiProperties.getStatus().getRedMin()) {
+
+                        return RED;
+                }
+
+                if (percentage >= kpiProperties.getStatus().getYellowMin()) {
+
+                        return YELLOW;
+                }
+
+                return GREEN;
+        }
+
+        private GlpiHealthStatusDto noDataGlpiHealthDetails() {
+
+                GlpiIndicatorStatusDto noData = indicator(
+                                "Datos GLPI",
+                                RED,
+                                "No hay snapshot GLPI disponible");
+
+                GlpiHealthStatusDto details = new GlpiHealthStatusDto();
+
+                details.setPercentage(kpiProperties.getAffection().getRed());
+                details.setColor(RED);
+                details.setIndicators(List.of(noData));
+                details.setReasons(List.of(noData.getReason()));
+                details.setAffectedService(true);
+                details.setCriticalCondition(true);
+                details.setTechnicalDegradationValue(kpiProperties.getAffection().getRed());
+                details.setTransversalReady(true);
+
+                return details;
+        }
+
+        private KpiResultDto buildGlpiHealthKpi(
+                        GlpiHealthStatusDto details,
+                        LocalDateTime timestamp,
+                        String freshness) {
+
+                return new KpiResultDto(
+                                "glpi_health",
+                                "Indice de salud GLPI",
+                                details.getPercentage(),
+                                KpiStatus.from(details.getColor()),
+                                "Afeccion normalizada de GLPI como consecuencia operativa.",
+                                "Media uniforme de tickets abiertos, tickets criticos, porcentaje de cierre diario y porcentaje de cierre semanal.",
+                                timestamp,
+                                freshness,
+                                details.getPercentage(),
+                                details.getIndicators().stream()
+                                                .map(indicator -> new KpiResultDto(
+                                                                indicatorId(indicator.getName()),
+                                                                indicator.getName(),
+                                                                indicator.getAffectionPercent(),
+                                                                KpiStatus.from(indicator.getColor()),
+                                                                indicator.getReason(),
+                                                                null,
+                                                                timestamp,
+                                                                freshness,
+                                                                indicator.getAffectionPercent(),
+                                                                List.of()))
+                                                .toList());
+        }
+
+        private String indicatorId(String name) {
+
+                return name.toLowerCase()
+                                .replace(" ", "_")
+                                .replace("%", "percent");
+        }
 }

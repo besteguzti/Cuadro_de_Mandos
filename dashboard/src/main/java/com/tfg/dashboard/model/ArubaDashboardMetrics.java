@@ -6,33 +6,28 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
+/**
+ * Métricas agregadas de Aruba usadas por la vista de resumen.
+ *
+ * Resume firmware y clientes WiFi calculados durante la sincronización para no
+ * depender de llamadas a Aruba Central en cada petición del dashboard.
+ */
 @Entity
 @Table(name = "aruba_dashboard_metrics")
 public class ArubaDashboardMetrics {
 
     @Id
     private Long id;
-
     private int firmwareOutdated;
-
     private int totalWifiClients;
-
     private int mutualiaApsClients;
-
     private int mutualiaWifiClients;
-
     private int mutualiaLangileakClients;
-
     private int mutualiaClients;
-
     private int mutualiaRedInternaClients;
-
     private int mutualiaRedExternaClients;
-
     private int mutualiaKorporatiboaClients;
-
     private int wifiPacsClients;
-
     private int mutVideoClients;
 
     private LocalDateTime updatedAt;
@@ -125,11 +120,8 @@ public class ArubaDashboardMetrics {
         this.mutualiaRedExternaClients = mutualiaRedExternaClients;
     }
 
-    public void setMutualiaKorporatiboaClients(
-            int mutualiaKorporatiboaClients
-    ) {
-        this.mutualiaKorporatiboaClients =
-                mutualiaKorporatiboaClients;
+    public void setMutualiaKorporatiboaClients(int mutualiaKorporatiboaClients) {
+        this.mutualiaKorporatiboaClients = mutualiaKorporatiboaClients;
     }
 
     public void setWifiPacsClients(int wifiPacsClients) {

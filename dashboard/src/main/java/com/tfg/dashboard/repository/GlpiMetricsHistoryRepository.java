@@ -8,8 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.tfg.dashboard.model.GlpiMetricsHistory;
 
-public interface GlpiMetricsHistoryRepository
-        extends JpaRepository<GlpiMetricsHistory, Long> {
+public interface GlpiMetricsHistoryRepository extends JpaRepository<GlpiMetricsHistory, Long> {
 
     Optional<GlpiMetricsHistory> findTopByOrderByCollectedAtDesc();
 

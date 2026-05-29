@@ -4,57 +4,32 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.tfg.dashboard.model.CitrixSummary;
+import com.tfg.dashboard.dto.summary.CitrixSummary;
 import com.tfg.dashboard.service.CitrixService;
 
+/**
+ * Endpoint REST de Citrix.
+ *
+ * Citrix se modela como fuente simulada persistida en MySQL. El endpoint de
+ * resumen lee el último snapshot para que la página Citrix y el dashboard
+ * principal trabajen con la misma captura.
+ */
 @RestController
 @RequestMapping("/citrix")
 public class CitrixController {
 
-    // =========================
-    // Servicio Citrix
-    // =========================
-    //
-    // Contiene la lógica de negocio
-    // para generar los KPIs Citrix.
-    //
     private final CitrixService citrixService;
 
-    // =========================
-    // Constructor
-    // =========================
-    //
-    // Spring inyecta automáticamente
-    // CitrixService mediante
-    // inyección por constructor.
-    //
-    public CitrixController(
-            CitrixService citrixService
-    ) {
-
-        this.citrixService =
-                citrixService;
+    public CitrixController(CitrixService citrixService) {
+        this.citrixService = citrixService;
     }
 
-    // =========================
-    // Endpoint resumen Citrix
-    // =========================
-    //
-    // Expone los KPIs principales
-    // del entorno Citrix.
-    //
-    // Devuelve el último snapshot
-    // guardado en MySQL. La generación
-    // simulada queda limitada al
-    // proceso de sincronización.
-    //
-    // URL:
-    // GET /citrix/summary
-    //
+    /**
+     * Devuelve sesiones, Delivery Controllers, logon duration, carga de
+     * servidores, errores de inicio e índice de salud Citrix.
+     */
     @GetMapping("/summary")
     public CitrixSummary getSummary() {
-
-        return citrixService
-                .getSummary();
+        return citrixService.getSummary();
     }
 }

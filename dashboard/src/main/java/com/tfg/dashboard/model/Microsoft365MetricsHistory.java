@@ -9,63 +9,38 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
+/**
+ * Snapshot histórico de métricas Microsoft 365 simuladas.
+ *
+ * Guarda señales de servicios, identidad, seguridad y dispositivos para
+ * reconstruir el índice de salud y los KPIs transversales.
+ */
 @Entity
 @Table(name = "microsoft365_metrics_history")
 public class Microsoft365MetricsHistory {
 
-    // =========================
-    // Snapshot temporal M365
-    // =========================
-    //
-    // Esta tabla almacena muestras
-    // simuladas para disponer de
-    // histórico y poder construir
-    // KPIs transversales.
-    //
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
     private Integer activeUsers;
-
     private Integer unassignedLicenses;
-
     private String outlookStatus;
-
     private String teamsStatus;
-
     private String sharePointStatus;
-
     private Integer nearlyFullMailboxes;
-
     private Integer emailsQuarantined;
-
     private Integer sharePointStoragePercent;
-
     private Integer riskyUsers;
-
     private Integer failedSignIns;
-
     private Integer usersWithoutMfa;
-
     private Integer appsSecretsExpiringSoon;
-
     private Integer unusedApplications;
-
     private Integer highPrivilegeApplications;
-
     private Integer nonCompliantDevices;
-
     private Integer outdatedWindowsDevices;
-
     private Integer devicesWithoutEncryption;
-
     private Integer staleDevices;
-
     private String microsoft365Health;
-
-    private Integer microsoft365OperationalRisk;
 
     @Column(name = "collected_at")
     private LocalDateTime collectedAt;
@@ -163,12 +138,6 @@ public class Microsoft365MetricsHistory {
         return microsoft365Health;
     }
 
-    public int getMicrosoft365OperationalRisk() {
-        return microsoft365OperationalRisk == null
-                ? 0
-                : microsoft365OperationalRisk;
-    }
-
     public LocalDateTime getCollectedAt() {
         return collectedAt;
     }
@@ -205,11 +174,8 @@ public class Microsoft365MetricsHistory {
         this.emailsQuarantined = emailsQuarantined;
     }
 
-    public void setSharePointStoragePercent(
-            Integer sharePointStoragePercent
-    ) {
-        this.sharePointStoragePercent =
-                sharePointStoragePercent;
+    public void setSharePointStoragePercent(Integer sharePointStoragePercent) {
+        this.sharePointStoragePercent = sharePointStoragePercent;
     }
 
     public void setRiskyUsers(Integer riskyUsers) {
@@ -224,40 +190,28 @@ public class Microsoft365MetricsHistory {
         this.usersWithoutMfa = usersWithoutMfa;
     }
 
-    public void setAppsSecretsExpiringSoon(
-            Integer appsSecretsExpiringSoon
-    ) {
-        this.appsSecretsExpiringSoon =
-                appsSecretsExpiringSoon;
+    public void setAppsSecretsExpiringSoon(Integer appsSecretsExpiringSoon) {
+        this.appsSecretsExpiringSoon = appsSecretsExpiringSoon;
     }
 
     public void setUnusedApplications(Integer unusedApplications) {
         this.unusedApplications = unusedApplications;
     }
 
-    public void setHighPrivilegeApplications(
-            Integer highPrivilegeApplications
-    ) {
-        this.highPrivilegeApplications =
-                highPrivilegeApplications;
+    public void setHighPrivilegeApplications(Integer highPrivilegeApplications) {
+        this.highPrivilegeApplications = highPrivilegeApplications;
     }
 
     public void setNonCompliantDevices(Integer nonCompliantDevices) {
         this.nonCompliantDevices = nonCompliantDevices;
     }
 
-    public void setOutdatedWindowsDevices(
-            Integer outdatedWindowsDevices
-    ) {
-        this.outdatedWindowsDevices =
-                outdatedWindowsDevices;
+    public void setOutdatedWindowsDevices(Integer outdatedWindowsDevices) {
+        this.outdatedWindowsDevices = outdatedWindowsDevices;
     }
 
-    public void setDevicesWithoutEncryption(
-            Integer devicesWithoutEncryption
-    ) {
-        this.devicesWithoutEncryption =
-                devicesWithoutEncryption;
+    public void setDevicesWithoutEncryption(Integer devicesWithoutEncryption) {
+        this.devicesWithoutEncryption = devicesWithoutEncryption;
     }
 
     public void setStaleDevices(Integer staleDevices) {
@@ -266,13 +220,6 @@ public class Microsoft365MetricsHistory {
 
     public void setMicrosoft365Health(String microsoft365Health) {
         this.microsoft365Health = microsoft365Health;
-    }
-
-    public void setMicrosoft365OperationalRisk(
-            Integer microsoft365OperationalRisk
-    ) {
-        this.microsoft365OperationalRisk =
-                microsoft365OperationalRisk;
     }
 
     public void setCollectedAt(LocalDateTime collectedAt) {

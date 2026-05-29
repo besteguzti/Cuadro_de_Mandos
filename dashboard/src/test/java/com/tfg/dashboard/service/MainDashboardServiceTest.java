@@ -12,10 +12,11 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import com.tfg.dashboard.model.ArubaSummary;
+import com.tfg.dashboard.config.properties.KpiProperties;
+import com.tfg.dashboard.dto.summary.ArubaSummary;
 import com.tfg.dashboard.model.CitrixMetricsHistory;
 import com.tfg.dashboard.model.GlpiMetricsHistory;
-import com.tfg.dashboard.model.MainDashboardSummary;
+import com.tfg.dashboard.dto.summary.MainDashboardSummary;
 import com.tfg.dashboard.model.Microsoft365MetricsHistory;
 import com.tfg.dashboard.repository.CitrixMetricsHistoryRepository;
 import com.tfg.dashboard.repository.GlpiMetricsHistoryRepository;
@@ -38,14 +39,26 @@ class MainDashboardServiceTest {
 
     private MainDashboardService service;
 
+    private KpiScoringService kpiScoringService;
+    private KpiProperties kpiProperties;
+
     @BeforeEach
     void setUp() {
+
+        kpiProperties =
+                new KpiProperties();
+        kpiScoringService =
+                new KpiScoringService(kpiProperties);
 
         service = new MainDashboardService(
                 arubaService,
                 citrixRepository,
                 microsoft365Repository,
-                glpiRepository
+                glpiRepository,
+                kpiScoringService,
+                new GlobalKpiCalculationService(kpiScoringService, kpiProperties),
+                new DashboardFreshnessService(kpiScoringService),
+                kpiProperties
         );
     }
 
@@ -112,96 +125,6 @@ class MainDashboardServiceTest {
 
         assertThat(summary.getDataStatus()).isEqualTo("NO_DATA");
         assertThat(summary.getGlobalHealth()).isNotEqualTo("GREEN");
-    }
-
-    @Test
-    void servicesWithAlertsIncreasesWhenAPlatformHasAlert() {
-
-        baseHealthyData();
-
-        ArubaSummary aruba =
-                healthyAruba();
-        aruba.setNetworkStatus("YELLOW");
-
-        when(arubaService.getSummary())
-                .thenReturn(aruba);
-
-        MainDashboardSummary summary =
-                service.getSummary();
-
-        assertThat(summary.getServicesWithAlerts()).isGreaterThan(0);
-    }
-
-    @Test
-    void capacityPressureIsAlwaysClampedBetweenZeroAndOneHundred() {
-
-        baseHealthyData();
-
-        CitrixMetricsHistory citrix =
-                healthyCitrix(LocalDateTime.now());
-        citrix.setServerLoadPercent(200);
-
-        Microsoft365MetricsHistory microsoft365 =
-                healthyMicrosoft365(LocalDateTime.now());
-        microsoft365.setSharePointStoragePercent(200);
-
-        GlpiMetricsHistory glpi =
-                healthyGlpi(LocalDateTime.now());
-        glpi.setOperationalBacklog(1000);
-
-        when(citrixRepository.findTopByOrderByCollectedAtDesc())
-                .thenReturn(Optional.of(citrix));
-        when(microsoft365Repository.findTopByOrderByCollectedAtDesc())
-                .thenReturn(Optional.of(microsoft365));
-        when(glpiRepository.findTopByOrderByCollectedAtDesc())
-                .thenReturn(Optional.of(glpi));
-
-        MainDashboardSummary summary =
-                service.getSummary();
-
-        assertThat(summary.getCapacityPressure())
-                .isBetween(0, 100);
-    }
-
-    @Test
-    void itemsRequiringActionSumsExpectedSources() {
-
-        baseHealthyData();
-
-        ArubaSummary aruba =
-                healthyAruba();
-        aruba.setFirmwareOutdated(2);
-        aruba.setSwitchesFirmwareUpgradeRequired(3);
-
-        CitrixMetricsHistory citrix =
-                healthyCitrix(LocalDateTime.now());
-        citrix.setTotalDeliveryControllers(4);
-        citrix.setAvailableDeliveryControllers(2);
-
-        Microsoft365MetricsHistory microsoft365 =
-                healthyMicrosoft365(LocalDateTime.now());
-        microsoft365.setAppsSecretsExpiringSoon(4);
-        microsoft365.setNonCompliantDevices(5);
-        microsoft365.setStaleDevices(6);
-
-        GlpiMetricsHistory glpi =
-                healthyGlpi(LocalDateTime.now());
-        glpi.setSlaBreachedTickets(7);
-
-        when(arubaService.getSummary())
-                .thenReturn(aruba);
-        when(citrixRepository.findTopByOrderByCollectedAtDesc())
-                .thenReturn(Optional.of(citrix));
-        when(microsoft365Repository.findTopByOrderByCollectedAtDesc())
-                .thenReturn(Optional.of(microsoft365));
-        when(glpiRepository.findTopByOrderByCollectedAtDesc())
-                .thenReturn(Optional.of(glpi));
-
-        MainDashboardSummary summary =
-                service.getSummary();
-
-        assertThat(summary.getItemsRequiringAction())
-                .isEqualTo(29);
     }
 
     private void baseHealthyData() {

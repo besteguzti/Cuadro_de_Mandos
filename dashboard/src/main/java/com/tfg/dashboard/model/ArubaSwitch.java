@@ -11,13 +11,8 @@ import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 
 @Entity
-@Table(
-        name = "aruba_switches",
-        uniqueConstraints = @UniqueConstraint(
-                name = "uk_aruba_switch_serial",
-                columnNames = "serial"
-        )
-)
+@Table(name = "aruba_switches", uniqueConstraints = @UniqueConstraint(name = "uk_aruba_switch_serial", columnNames = "serial"))
+
 public class ArubaSwitch {
 
     @Id
@@ -26,21 +21,13 @@ public class ArubaSwitch {
 
     @Column(nullable = false)
     private String serial;
-
     private String macAddress;
-
     private String hostname;
-
     private String model;
-
     private String deviceStatus;
-
     private boolean upgradeRequired;
-
     private String statusState;
-
     private LocalDateTime firstSeenAt;
-
     private LocalDateTime lastSeenAt;
 
     public Long getId() {

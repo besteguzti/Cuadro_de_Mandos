@@ -108,7 +108,8 @@ function ArubaPage() {
   const [error, setError] = useState(null)
 
   const loadDashboard = () => {
-
+    // ArubaPage pinta datos ya sincronizados y calculados en backend; no llama
+    // directamente a Aruba Central desde el navegador.
     fetch(`${API_BASE_URL}/aruba/summary`)
       .then(response => {
 
@@ -161,18 +162,28 @@ function ArubaPage() {
   const apCards = summary
     ? [
       { title: 'Total APs', value: summary.totalAps, info: arubaKpiInfo.totalAps },
-      { title: 'APs activos', value: summary.upAps, info: arubaKpiInfo.upAps },
-      { title: 'APs caidos', value: summary.downAps, info: arubaKpiInfo.downAps },
+      {
+        title: 'APs activos',
+        value: summary.upAps,
+        status: positiveIsOkStatus(summary.upAps),
+        info: arubaKpiInfo.upAps
+      },
+      {
+        title: 'APs caidos',
+        value: summary.downAps,
+        status: downCountStatus(summary.downAps, summary.totalAps),
+        info: arubaKpiInfo.downAps
+      },
       {
         title: 'Firmware pendiente',
         value: summary.firmwareOutdated,
-        critical: summary.firmwareOutdated > 0,
+        status: zeroIsOkStatus(summary.firmwareOutdated),
         info: arubaKpiInfo.firmwareOutdated
       },
       {
         title: 'APs inactivos',
         value: summary.inactiveAps,
-        critical: summary.inactiveAps > 0,
+        status: zeroIsOkStatus(summary.inactiveAps),
         info: arubaKpiInfo.inactiveAps
       }
     ]
@@ -184,13 +195,13 @@ function ArubaPage() {
       {
         title: 'Switches apagados',
         value: summary.downSwitches,
-        critical: summary.downSwitches > 0,
+        status: downCountStatus(summary.downSwitches, summary.totalSwitches),
         info: arubaKpiInfo.downSwitches
       },
       {
         title: 'Switches con upgrade',
         value: summary.switchesFirmwareUpgradeRequired,
-        critical: summary.switchesFirmwareUpgradeRequired > 0,
+        status: zeroIsOkStatus(summary.switchesFirmwareUpgradeRequired),
         info: arubaKpiInfo.switchesFirmwareUpgradeRequired
       }
     ]
@@ -200,21 +211,37 @@ function ArubaPage() {
     ? (summary.underusedSwitches ?? []).map(switchUsage => ({
       title: switchUsage.associatedDeviceName || switchUsage.associatedDevice,
       value: `${switchUsage.downInterfaces} interfaces down`,
-      critical: switchUsage.downInterfaces > 0,
+      status: 'YELLOW',
       info: arubaKpiInfo.underusedSwitches
     }))
     : []
 
   const wifiGroupCards = summary
     ? [
-      { title: 'Total clientes WiFi', value: summary.totalWifiClients, info: arubaKpiInfo.totalWifiClients },
-      { title: 'Clientes MUTUALIA-APs', value: summary.mutualiaApsClients, info: arubaKpiInfo.mutualiaApsClients },
-      { title: 'Clientes MUTUALIA-WIFI', value: summary.mutualiaWifiClients, info: arubaKpiInfo.mutualiaWifiClients }
+      {
+        title: 'Total clientes WiFi',
+        value: summary.totalWifiClients,
+        status: positiveIsOkStatus(summary.totalWifiClients),
+        info: arubaKpiInfo.totalWifiClients
+      },
+      {
+        title: 'Clientes MUTUALIA-APs',
+        value: summary.mutualiaApsClients,
+        status: positiveIsOkStatus(summary.mutualiaApsClients),
+        info: arubaKpiInfo.mutualiaApsClients
+      },
+      {
+        title: 'Clientes MUTUALIA-WIFI',
+        value: summary.mutualiaWifiClients,
+        status: positiveIsOkStatus(summary.mutualiaWifiClients),
+        info: arubaKpiInfo.mutualiaWifiClients
+      }
     ]
     : []
 
   const wifiNetworkCards = summary
     ? [
+      // Redes informativas: si no son críticas, se muestran neutras y no como error.
       { title: 'MUTUALIA_LANGILEAK', value: summary.mutualiaLangileakClients, info: arubaKpiInfo.mutualiaLangileakClients },
       { title: 'MUTUALIA', value: summary.mutualiaClients, info: arubaKpiInfo.mutualiaClients },
       { title: 'MUTUALIA_RED_INTERNA', value: summary.mutualiaRedInternaClients, info: arubaKpiInfo.mutualiaRedInternaClients },
@@ -286,7 +313,7 @@ function ArubaPage() {
                   key={card.title}
                   title={card.title}
                   value={card.value}
-                  critical={card.critical}
+                  status={card.status}
                   info={card.info}
                 />
               ))}
@@ -302,6 +329,7 @@ function ArubaPage() {
                   key={card.title}
                   title={card.title}
                   value={card.value}
+                  status={card.status}
                   info={card.info}
                 />
               ))}
@@ -332,7 +360,7 @@ function ArubaPage() {
                   key={card.title}
                   title={card.title}
                   value={card.value}
-                  critical={card.critical}
+                  status={card.status}
                   info={card.info}
                 />
               ))}
@@ -349,7 +377,7 @@ function ArubaPage() {
                     key={card.title}
                     title={card.title}
                     value={card.value}
-                    critical={card.critical}
+                    status={card.status}
                     info={card.info}
                   />
                 ))
@@ -357,6 +385,7 @@ function ArubaPage() {
                 <KpiCard
                   title="Switches infrautilizados"
                   value="0"
+                  status="GREEN"
                   info={arubaKpiInfo.underusedSwitches}
                 />
               )}
@@ -366,6 +395,48 @@ function ArubaPage() {
       )}
     </main>
   )
+}
+
+function positiveIsOkStatus(value) {
+  // Para métricas críticas de clientes, un valor positivo significa servicio activo.
+  if (value === null || value === undefined) {
+    return 'NO_DATA'
+  }
+
+  return Number(value) > 0 ? 'GREEN' : 'RED'
+}
+
+function zeroIsOkStatus(value) {
+  // Para incidencias o mantenimiento pendiente, cero es el estado saludable.
+  if (value === null || value === undefined) {
+    return 'NO_DATA'
+  }
+
+  return Number(value) > 0 ? 'YELLOW' : 'GREEN'
+}
+
+function downCountStatus(value, total) {
+  // Diferencia caída parcial frente a caída total para no usar una regla genérica value > 0.
+  if (value === null || value === undefined || total === null || total === undefined) {
+    return 'NO_DATA'
+  }
+
+  const count = Number(value)
+  const totalCount = Number(total)
+
+  if (Number.isNaN(count) || Number.isNaN(totalCount) || totalCount <= 0) {
+    return 'NO_DATA'
+  }
+
+  if (count <= 0) {
+    return 'GREEN'
+  }
+
+  if (count >= totalCount) {
+    return 'RED'
+  }
+
+  return 'YELLOW'
 }
 
 function formatSnapshotDate(value) {

@@ -5,15 +5,18 @@ import java.util.Iterator;
 import java.util.List;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -25,832 +28,441 @@ import com.tfg.dashboard.dto.ArubaSwitchInfo;
 import com.tfg.dashboard.dto.ArubaWifiClientInfo;
 import com.tfg.dashboard.service.ArubaAuthService;
 
+/**
+ * Cliente que se encarga de hablar con Aruba Central.
+ *
+ * Aquí se concentran las llamadas reales a la API de Aruba para no repartir esa
+ * lógica por el resto del backend. Se piden APs, switches, firmware y clientes
+ * WiFi, y después se transforman las respuestas al formato que usa la aplicación.
+ *
+ * Si una parte de Aruba falla, por ejemplo firmware, se registra el problema y
+ * se intenta continuar con el resto de la sincronización. La idea es no tirar
+ * abajo todo el proceso por un fallo parcial de la API.
+ */
 @Component
 public class ArubaApiClient {
 
-    private static final Logger log =
-            LoggerFactory.getLogger(ArubaApiClient.class);
+        private static final Logger log = LoggerFactory.getLogger(ArubaApiClient.class);
 
-    // =========================
-    // Auth Aruba
-    // =========================
+        private final ArubaAuthService authService;
+        private final RestTemplate restTemplate;
 
-    private final ArubaAuthService authService;
+        @Value("${aruba.base.url}")
+        private String baseUrl;
 
-    // =========================
-    // Base URL Aruba
-    // =========================
-
-    @Value("${aruba.base.url}")
-    private String baseUrl;
-
-    // =========================
-    // Constructor
-    // =========================
-
-    public ArubaApiClient(
-            ArubaAuthService authService
-    ) {
-        this.authService = authService;
-    }
-
-    // =========================
-    // Obtener lista APs parseada
-    // =========================
-
-    public List<ArubaApInfo> getApsList() {
-
-    List<ArubaApInfo> result =
-            new ArrayList<>();
-
-    try {
-
-        String token =
-                authService.getAccessToken();
-
-        RestTemplate restTemplate =
-                new RestTemplate();
-
-        HttpHeaders headers =
-                new HttpHeaders();
-
-        headers.setBearerAuth(token);
-
-        HttpEntity<String> entity =
-                new HttpEntity<>(headers);
-
-        ObjectMapper mapper =
-                new ObjectMapper();
-
-        int offset = 0;
-
-        int limit = 100;
-
-        while (true) {
-
-            String url =
-                    baseUrl
-                    + "/monitoring/v2/aps"
-                    + "?offset=" + offset
-                    + "&limit=" + limit;
-
-            ResponseEntity<String> response =
-                    restTemplate.exchange(
-                            url,
-                            HttpMethod.GET,
-                            entity,
-                            String.class
-                    );
-
-            JsonNode root =
-                    mapper.readTree(
-                            response.getBody()
-                    );
-
-            JsonNode aps =
-                    root.get("aps");
-
-            if (aps == null
-                    || !aps.isArray()
-                    || aps.size() == 0) {
-
-                break;
-            }
-
-            for (JsonNode ap : aps) {
-
-                ArubaApInfo info =
-                        new ArubaApInfo();
-
-                info.setName(
-                        ap.path("name").asText()
-                );
-
-                info.setStatus(
-                        ap.path("status").asText()
-                );
-
-                info.setIpAddress(
-                        ap.path("ip_address").asText()
-                );
-
-                info.setPublicIpAddress(
-                        ap.path("public_ip_address").asText()
-                );
-
-                info.setSerial(
-                        ap.path("serial").asText()
-                );
-
-                info.setSite(
-                        ap.path("site").asText()
-                );
-
-                info.setFirmwareVersion(
-                        ap.path("firmware_version")
-                                .asText()
-                );
-
-                info.setMacaddr(
-                        ap.path("macaddr").asText()
-                );
-
-                info.setSwarmName(
-                        ap.path("swarm_name").asText()
-                );
-
-                result.add(info);
-            }
-
-            offset += limit;
+        public ArubaApiClient(
+                        ArubaAuthService authService,
+                        RestTemplateBuilder restTemplateBuilder
+        ) {
+                this.authService = authService;
+                this.restTemplate = restTemplateBuilder
+                                .setConnectTimeout(Duration.ofSeconds(10))
+                                .setReadTimeout(Duration.ofSeconds(30))
+                                .build();
         }
 
+        /**
+         * Obtiene los Access Points desde Aruba Central.
+         *
+         * Aruba devuelve la información paginada, así que este método recorre las páginas
+         * necesarias y convierte cada AP al DTO que después usa la sincronización.
+         */
+        public List<ArubaApInfo> getApsList() {
 
+                List<ArubaApInfo> result = new ArrayList<>();
 
-    } catch (Exception e) {
+                try {
+                        String token = authService.getAccessToken();
+                        HttpHeaders headers = new HttpHeaders();
+                        headers.setBearerAuth(token);
+                        HttpEntity<String> entity = new HttpEntity<>(headers);
+                        ObjectMapper mapper = new ObjectMapper();
+                        int offset = 0;
+                        int limit = 100;
+                        while (true) {
+                                String url = baseUrl + "/monitoring/v2/aps" + "?offset=" + offset + "&limit=" + limit;
 
-        log.error(
-                "Error obteniendo listado de APs desde Aruba",
-                e
-        );
-    }
+                                ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, entity,
+                                                String.class);
 
-    return result;
-}
+                                JsonNode root = mapper.readTree(response.getBody());
 
-    // =========================
-    // Firmware devices Aruba
-    // =========================
+                                JsonNode aps = root.get("aps");
 
-    public JsonNode getFirmwareSwarms() {
+                                if (aps == null || !aps.isArray() || aps.size() == 0) {
+                                        break;
+                                }
 
-    try {
+                                for (JsonNode ap : aps) {
+                                        ArubaApInfo info = new ArubaApInfo();
+                                        info.setName(ap.path("name").asText());
+                                        info.setStatus(ap.path("status").asText());
+                                        info.setIpAddress(ap.path("ip_address").asText());
+                                        info.setPublicIpAddress(ap.path("public_ip_address").asText());
+                                        info.setSerial(ap.path("serial").asText());
+                                        info.setSite(ap.path("site").asText());
+                                        info.setFirmwareVersion(ap.path("firmware_version").asText());
+                                        info.setMacaddr(ap.path("macaddr").asText());
+                                        info.setSwarmName(ap.path("swarm_name").asText());
+                                        result.add(info);
+                                }
+                                offset += limit;
+                        }
 
-        String token =
-                authService.getAccessToken();
-
-        RestTemplate restTemplate =
-                new RestTemplate();
-
-        HttpHeaders headers =
-                new HttpHeaders();
-
-        headers.setBearerAuth(token);
-
-        HttpEntity<String> entity =
-                new HttpEntity<>(headers);
-
-        ObjectMapper mapper =
-                new ObjectMapper();
-
-        ArrayNode allSwarms =
-                mapper.createArrayNode();
-
-        int offset = 0;
-
-        int limit = 20;
-
-        while (true) {
-
-            String url =
-                    baseUrl
-                    + "/firmware/v1/swarms"
-                    + "?offset=" + offset
-                    + "&limit=" + limit;
-
-            ResponseEntity<String> response =
-                    restTemplate.exchange(
-                            url,
-                            HttpMethod.GET,
-                            entity,
-                            String.class
-                    );
-
-            JsonNode root =
-                    mapper.readTree(
-                            response.getBody()
-                    );
-
-            JsonNode swarms =
-                    root.get("swarms");
-
-            if (swarms == null
-                    || !swarms.isArray()
-                    || swarms.size() == 0) {
-
-                break;
-            }
-
-            for (JsonNode swarm : swarms) {
-
-                allSwarms.add(swarm);
-            }
-
-            offset += limit;
+                } catch (Exception e) {
+                        log.error("Error obteniendo listado de APs desde Aruba", e);
+                }
+                return result;
         }
 
-        ObjectNode result =
-                mapper.createObjectNode();
+        /**
+         * Consulta la información de firmware de los swarms.
+         *
+         * Este endpoint puede devolver un 503 si Aruba no tiene disponible el módulo de
+         * firmware en ese momento. En ese caso no se considera un fallo general de la
+         * aplicación, sino un dato temporalmente no disponible.
+         */
+        public JsonNode getFirmwareSwarms() {
 
-        result.set("swarms", allSwarms);
+                try {
+                        String token = authService.getAccessToken();
+                        HttpHeaders headers = new HttpHeaders();
+                        headers.setBearerAuth(token);
+                        HttpEntity<String> entity = new HttpEntity<>(headers);
+                        ObjectMapper mapper = new ObjectMapper();
+                        ArrayNode allSwarms = mapper.createArrayNode();
+                        int offset = 0;
+                        int limit = 20;
+                        while (true) {
+                                String url = baseUrl + "/firmware/v1/swarms" + "?offset=" + offset + "&limit=" + limit;
+                                ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, entity,
+                                                String.class);
+                                JsonNode root = mapper.readTree(response.getBody());
+                                JsonNode swarms = root.get("swarms");
 
+                                if (swarms == null || !swarms.isArray() || swarms.size() == 0) {
+                                        break;
+                                }
+
+                                for (JsonNode swarm : swarms) {
+                                        allSwarms.add(swarm);
+                                }
+
+                                offset += limit;
+                        }
+
+                        ObjectNode result = mapper.createObjectNode();
+                        result.set("swarms", allSwarms);
+                        return result;
+
+                } catch (HttpStatusCodeException e) {
+                        if (isServiceUnavailable(e)) {
+                                log.warn("Firmware de swarms Aruba no disponible temporalmente (503). Se omite este bloque sin detener la sincronizacion.");
+                                return null;
+                        }
+
+                        log.error("Error obteniendo firmware de swarms desde Aruba", e);
+                        return null;
+                } catch (Exception e) {
+                        log.error("Error obteniendo firmware de swarms desde Aruba", e);
+                        return null;
+                }
+        }
+
+        // Revisa el firmware de los switches para saber si hay actualizaciones pendientes.
         
+        public List<ArubaSwitchInfo> getSwitchesList() {
 
-        return result;
+                List<ArubaSwitchInfo> result = new ArrayList<>();
 
-    } catch (Exception e) {
+                try {
 
-        log.error(
-                "Error obteniendo firmware de swarms desde Aruba",
-                e
-        );
+                        String token = authService.getAccessToken();
+                        HttpHeaders headers = new HttpHeaders();
+                        headers.setBearerAuth(token);
+                        HttpEntity<String> entity = new HttpEntity<>(headers);
+                        ObjectMapper mapper = new ObjectMapper();
+                        int offset = 0;
+                        int limit = 100;
+                        while (true) {
 
-        return null;
-    }
-}
+                                String url = baseUrl + "/firmware/v1/devices" + "?device_type=HP" + "&offset=" + offset
+                                                + "&limit=100";
+                                ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, entity,
+                                                String.class);
+                                JsonNode root = mapper.readTree(response.getBody());
+                                JsonNode devices = root.get("devices");
 
-    // =========================
-    // Obtener switches Aruba
-    // =========================
+                                if (devices == null || !devices.isArray() || devices.size() == 0) {
+                                        break;
+                                }
 
-    public List<ArubaSwitchInfo> getSwitchesList() {
+                                for (JsonNode device : devices) {
+                                        ArubaSwitchInfo info = new ArubaSwitchInfo();
+                                        info.setSerial(device.path("serial").asText());
+                                        info.setMacAddress(device.path("mac_address").asText());
+                                        info.setHostname(device.path("hostname").asText());
+                                        info.setModel(device.path("model").asText());
+                                        info.setDeviceStatus(device.path("device_status").asText());
+                                        info.setUpgradeRequired(device.path("upgrade_required").asBoolean(false));
+                                        info.setStatusState(device.path("status").path("state").asText());
+                                        result.add(info);
+                                }
 
-        List<ArubaSwitchInfo> result =
-                new ArrayList<>();
+                                offset += limit;
+                        }
 
-        try {
+                } catch (HttpStatusCodeException e) {
+                        if (isServiceUnavailable(e)) {
+                                log.warn("Firmware de switches Aruba no disponible temporalmente (503). Se omite este bloque sin detener la sincronizacion.");
+                                return result;
+                        }
 
-            String token =
-                    authService.getAccessToken();
+                        log.error("Error obteniendo switches desde Aruba", e);
+                } catch (Exception e) {
+                        log.error("Error obteniendo switches desde Aruba", e);
+                }
+                return result;
+        }
 
-            RestTemplate restTemplate =
-                    new RestTemplate();
+        //Obtiene los switches desde la parte de monitoring de Aruba.
 
-            HttpHeaders headers =
-                    new HttpHeaders();
+        public List<ArubaSwitchInfo> getMonitoringSwitchesList() {
 
-            headers.setBearerAuth(token);
+                List<ArubaSwitchInfo> result = new ArrayList<>();
+                try {
+                        String token = authService.getAccessToken();
+                        HttpHeaders headers = new HttpHeaders();
+                        headers.setBearerAuth(token);
+                        HttpEntity<String> entity = new HttpEntity<>(headers);
+                        ObjectMapper mapper = new ObjectMapper();
+                        int offset = 0;
+                        int limit = 100;
 
-            HttpEntity<String> entity =
-                    new HttpEntity<>(headers);
+                        while (true) {
+                                String url = baseUrl + "/monitoring/v1/switches" + "?offset=" + offset + "&limit=" + limit;
+                                ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, entity, String.class);
+                                JsonNode root = mapper.readTree(response.getBody());
+                                JsonNode switches = findArray(root, "switches", "devices", "items", "data");
 
-            ObjectMapper mapper =
-                    new ObjectMapper();
+                                if (switches == null || switches.size() == 0) {
 
-            int offset = 0;
+                                        if (offset == 0) {
 
-            int limit = 100;
+                                                log.warn("La respuesta de monitoring switches no contiene switches. Campos raiz: {}",
+                                                                fieldNames(root));
+                                        }
 
-            while (true) {
+                                        break;
+                                }
 
-                String url =
-                        baseUrl
-                        + "/firmware/v1/devices"
-                        + "?device_type=HP"
-                        + "&offset="
-                        + offset
-                        + "&limit=100";
+                                for (JsonNode switchNode : switches) {
 
-                ResponseEntity<String> response =
-                        restTemplate.exchange(
-                                url,
-                                HttpMethod.GET,
-                                entity,
-                                String.class
-                        );
+                                        ArubaSwitchInfo info = new ArubaSwitchInfo();
+                                        info.setSerial(text(switchNode, "serial", "serial_number"));
+                                        info.setMacAddress(text(switchNode, "macaddr", "mac_address", "mac"));
+                                        info.setHostname(text(switchNode, "name", "hostname", "device_name"));
+                                        info.setModel(text(switchNode, "model"));
+                                        info.setDeviceStatus(text(switchNode, "status", "device_status"));
+                                        result.add(info);
+                                }
 
-                JsonNode root =
-                        mapper.readTree(
-                                response.getBody()
-                        );
+                                offset += limit;
+                        }
 
-                JsonNode devices =
-                        root.get("devices");
+                } catch (Exception e) {
 
-                if (devices == null
-                        || !devices.isArray()
-                        || devices.size() == 0) {
-
-                    break;
+                        log.error("Error obteniendo switches desde Aruba monitoring", e);
                 }
 
-                for (JsonNode device : devices) {
+                return result;
+        }
 
-                    ArubaSwitchInfo info =
-                            new ArubaSwitchInfo();
+        //Consulta los clientes WiFi conectados.
+        
+        public List<ArubaWifiClientInfo> getWifiClientsList() {
 
-                    info.setSerial(
-                            device.path("serial").asText()
-                    );
+                return getClientsList("WIRELESS", "clientes WiFi");
+        }
 
-                    info.setMacAddress(
-                            device.path("mac_address").asText()
-                    );
+        private List<ArubaWifiClientInfo> getClientsList(String clientType,String logLabel) {
 
-                    info.setHostname(
-                            device.path("hostname").asText()
-                    );
+                List<ArubaWifiClientInfo> result = new ArrayList<>();
 
-                    info.setModel(
-                            device.path("model").asText()
-                    );
+                try {
 
-                    info.setDeviceStatus(
-                            device.path("device_status").asText()
-                    );
+                        String token = authService.getAccessToken();
+                        HttpHeaders headers = new HttpHeaders();
+                        headers.setBearerAuth(token);
+                        HttpEntity<String> entity = new HttpEntity<>(headers);
+                        ObjectMapper mapper = new ObjectMapper();
+                        int offset = 0;
+                        int limit = 1000;
+                        while (true) {
 
-                    info.setUpgradeRequired(
-                            device.path("upgrade_required").asBoolean(false)
-                    );
+                                String url = baseUrl
+                                                + "/monitoring/v2/clients"
+                                                + "?client_type=" + clientType
+                                                + "&client_status=CONNECTED"
+                                                + "&calculate_total=true"
+                                                + "&timerange=3H"
+                                                + "&offset=" + offset
+                                                + "&limit=" + limit;
 
-                    info.setStatusState(
-                            device.path("status")
-                                    .path("state")
-                                    .asText()
-                    );
+                                ResponseEntity<String> response = restTemplate.exchange(
+                                                url,
+                                                HttpMethod.GET,
+                                                entity,
+                                                String.class);
 
-                    result.add(info);
+                                JsonNode root = mapper.readTree(response.getBody());
+
+                                JsonNode clients = findArray(
+                                                root,
+                                                "clients",
+                                                "client",
+                                                "items",
+                                                "data");
+
+                                if (clients == null || clients.size() == 0) {
+
+                                        if (offset == 0) {
+
+                                                log.warn(
+                                                        "La respuesta de Aruba clients {} no contiene clientes. Campos raiz: {}, total={}, count={}, client_count={}",
+                                                        clientType,
+                                                        fieldNames(root),
+                                                        root.path("total").asText(""),
+                                                        root.path("count").asText(""),
+                                                        root.path("client_count").asText(""));
+                                        }
+
+                                        break;
+                                }
+
+                                for (JsonNode client : clients) {
+
+                                        ArubaWifiClientInfo info = new ArubaWifiClientInfo();
+                                        info.setAssociatedDevice(text(client, "associated_device"));
+                                        info.setAssociatedDeviceMac(text(client, "associated_device_mac"));
+                                        info.setAssociatedDeviceName(text(client, "associated_device_name"));
+                                        info.setGroupName(text(client, "group_name", "groupName", "group"));
+                                        info.setHostname(text(client, "hostname"));
+                                        info.setIpAddress(text(client, "ip_address"));
+                                        info.setLastConnectionTime(client.path("last_connection_time").asLong(0));
+                                        info.setMacaddr(text(client, "macaddr", "mac_address"));
+                                        info.setNetwork(text(client, "network", "network_name", "networkName", "ssid", "ssid_name"));
+                                        info.setOsType(text(client, "os_type"));
+                                        result.add(info);
+                                }
+
+                                offset += limit;
+                        }
+
+                } catch (Exception e) {
+
+                        log.error("Error obteniendo " + logLabel + " desde Aruba",e);
                 }
 
-                offset += limit;
-            }
-
-        } catch (Exception e) {
-
-            log.error(
-                    "Error obteniendo switches desde Aruba",
-                    e
-            );
+                log.info("{} obtenidos desde Aruba: {}",logLabel, result.size());
+                return result;
         }
 
-        return result;
-    }
+        /**
+         * Cuenta puertos en estado down de un switch concreto. Si falla la
+         * consulta, devuelve 0 para no detener el ciclo de sincronización.
+         */
+        public int countSwitchPortsDown(String serial) {
 
-    public List<ArubaSwitchInfo> getMonitoringSwitchesList() {
-
-        List<ArubaSwitchInfo> result =
-                new ArrayList<>();
-
-        try {
-
-            String token =
-                    authService.getAccessToken();
-
-            RestTemplate restTemplate =
-                    new RestTemplate();
-
-            HttpHeaders headers =
-                    new HttpHeaders();
-
-            headers.setBearerAuth(token);
-
-            HttpEntity<String> entity =
-                    new HttpEntity<>(headers);
-
-            ObjectMapper mapper =
-                    new ObjectMapper();
-
-            int offset = 0;
-
-            int limit = 100;
-
-            while (true) {
-
-                String url =
-                        baseUrl
-                        + "/monitoring/v1/switches"
-                        + "?offset=" + offset
-                        + "&limit=" + limit;
-
-                ResponseEntity<String> response =
-                        restTemplate.exchange(
-                                url,
-                                HttpMethod.GET,
-                                entity,
-                                String.class
-                        );
-
-                JsonNode root =
-                        mapper.readTree(
-                                response.getBody()
-                        );
-
-                JsonNode switches =
-                        findArray(
-                                root,
-                                "switches",
-                                "devices",
-                                "items",
-                                "data"
-                        );
-
-                if (switches == null
-                        || switches.size() == 0) {
-
-                    if (offset == 0) {
-
-                        log.warn(
-                                "La respuesta de monitoring switches no contiene switches. Campos raiz: {}",
-                                fieldNames(root)
-                        );
-                    }
-
-                    break;
+                if (serial == null || serial.isBlank()) {
+                        return 0;
                 }
 
-                for (JsonNode switchNode : switches) {
+                try {
 
-                    ArubaSwitchInfo info =
-                            new ArubaSwitchInfo();
+                        String token = authService.getAccessToken();
+                        HttpHeaders headers = new HttpHeaders();
+                        headers.setBearerAuth(token);
+                        HttpEntity<String> entity = new HttpEntity<>(headers);
+                        ObjectMapper mapper = new ObjectMapper();
+                        String encodedSerial = URLEncoder.encode(serial, StandardCharsets.UTF_8);
 
-                    info.setSerial(
-                            text(
-                                    switchNode,
-                                    "serial",
-                                    "serial_number"
-                            )
-                    );
+                        String url = baseUrl + "/monitoring/v1/switches/" + encodedSerial + "/ports";
 
-                    info.setMacAddress(
-                            text(
-                                    switchNode,
-                                    "macaddr",
-                                    "mac_address",
-                                    "mac"
-                            )
-                    );
+                        ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, entity, String.class);
+                        JsonNode root = mapper.readTree(response.getBody());
+                        
+                        return countPortsByStatus(root, "down");
 
-                    info.setHostname(
-                            text(
-                                    switchNode,
-                                    "name",
-                                    "hostname",
-                                    "device_name"
-                            )
-                    );
+                } catch (Exception e) {
+                        log.error("Error obteniendo puertos del switch {} desde Aruba", serial, e);
+                        return 0;
+                }
+        }
 
-                    info.setModel(
-                            text(switchNode, "model")
-                    );
+        private int countPortsByStatus(JsonNode root,String expectedStatus) {
 
-                    info.setDeviceStatus(
-                            text(
-                                    switchNode,
-                                    "status",
-                                    "device_status"
-                            )
-                    );
+                JsonNode ports = findArray(root,"ports","interfaces","items","data");
 
-                    result.add(info);
+                if (ports == null || !ports.isArray()) {
+                        return 0;
                 }
 
-                offset += limit;
-            }
+                int count = 0;
 
-        } catch (Exception e) {
+                for (JsonNode port : ports) {
 
-            log.error(
-                    "Error obteniendo switches desde Aruba monitoring",
-                    e
-            );
-        }
+                        String status = text(port, "status");
 
-        return result;
-    }
-
-    // =========================
-    // Obtener clientes WiFi Aruba
-    // =========================
-
-    public List<ArubaWifiClientInfo> getWifiClientsList() {
-
-        return getClientsList(
-                "WIRELESS",
-                "clientes WiFi"
-        );
-    }
-
-    private List<ArubaWifiClientInfo> getClientsList(
-            String clientType,
-            String logLabel
-    ) {
-
-        List<ArubaWifiClientInfo> result =
-                new ArrayList<>();
-
-        try {
-
-            String token =
-                    authService.getAccessToken();
-
-            RestTemplate restTemplate =
-                    new RestTemplate();
-
-            HttpHeaders headers =
-                    new HttpHeaders();
-
-            headers.setBearerAuth(token);
-
-            HttpEntity<String> entity =
-                    new HttpEntity<>(headers);
-
-            ObjectMapper mapper =
-                    new ObjectMapper();
-
-            int offset = 0;
-
-            int limit = 1000;
-
-            while (true) {
-
-                String url =
-                        baseUrl
-                        + "/monitoring/v2/clients"
-                        + "?client_type=" + clientType
-                        + "&client_status=CONNECTED"
-                        + "&calculate_total=true"
-                        + "&timerange=3H"
-                        + "&offset=" + offset
-                        + "&limit=" + limit;
-
-                ResponseEntity<String> response =
-                        restTemplate.exchange(
-                                url,
-                                HttpMethod.GET,
-                                entity,
-                                String.class
-                        );
-
-                JsonNode root =
-                        mapper.readTree(
-                                response.getBody()
-                        );
-
-                JsonNode clients =
-                        findArray(
-                                root,
-                                "clients",
-                                "client",
-                                "items",
-                                "data"
-                        );
-
-                if (clients == null
-                        || clients.size() == 0) {
-
-                    if (offset == 0) {
-
-                        log.warn(
-                                "La respuesta de Aruba clients {} no contiene clientes. Campos raiz: {}, total={}, count={}, client_count={}",
-                                clientType,
-                                fieldNames(root),
-                                root.path("total").asText(""),
-                                root.path("count").asText(""),
-                                root.path("client_count").asText("")
-                        );
-                    }
-
-                    break;
+                        if (expectedStatus.equalsIgnoreCase(status)) {
+                                count++;
+                        }
                 }
 
-                for (JsonNode client : clients) {
+                return count;
+        }
 
-                    ArubaWifiClientInfo info =
-                            new ArubaWifiClientInfo();
+        private JsonNode findArray(JsonNode root,String... names) {
 
-                    info.setAssociatedDevice(
-                            text(client, "associated_device")
-                    );
+                for (String name : names) {
 
-                    info.setAssociatedDeviceMac(
-                            text(client, "associated_device_mac")
-                    );
+                        JsonNode node = root.get(name);
 
-                    info.setAssociatedDeviceName(
-                            text(client, "associated_device_name")
-                    );
-
-                    info.setGroupName(
-                            text(
-                                    client,
-                                    "group_name",
-                                    "groupName",
-                                    "group"
-                            )
-                    );
-
-                    info.setHostname(
-                            text(client, "hostname")
-                    );
-
-                    info.setIpAddress(
-                            text(client, "ip_address")
-                    );
-
-                    info.setLastConnectionTime(
-                            client.path("last_connection_time").asLong(0)
-                    );
-
-                    info.setMacaddr(
-                            text(client, "macaddr", "mac_address")
-                    );
-
-                    info.setNetwork(
-                            text(
-                                    client,
-                                    "network",
-                                    "network_name",
-                                    "networkName",
-                                    "ssid",
-                                    "ssid_name"
-                            )
-                    );
-
-                    info.setOsType(
-                            text(client, "os_type")
-                    );
-
-                    result.add(info);
+                        if (node != null && node.isArray()) {
+                                return node;
+                        }
                 }
 
-                offset += limit;
-            }
-
-        } catch (Exception e) {
-
-            log.error(
-                    "Error obteniendo " + logLabel + " desde Aruba",
-                    e
-            );
+                return null;
         }
 
-        log.info(
-                "{} obtenidos desde Aruba: {}",
-                logLabel,
-                result.size()
-        );
+        private String text(JsonNode node,String... names) {
 
-        return result;
-    }
+                for (String name : names) {
 
-    public int countSwitchPortsDown(String serial) {
+                        JsonNode value = node.get(name);
 
-        if (serial == null
-                || serial.isBlank()) {
-
-            return 0;
+                        if (value != null && !value.isNull()) {
+                                return value.asText().trim();
+                        }
+                }
+                return "";
         }
 
-        try {
+        private List<String> fieldNames(JsonNode node) {
 
-            String token =
-                    authService.getAccessToken();
+                List<String> names = new ArrayList<>();
 
-            RestTemplate restTemplate =
-                    new RestTemplate();
+                Iterator<String> iterator = node.fieldNames();
 
-            HttpHeaders headers =
-                    new HttpHeaders();
-
-            headers.setBearerAuth(token);
-
-            HttpEntity<String> entity =
-                    new HttpEntity<>(headers);
-
-            ObjectMapper mapper =
-                    new ObjectMapper();
-
-            String encodedSerial =
-                    URLEncoder.encode(
-                            serial,
-                            StandardCharsets.UTF_8
-                    );
-
-            String url =
-                    baseUrl
-                    + "/monitoring/v1/switches/"
-                    + encodedSerial
-                    + "/ports";
-
-            ResponseEntity<String> response =
-                    restTemplate.exchange(
-                            url,
-                            HttpMethod.GET,
-                            entity,
-                            String.class
-                    );
-
-            JsonNode root =
-                    mapper.readTree(
-                            response.getBody()
-                    );
-
-            return countPortsByStatus(
-                    root,
-                    "down"
-            );
-
-        } catch (Exception e) {
-
-            log.error(
-                    "Error obteniendo puertos del switch {} desde Aruba",
-                    serial,
-                    e
-            );
-
-            return 0;
-        }
-    }
-
-    private int countPortsByStatus(
-            JsonNode root,
-            String expectedStatus
-    ) {
-
-        JsonNode ports =
-                findArray(
-                        root,
-                        "ports",
-                        "interfaces",
-                        "items",
-                        "data"
-                );
-
-        if (ports == null
-                || !ports.isArray()) {
-
-            return 0;
+                while (iterator.hasNext()) {
+                        names.add(iterator.next());
+                }
+                return names;
         }
 
-        int count = 0;
+        private boolean isServiceUnavailable(HttpStatusCodeException e) {
 
-        for (JsonNode port : ports) {
-
-            String status =
-                    text(port, "status");
-
-            if (expectedStatus.equalsIgnoreCase(status)) {
-
-                count++;
-            }
+                return e.getStatusCode().value() == 503;
         }
-
-        return count;
-    }
-
-    private JsonNode findArray(
-            JsonNode root,
-            String... names
-    ) {
-
-        for (String name : names) {
-
-            JsonNode node =
-                    root.get(name);
-
-            if (node != null
-                    && node.isArray()) {
-
-                return node;
-            }
-        }
-
-        return null;
-    }
-
-    private String text(
-            JsonNode node,
-            String... names
-    ) {
-
-        for (String name : names) {
-
-            JsonNode value =
-                    node.get(name);
-
-            if (value != null
-                    && !value.isNull()) {
-
-                return value.asText().trim();
-            }
-        }
-
-        return "";
-    }
-
-    private List<String> fieldNames(JsonNode node) {
-
-        List<String> names =
-                new ArrayList<>();
-
-        Iterator<String> iterator =
-                node.fieldNames();
-
-        while (iterator.hasNext()) {
-
-            names.add(iterator.next());
-        }
-
-        return names;
-    }
 }

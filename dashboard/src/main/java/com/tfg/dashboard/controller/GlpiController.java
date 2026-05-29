@@ -4,72 +4,31 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.tfg.dashboard.model.GlpiSummary;
+import com.tfg.dashboard.dto.summary.GlpiSummary;
 import com.tfg.dashboard.service.GlpiService;
 
+/**
+ * Endpoint REST de GLPI.
+ *
+ * GLPI representa la consecuencia operativa del entorno: tickets abiertos,
+ * críticos, SLA y capacidad de cierre. Los datos se generan en backend y se
+ * consultan desde el último snapshot persistido.
+ */
 @RestController
 @RequestMapping("/glpi")
 public class GlpiController {
 
-    // =========================
-    // Servicio GLPI
-    // =========================
-    //
-    // Contiene la lógica encargada
-    // de construir los KPIs
-    // relacionados con operación,
-    // tickets y actividad.
-    //
     private final GlpiService glpiService;
 
-    // =========================
-    // Constructor
-    // =========================
-    //
-    // Spring inyecta automáticamente
-    // el servicio GLPI.
-    //
-    public GlpiController(
-            GlpiService glpiService
-    ) {
-
-        this.glpiService =
-                glpiService;
+    public GlpiController(GlpiService glpiService) {
+        this.glpiService = glpiService;
     }
 
-    // =========================
-    // Endpoint resumen GLPI
-    // =========================
-    //
-    // Expone el conjunto de KPIs:
-    //
-    // - Tickets abiertos
-    // - Tickets críticos
-    // - SLA incumplidos
-    // - Actividad diaria
-    // - Actividad semanal
-    // - Backlog operativo
-    //
-    // Devuelve el último snapshot
-    // guardado en MySQL.
-    //
-    // Futuro:
-    //
-    // Sincronización simulada
-    // ↓
-    // GlpiService
-    // ↓
-    // GlpiSummary
-    //
-    // URL:
-    //
-    // GET /glpi/summary
-    //
+    /**
+     * Devuelve KPIs operativos e índice de salud GLPI normalizado.
+     */
     @GetMapping("/summary")
     public GlpiSummary getSummary() {
-
-        return glpiService
-                .getSummary();
+        return glpiService.getSummary();
     }
-
 }

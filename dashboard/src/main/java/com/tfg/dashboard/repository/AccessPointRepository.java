@@ -7,14 +7,11 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import com.tfg.dashboard.model.AccessPoint;
 
-public interface AccessPointRepository
-        extends JpaRepository<AccessPoint, Long> {
+public interface AccessPointRepository extends JpaRepository<AccessPoint, Long> {
 
-    Optional<AccessPoint> findBySerial(String serial);
+        Optional<AccessPoint> findBySerial(String serial);
 
-    Optional<AccessPoint>
-            findTopByLastSeenAtIsNotNullOrderByLastSeenAtDesc();
+        Optional<AccessPoint> findTopByLastSeenAtIsNotNullOrderByLastSeenAtDesc();
 
-    Long countBySerialIsNotNullAndLastSeenAtBefore(
-            LocalDateTime date);
+        Long countBySerialIsNotNullAndLastSeenAtBefore(LocalDateTime date);
 }

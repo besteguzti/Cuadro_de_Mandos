@@ -1,73 +1,44 @@
-package com.tfg.dashboard.model;
+package com.tfg.dashboard.dto.summary;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
+import com.tfg.dashboard.dto.KpiResultDto;
+
+/**
+ * Respuesta agregada del dashboard principal.
+ *
+ * Contiene KPIs transversales, estados de frescura y campos de compatibilidad
+ * consumidos por la vista principal de React.
+ */
 public class MainDashboardSummary {
 
-    // =========================
-    // KPIs transversales
-    // =========================
-    //
-    // Estos indicadores combinan
-    // información de varias
-    // plataformas para alimentar
-    // la vista Principal.
-    //
-
     private String globalHealth;
-
     private int globalHealthPercentage;
-
+    private String globalHealthStatus;
     private int globalCriticality;
-
+    private String globalCriticalityStatus;
     private int globalAvailability;
-
+    private String globalAvailabilityStatus;
     private int userImpact;
-
+    private String userImpactStatus;
     private int affectedServicesPercent;
-
+    private String affectedServicesStatus;
     private int technicalDegradation;
-
+    private String technicalDegradationStatus;
     private int operationalPressure;
-
+    private String operationalPressureStatus;
     private int operationalBacklog;
-
+    private String operationalBacklogStatus;
     private int slaRisk;
-
-    private int globalOperationalRisk;
-
-    private int servicesWithAlerts;
-
-    private int totalActiveUsers;
-
-    private int itemsRequiringAction;
-
+    private String slaRiskStatus;
     private int criticalOpenTickets;
-
-    private int securityRiskItems;
-
-    private int capacityPressure;
-
-    // =========================
-    // Frescura transversal
-    // =========================
-    //
-    // dataStatus resume si los
-    // snapshots usados por la vista
-    // principal son recientes,
-    // antiguos o inexistentes.
-    //
-
+    private List<KpiResultDto> kpis;
     private LocalDateTime lastUpdated;
-
     private String dataStatus;
-
     private String arubaDataStatus;
-
     private String citrixDataStatus;
-
     private String microsoft365DataStatus;
-
     private String glpiDataStatus;
 
     public MainDashboardSummary() {
@@ -81,64 +52,80 @@ public class MainDashboardSummary {
         return globalHealthPercentage;
     }
 
+    public String getGlobalHealthStatus() {
+        return globalHealthStatus;
+    }
+
     public int getGlobalCriticality() {
         return globalCriticality;
+    }
+
+    public String getGlobalCriticalityStatus() {
+        return globalCriticalityStatus;
     }
 
     public int getGlobalAvailability() {
         return globalAvailability;
     }
 
+    public String getGlobalAvailabilityStatus() {
+        return globalAvailabilityStatus;
+    }
+
     public int getUserImpact() {
         return userImpact;
+    }
+
+    public String getUserImpactStatus() {
+        return userImpactStatus;
     }
 
     public int getAffectedServicesPercent() {
         return affectedServicesPercent;
     }
 
+    public String getAffectedServicesStatus() {
+        return affectedServicesStatus;
+    }
+
     public int getTechnicalDegradation() {
         return technicalDegradation;
+    }
+
+    public String getTechnicalDegradationStatus() {
+        return technicalDegradationStatus;
     }
 
     public int getOperationalPressure() {
         return operationalPressure;
     }
 
+    public String getOperationalPressureStatus() {
+        return operationalPressureStatus;
+    }
+
     public int getOperationalBacklog() {
         return operationalBacklog;
+    }
+
+    public String getOperationalBacklogStatus() {
+        return operationalBacklogStatus;
     }
 
     public int getSlaRisk() {
         return slaRisk;
     }
 
-    public int getGlobalOperationalRisk() {
-        return globalOperationalRisk;
-    }
-
-    public int getServicesWithAlerts() {
-        return servicesWithAlerts;
-    }
-
-    public int getTotalActiveUsers() {
-        return totalActiveUsers;
-    }
-
-    public int getItemsRequiringAction() {
-        return itemsRequiringAction;
+    public String getSlaRiskStatus() {
+        return slaRiskStatus;
     }
 
     public int getCriticalOpenTickets() {
         return criticalOpenTickets;
     }
 
-    public int getSecurityRiskItems() {
-        return securityRiskItems;
-    }
-
-    public int getCapacityPressure() {
-        return capacityPressure;
+    public List<KpiResultDto> getKpis() {
+        return kpis;
     }
 
     public LocalDateTime getLastUpdated() {
@@ -173,64 +160,80 @@ public class MainDashboardSummary {
         this.globalHealthPercentage = globalHealthPercentage;
     }
 
+    public void setGlobalHealthStatus(String globalHealthStatus) {
+        this.globalHealthStatus = globalHealthStatus;
+    }
+
     public void setGlobalCriticality(int globalCriticality) {
         this.globalCriticality = globalCriticality;
+    }
+
+    public void setGlobalCriticalityStatus(String globalCriticalityStatus) {
+        this.globalCriticalityStatus = globalCriticalityStatus;
     }
 
     public void setGlobalAvailability(int globalAvailability) {
         this.globalAvailability = globalAvailability;
     }
 
+    public void setGlobalAvailabilityStatus(String globalAvailabilityStatus) {
+        this.globalAvailabilityStatus = globalAvailabilityStatus;
+    }
+
     public void setUserImpact(int userImpact) {
         this.userImpact = userImpact;
+    }
+
+    public void setUserImpactStatus(String userImpactStatus) {
+        this.userImpactStatus = userImpactStatus;
     }
 
     public void setAffectedServicesPercent(int affectedServicesPercent) {
         this.affectedServicesPercent = affectedServicesPercent;
     }
 
+    public void setAffectedServicesStatus(String affectedServicesStatus) {
+        this.affectedServicesStatus = affectedServicesStatus;
+    }
+
     public void setTechnicalDegradation(int technicalDegradation) {
         this.technicalDegradation = technicalDegradation;
+    }
+
+    public void setTechnicalDegradationStatus(String technicalDegradationStatus) {
+        this.technicalDegradationStatus = technicalDegradationStatus;
     }
 
     public void setOperationalPressure(int operationalPressure) {
         this.operationalPressure = operationalPressure;
     }
 
+    public void setOperationalPressureStatus(String operationalPressureStatus) {
+        this.operationalPressureStatus = operationalPressureStatus;
+    }
+
     public void setOperationalBacklog(int operationalBacklog) {
         this.operationalBacklog = operationalBacklog;
+    }
+
+    public void setOperationalBacklogStatus(String operationalBacklogStatus) {
+        this.operationalBacklogStatus = operationalBacklogStatus;
     }
 
     public void setSlaRisk(int slaRisk) {
         this.slaRisk = slaRisk;
     }
 
-    public void setGlobalOperationalRisk(int globalOperationalRisk) {
-        this.globalOperationalRisk = globalOperationalRisk;
-    }
-
-    public void setServicesWithAlerts(int servicesWithAlerts) {
-        this.servicesWithAlerts = servicesWithAlerts;
-    }
-
-    public void setTotalActiveUsers(int totalActiveUsers) {
-        this.totalActiveUsers = totalActiveUsers;
-    }
-
-    public void setItemsRequiringAction(int itemsRequiringAction) {
-        this.itemsRequiringAction = itemsRequiringAction;
+    public void setSlaRiskStatus(String slaRiskStatus) {
+        this.slaRiskStatus = slaRiskStatus;
     }
 
     public void setCriticalOpenTickets(int criticalOpenTickets) {
         this.criticalOpenTickets = criticalOpenTickets;
     }
 
-    public void setSecurityRiskItems(int securityRiskItems) {
-        this.securityRiskItems = securityRiskItems;
-    }
-
-    public void setCapacityPressure(int capacityPressure) {
-        this.capacityPressure = capacityPressure;
+    public void setKpis(List<KpiResultDto> kpis) {
+        this.kpis = kpis;
     }
 
     public void setLastUpdated(LocalDateTime lastUpdated) {

@@ -14,11 +14,11 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.tfg.dashboard.model.CitrixMetricsHistory;
-import com.tfg.dashboard.model.CitrixSummary;
+import com.tfg.dashboard.dto.summary.CitrixSummary;
 import com.tfg.dashboard.model.GlpiMetricsHistory;
-import com.tfg.dashboard.model.GlpiSummary;
+import com.tfg.dashboard.dto.summary.GlpiSummary;
 import com.tfg.dashboard.model.Microsoft365MetricsHistory;
-import com.tfg.dashboard.model.Microsoft365Summary;
+import com.tfg.dashboard.dto.summary.Microsoft365Summary;
 import com.tfg.dashboard.repository.CitrixMetricsHistoryRepository;
 import com.tfg.dashboard.repository.GlpiMetricsHistoryRepository;
 import com.tfg.dashboard.repository.Microsoft365MetricsHistoryRepository;

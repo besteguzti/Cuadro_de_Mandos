@@ -11,40 +11,24 @@ import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 
 @Entity
-@Table(
-        name = "access_points",
-        uniqueConstraints = @UniqueConstraint(
-                name = "uk_access_point_serial",
-                columnNames = "serial"
-        )
-)
+@Table(name = "access_points", uniqueConstraints = @UniqueConstraint(name = "uk_access_point_serial", columnNames = "serial"))
 public class AccessPoint {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
     private String name;
-
     private String status;
-
     private String ipAddress;
-
     private String publicIpAddress;
 
     @Column(nullable = false)
     private String serial;
-
     private String site;
-
     private String firmwareVersion;
-
     private String macaddr;
-
     private String swarmName;
-
     private LocalDateTime firstSeenAt;
-
     private LocalDateTime lastSeenAt;
 
     public Long getId() {

@@ -1,87 +1,59 @@
-package com.tfg.dashboard.model;
+package com.tfg.dashboard.dto.summary;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
 import com.tfg.dashboard.dto.ArubaNetworkStatusDto;
+import com.tfg.dashboard.dto.KpiResultDto;
+import com.tfg.dashboard.model.ArubaSwitchClientUsage;
 
+/**
+ * Respuesta de la vista Aruba.
+ *
+ * Agrupa inventario de APs/switches, clientes WiFi, estado normalizado de red
+ * y frescura de los datos sincronizados desde Aruba Central.
+ */
 public class ArubaSummary {
 
     private int totalAps;
-
     private int upAps;
-
     private int downAps;
-
     private int totalSites;
-
     private int totalSwarms;
-
     private int firmwareOutdated;
-
     private int apsWithoutPublicIp;
-
     private String networkStatus;
 
-    // Detalle calculado en backend para
-    // explicar la afectacion de red Aruba.
-    // Se mantiene networkStatus como campo
-    // simple para no romper vistas ni
-    // consumidores existentes.
+    // Detalle calculado en backend para explicar la afección de red Aruba. Se
+    // mantiene networkStatus como campo
+    // simple para no romper vistas ni consumidores existentes.
     private ArubaNetworkStatusDto networkStatusDetails;
-
+    private KpiResultDto networkStatusKpi;
     private int inactiveAps;
-
     private int totalSwitches;
-
     private int downSwitches;
-
     private int switchesFirmwareUpgradeRequired;
-
     private List<ArubaSwitchClientUsage> underusedSwitches;
-
     private int totalWifiClients;
-
     private int mutualiaApsClients;
-
     private int mutualiaWifiClients;
-
     private int mutualiaLangileakClients;
-
     private int mutualiaClients;
-
     private int mutualiaRedInternaClients;
-
     private int mutualiaRedExternaClients;
-
     private int mutualiaKorporatiboaClients;
-
     private int wifiPacsClients;
-
     private int mutVideoClients;
 
-    // =========================
     // Frescura Aruba
-    // =========================
-    //
-    // lastUpdated indica la fecha
-    // y hora del último dato Aruba
-    // usado para construir este
-    // resumen.
-    //
-    // dataStatus indica si los
-    // datos Aruba son recientes,
-    // antiguos o inexistentes:
+
+    // lastUpdated indica la fecha y hora del último dato Aruba usado para construir
+    // este resumen.
+    // dataStatus indica si los datos Aruba son recientes,antiguos o inexistentes:
     // OK, STALE o NO_DATA.
-    //
 
     private LocalDateTime lastUpdated;
-
     private String dataStatus;
-
-    // =========================
-    // GETTERS
-    // =========================
 
     public int getTotalAps() {
         return totalAps;
@@ -117,6 +89,10 @@ public class ArubaSummary {
 
     public ArubaNetworkStatusDto getNetworkStatusDetails() {
         return networkStatusDetails;
+    }
+
+    public KpiResultDto getNetworkStatusKpi() {
+        return networkStatusKpi;
     }
 
     public int getInactiveAps() {
@@ -187,10 +163,6 @@ public class ArubaSummary {
         return dataStatus;
     }
 
-    // =========================
-    // SETTERS
-    // =========================
-
     public void setTotalAps(int totalAps) {
         this.totalAps = totalAps;
     }
@@ -224,9 +196,12 @@ public class ArubaSummary {
     }
 
     public void setNetworkStatusDetails(
-            ArubaNetworkStatusDto networkStatusDetails
-    ) {
+            ArubaNetworkStatusDto networkStatusDetails) {
         this.networkStatusDetails = networkStatusDetails;
+    }
+
+    public void setNetworkStatusKpi(KpiResultDto networkStatusKpi) {
+        this.networkStatusKpi = networkStatusKpi;
     }
 
     public void setInactiveAps(int inactiveAps) {
@@ -241,16 +216,12 @@ public class ArubaSummary {
         this.downSwitches = downSwitches;
     }
 
-    public void setSwitchesFirmwareUpgradeRequired(
-            int switchesFirmwareUpgradeRequired
-    ) {
-        this.switchesFirmwareUpgradeRequired =
-                switchesFirmwareUpgradeRequired;
+    public void setSwitchesFirmwareUpgradeRequired(int switchesFirmwareUpgradeRequired) {
+        this.switchesFirmwareUpgradeRequired = switchesFirmwareUpgradeRequired;
     }
 
     public void setUnderusedSwitches(
-            List<ArubaSwitchClientUsage> underusedSwitches
-    ) {
+            List<ArubaSwitchClientUsage> underusedSwitches) {
         this.underusedSwitches = underusedSwitches;
     }
 
@@ -274,25 +245,16 @@ public class ArubaSummary {
         this.mutualiaClients = mutualiaClients;
     }
 
-    public void setMutualiaRedInternaClients(
-            int mutualiaRedInternaClients
-    ) {
-        this.mutualiaRedInternaClients =
-                mutualiaRedInternaClients;
+    public void setMutualiaRedInternaClients(int mutualiaRedInternaClients) {
+        this.mutualiaRedInternaClients = mutualiaRedInternaClients;
     }
 
-    public void setMutualiaRedExternaClients(
-            int mutualiaRedExternaClients
-    ) {
-        this.mutualiaRedExternaClients =
-                mutualiaRedExternaClients;
+    public void setMutualiaRedExternaClients(int mutualiaRedExternaClients) {
+        this.mutualiaRedExternaClients = mutualiaRedExternaClients;
     }
 
-    public void setMutualiaKorporatiboaClients(
-            int mutualiaKorporatiboaClients
-    ) {
-        this.mutualiaKorporatiboaClients =
-                mutualiaKorporatiboaClients;
+    public void setMutualiaKorporatiboaClients(int mutualiaKorporatiboaClients) {
+        this.mutualiaKorporatiboaClients = mutualiaKorporatiboaClients;
     }
 
     public void setWifiPacsClients(int wifiPacsClients) {

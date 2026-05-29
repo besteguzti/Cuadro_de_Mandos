@@ -9,40 +9,27 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
+/**
+ * Snapshot histórico de métricas Citrix simuladas.
+ *
+ * Cada fila representa una captura generada por MetricsSyncService y sirve para
+ * consultar el último estado, calcular frescura y alimentar KPIs transversales.
+ */
 @Entity
 @Table(name = "citrix_metrics_history")
 public class CitrixMetricsHistory {
 
-    // =========================
-    // Snapshot temporal Citrix
-    // =========================
-    //
-    // Esta tabla almacena muestras
-    // simuladas para disponer de
-    // histórico y poder construir
-    // KPIs transversales.
-    //
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
     private Integer activeSessions;
-
     private Integer activeLicenses;
-
     private Integer availableDeliveryControllers;
-
     private Integer totalDeliveryControllers;
-
     private Integer disconnectedSessions;
-
     private Integer averageLogonDurationSeconds;
-
     private Integer serverLoadPercent;
-
     private Integer failedLogons;
-
     private String citrixHealth;
 
     @Column(name = "collected_at")
@@ -113,29 +100,20 @@ public class CitrixMetricsHistory {
         this.activeLicenses = activeLicenses;
     }
 
-    public void setAvailableDeliveryControllers(
-            Integer availableDeliveryControllers
-    ) {
-        this.availableDeliveryControllers =
-                availableDeliveryControllers;
+    public void setAvailableDeliveryControllers(Integer availableDeliveryControllers) {
+        this.availableDeliveryControllers = availableDeliveryControllers;
     }
 
-    public void setTotalDeliveryControllers(
-            Integer totalDeliveryControllers
-    ) {
-        this.totalDeliveryControllers =
-                totalDeliveryControllers;
+    public void setTotalDeliveryControllers(Integer totalDeliveryControllers) {
+        this.totalDeliveryControllers = totalDeliveryControllers;
     }
 
     public void setDisconnectedSessions(Integer disconnectedSessions) {
         this.disconnectedSessions = disconnectedSessions;
     }
 
-    public void setAverageLogonDurationSeconds(
-            Integer averageLogonDurationSeconds
-    ) {
-        this.averageLogonDurationSeconds =
-                averageLogonDurationSeconds;
+    public void setAverageLogonDurationSeconds(Integer averageLogonDurationSeconds) {
+        this.averageLogonDurationSeconds = averageLogonDurationSeconds;
     }
 
     public void setServerLoadPercent(Integer serverLoadPercent) {

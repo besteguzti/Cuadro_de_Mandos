@@ -1,0 +1,126 @@
+package com.tfg.dashboard.controller;
+
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import java.time.LocalDateTime;
+import java.util.List;
+
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.web.servlet.MockMvc;
+
+import com.tfg.dashboard.dto.AnalyticsComparePoint;
+import com.tfg.dashboard.dto.OperationalImpactAnalysisResponse;
+import com.tfg.dashboard.dto.TechnicalTimelinePointDto;
+import com.tfg.dashboard.service.TransversalKpiAnalyticsService;
+
+@WebMvcTest(AnalysisController.class)
+class AnalysisControllerTest {
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    @MockBean
+    private TransversalKpiAnalyticsService analyticsService;
+
+    @Test
+    void glpiPlatformRelationReturnsExpectedStructure() throws Exception {
+
+        OperationalImpactAnalysisResponse response =
+                new OperationalImpactAnalysisResponse();
+        response.setSelectedPlatform("Aruba");
+        response.setGlpiOperationalPressure(45);
+        response.setArubaGlpiRelation(40);
+        response.setPoints(List.of(point(45, 40)));
+
+        when(analyticsService.getGlpiPlatformRelation("aruba", "30d"))
+                .thenReturn(response);
+
+        mockMvc.perform(get("/api/analysis/glpi-platform-relation")
+                        .param("platform", "aruba")
+                        .param("period", "30d"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.selectedPlatform").value("Aruba"))
+                .andExpect(jsonPath("$.glpiOperationalPressure").value(45))
+                .andExpect(jsonPath("$.points[0].x").value(45.0));
+    }
+
+    @Test
+    void technicalDegradationImpactReturnsPoints() throws Exception {
+
+        when(analyticsService.getTechnicalDegradationImpact("30d"))
+                .thenReturn(List.of(point(30, 55)));
+
+        mockMvc.perform(get("/api/analysis/technical-degradation-impact")
+                        .param("period", "30d"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].x").value(30.0))
+                .andExpect(jsonPath("$[0].y").value(55.0));
+    }
+
+    @Test
+    void platformEvolutionReturnsTimeline() throws Exception {
+
+        TechnicalTimelinePointDto point =
+                new TechnicalTimelinePointDto();
+        point.setTimestamp(LocalDateTime.now());
+        point.setAruba(20.0);
+        point.setCitrix(30.0);
+        point.setMicrosoft365(40.0);
+
+        when(analyticsService.getPlatformEvolution("30d"))
+                .thenReturn(List.of(point));
+
+        mockMvc.perform(get("/api/analysis/platform-evolution")
+                        .param("period", "30d"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].aruba").value(20.0))
+                .andExpect(jsonPath("$[0].citrix").value(30.0))
+                .andExpect(jsonPath("$[0].microsoft365").value(40.0));
+    }
+
+    @Test
+    void emptyServiceResponsesDoNotReturnServerError() throws Exception {
+
+        OperationalImpactAnalysisResponse emptyRelation =
+                new OperationalImpactAnalysisResponse();
+        emptyRelation.setPoints(List.of());
+
+        when(analyticsService.getGlpiPlatformRelation("citrix", "7d"))
+                .thenReturn(emptyRelation);
+        when(analyticsService.getTechnicalDegradationImpact("7d"))
+                .thenReturn(List.of());
+        when(analyticsService.getPlatformEvolution("7d"))
+                .thenReturn(List.of());
+
+        mockMvc.perform(get("/api/analysis/glpi-platform-relation")
+                        .param("platform", "citrix")
+                        .param("period", "7d"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.points").isArray());
+
+        mockMvc.perform(get("/api/analysis/technical-degradation-impact")
+                        .param("period", "7d"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray());
+
+        mockMvc.perform(get("/api/analysis/platform-evolution")
+                        .param("period", "7d"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray());
+    }
+
+    private AnalyticsComparePoint point(double x, double y) {
+
+        return new AnalyticsComparePoint(
+                LocalDateTime.now(),
+                x,
+                y
+        );
+    }
+}

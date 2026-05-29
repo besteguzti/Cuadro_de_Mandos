@@ -11,13 +11,8 @@ import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 
 @Entity
-@Table(
-        name = "aruba_switch_client_usage",
-        uniqueConstraints = @UniqueConstraint(
-                name = "uk_switch_client_usage_associated_device",
-                columnNames = "associated_device"
-        )
-)
+@Table(name = "aruba_switch_client_usage", uniqueConstraints = @UniqueConstraint(name = "uk_switch_client_usage_associated_device", columnNames = "associated_device"))
+
 public class ArubaSwitchClientUsage {
 
     @Id

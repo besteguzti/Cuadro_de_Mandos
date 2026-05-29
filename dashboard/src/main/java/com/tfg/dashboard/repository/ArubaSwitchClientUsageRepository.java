@@ -7,18 +7,11 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import com.tfg.dashboard.model.ArubaSwitchClientUsage;
 
-public interface ArubaSwitchClientUsageRepository
-        extends JpaRepository<ArubaSwitchClientUsage, Long> {
+public interface ArubaSwitchClientUsageRepository extends JpaRepository<ArubaSwitchClientUsage, Long> {
 
-    Optional<ArubaSwitchClientUsage> findByAssociatedDevice(
-            String associatedDevice
-    );
+        Optional<ArubaSwitchClientUsage> findByAssociatedDevice(String associatedDevice);
 
-    Optional<ArubaSwitchClientUsage>
-            findTopByUpdatedAtIsNotNullOrderByUpdatedAtDesc();
+        Optional<ArubaSwitchClientUsage> findTopByUpdatedAtIsNotNullOrderByUpdatedAtDesc();
 
-    List<ArubaSwitchClientUsage>
-            findByAssociatedDeviceInOrderByDownInterfacesDescAssociatedDeviceAsc(
-                    List<String> associatedDevices
-            );
+        List<ArubaSwitchClientUsage> findByAssociatedDeviceInOrderByDownInterfacesDescAssociatedDeviceAsc(List<String> associatedDevices);
 }

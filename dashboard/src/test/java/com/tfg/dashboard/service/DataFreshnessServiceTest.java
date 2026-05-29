@@ -11,6 +11,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import com.tfg.dashboard.config.properties.KpiProperties;
 import com.tfg.dashboard.model.CitrixMetricsHistory;
 import com.tfg.dashboard.model.GlpiMetricsHistory;
 import com.tfg.dashboard.model.Microsoft365MetricsHistory;
@@ -30,6 +31,9 @@ class DataFreshnessServiceTest {
     @Mock
     private GlpiMetricsHistoryRepository glpiRepository;
 
+    private final KpiProperties kpiProperties =
+            new KpiProperties();
+
     @Test
     void citrixRecentSnapshotReturnsOk() {
 
@@ -42,7 +46,7 @@ class DataFreshnessServiceTest {
                 .thenReturn(Optional.of(history));
 
         CitrixService service =
-                new CitrixService(citrixRepository);
+                new CitrixService(citrixRepository, kpiProperties);
 
         assertThat(service.getSummary().getDataStatus())
                 .isEqualTo("OK");
@@ -55,7 +59,7 @@ class DataFreshnessServiceTest {
                 .thenReturn(Optional.empty());
 
         CitrixService service =
-                new CitrixService(citrixRepository);
+                new CitrixService(citrixRepository, kpiProperties);
 
         assertThat(service.getSummary().getDataStatus())
                 .isEqualTo("NO_DATA");
@@ -73,7 +77,7 @@ class DataFreshnessServiceTest {
                 .thenReturn(Optional.of(history));
 
         Microsoft365Service service =
-                new Microsoft365Service(microsoft365Repository);
+                new Microsoft365Service(microsoft365Repository, kpiProperties);
 
         assertThat(service.getSummary().getDataStatus())
                 .isEqualTo("STALE");
@@ -90,7 +94,7 @@ class DataFreshnessServiceTest {
                 .thenReturn(Optional.of(history));
 
         GlpiService service =
-                new GlpiService(glpiRepository);
+                new GlpiService(glpiRepository, kpiProperties);
 
         assertThat(service.getSummary().getDataStatus())
                 .isEqualTo("OK");

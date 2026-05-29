@@ -5,21 +5,13 @@ import java.util.List;
 public class ArubaNetworkStatusDto {
 
     private int percentage;
-
     private String color;
-
     private AccessPointStatusDto accessPointStatus;
-
     private SwitchStatusDto switchStatus;
-
     private List<String> reasons;
-
     private boolean affectedService;
-
     private boolean criticalCondition;
-
     private int technicalDegradationValue;
-
     private boolean transversalReady;
 
     public int getPercentage() {

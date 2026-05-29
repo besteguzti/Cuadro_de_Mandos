@@ -9,19 +9,15 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
+/**
+ * Histórico de KPIs transversales.
+ *
+ * Almacena código, nombre, unidad, valor y fecha de captura para poder comparar
+ * indicadores globales en el módulo de análisis.
+ */
 @Entity
 @Table(name = "transversal_kpi_history")
 public class TransversalKpiHistory {
-
-    // =========================
-    // Snapshot KPI transversal
-    // =========================
-    //
-    // Esta tabla almacena muestras
-    // historicas de indicadores
-    // globales para poder comparar
-    // relaciones entre KPIs.
-    //
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -32,9 +28,7 @@ public class TransversalKpiHistory {
 
     @Column(name = "kpi_name")
     private String kpiName;
-
     private Double value;
-
     private String unit;
 
     @Column(name = "collected_at")

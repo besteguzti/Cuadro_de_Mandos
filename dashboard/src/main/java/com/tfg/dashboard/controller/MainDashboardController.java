@@ -4,39 +4,30 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.tfg.dashboard.model.MainDashboardSummary;
+import com.tfg.dashboard.dto.summary.MainDashboardSummary;
 import com.tfg.dashboard.service.MainDashboardService;
 
+/**
+ * Publica el resumen que usa la pantalla principal del dashboard.
+ *
+ * La ruta se mantiene porque es la que consume React. El cálculo de los KPIs no
+ * se hace aquí, sino en MainDashboardService; este controlador solo actúa como
+ * punto de entrada HTTP.
+ */
 @RestController
 @RequestMapping("/dashboard")
 public class MainDashboardController {
 
-    // =========================
-    // Dashboard principal
-    // =========================
-    //
-    // Este controlador alimenta la
-    // vista Principal del dashboard
-    // con KPIs transversales.
-    //
-
     private final MainDashboardService mainDashboardService;
 
-    public MainDashboardController(
-            MainDashboardService mainDashboardService
-    ) {
-
-        this.mainDashboardService =
-                mainDashboardService;
+    public MainDashboardController(MainDashboardService mainDashboardService) {
+        this.mainDashboardService = mainDashboardService;
     }
 
-    // =========================
-    // Resumen transversal
-    // =========================
-    //
-    // GET /dashboard/summary
-    //
-
+    /**
+     * Devuelve estado global, criticidad, disponibilidad, presión operativa y
+     * resto de KPIs transversales calculados desde las plataformas monitorizadas.
+     */
     @GetMapping("/summary")
     public MainDashboardSummary getSummary() {
 

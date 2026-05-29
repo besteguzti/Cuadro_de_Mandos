@@ -8,15 +8,23 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import com.tfg.dashboard.model.CitrixMetricsHistory;
-import com.tfg.dashboard.model.CitrixSummary;
+import com.tfg.dashboard.dto.summary.CitrixSummary;
 import com.tfg.dashboard.model.GlpiMetricsHistory;
-import com.tfg.dashboard.model.GlpiSummary;
+import com.tfg.dashboard.dto.summary.GlpiSummary;
 import com.tfg.dashboard.model.Microsoft365MetricsHistory;
-import com.tfg.dashboard.model.Microsoft365Summary;
+import com.tfg.dashboard.dto.summary.Microsoft365Summary;
 import com.tfg.dashboard.repository.CitrixMetricsHistoryRepository;
 import com.tfg.dashboard.repository.GlpiMetricsHistoryRepository;
 import com.tfg.dashboard.repository.Microsoft365MetricsHistoryRepository;
 
+/**
+ * Scheduler de sincronización de fuentes simuladas.
+ *
+ * Genera métricas dinámicas de Citrix, Microsoft 365 y GLPI, las persiste como
+ * snapshots en MySQL y crea capturas transversales para el dashboard de
+ * análisis. Cada plataforma se sincroniza de forma aislada para que un fallo
+ * parcial no bloquee el resto.
+ */
 @Service
 public class MetricsSyncService {
 
@@ -24,15 +32,6 @@ public class MetricsSyncService {
             LoggerFactory.getLogger(MetricsSyncService.class);
 
     private static final int RETENTION_DAYS = 90;
-
-    // =========================
-    // Servicios simulados
-    // =========================
-    //
-    // De momento no conectan APIs
-    // reales. Generan datos dinamicos
-    // que se guardan como historico.
-    //
 
     private final CitrixService citrixService;
 
@@ -67,18 +66,10 @@ public class MetricsSyncService {
         this.analyticsService = analyticsService;
     }
 
-    // =========================
-    // Sincronizacion periodica
-    // =========================
-    //
-    // Guarda una muestra nueva cada
-    // minuto para Citrix, Microsoft
-    // 365 y GLPI. Cada plataforma se
-    // sincroniza de forma independiente
-    // para que un fallo no bloquee las
-    // demas.
-    //
-
+    /**
+     * Ejecuta la sincronización periódica de las fuentes simuladas y snapshots
+     * de análisis.
+     */
     @Scheduled(fixedRate = 60000)
     public void syncExternalPlatformMetrics() {
 
@@ -121,10 +112,12 @@ public class MetricsSyncService {
 
             analyticsService.saveCurrentSnapshot(collectedAt);
             log.info("Snapshot transversal guardado");
+            analyticsService.saveAnalysisSnapshot(collectedAt);
+            log.info("Snapshot de analisis guardado");
 
         } catch (Exception exception) {
 
-            log.error("Error guardando snapshot transversal", exception);
+            log.error("Error guardando snapshots de analisis", exception);
         }
 
         cleanOldMetrics();
@@ -132,6 +125,9 @@ public class MetricsSyncService {
         log.info("Sincronizacion de metricas externas finalizada");
     }
 
+    /**
+     * Genera y persiste un snapshot Citrix simulado.
+     */
     private void syncCitrixMetrics(
             LocalDateTime collectedAt
     ) {
@@ -144,6 +140,9 @@ public class MetricsSyncService {
         log.info("Datos Citrix guardados");
     }
 
+    /**
+     * Genera y persiste un snapshot Microsoft 365 simulado.
+     */
     private void syncMicrosoft365Metrics(
             LocalDateTime collectedAt
     ) {
@@ -156,6 +155,9 @@ public class MetricsSyncService {
         log.info("Datos Microsoft 365 guardados");
     }
 
+    /**
+     * Genera y persiste un snapshot GLPI simulado.
+     */
     private void syncGlpiMetrics(
             LocalDateTime collectedAt
     ) {
@@ -168,6 +170,10 @@ public class MetricsSyncService {
         log.info("Datos GLPI guardados");
     }
 
+    /**
+     * Aplica retención de históricos para evitar crecimiento indefinido de las
+     * tablas de snapshots simulados.
+     */
     private void cleanOldMetrics() {
 
         // Se aplica retencion de 90 dias
@@ -270,9 +276,6 @@ public class MetricsSyncService {
         );
         history.setStaleDevices(summary.getStaleDevices());
         history.setMicrosoft365Health(summary.getMicrosoft365Health());
-        history.setMicrosoft365OperationalRisk(
-                summary.getMicrosoft365OperationalRisk()
-        );
         history.setCollectedAt(collectedAt);
 
         return history;

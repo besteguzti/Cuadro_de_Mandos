@@ -10,11 +10,9 @@ import org.springframework.data.repository.query.Param;
 
 import com.tfg.dashboard.model.ArubaSwitchInterfaceUsageHistory;
 
-public interface ArubaSwitchInterfaceUsageHistoryRepository
-        extends JpaRepository<ArubaSwitchInterfaceUsageHistory, Long> {
+public interface ArubaSwitchInterfaceUsageHistoryRepository extends JpaRepository<ArubaSwitchInterfaceUsageHistory, Long> {
 
-    Optional<ArubaSwitchInterfaceUsageHistory>
-            findTopByObservedAtIsNotNullOrderByObservedAtDesc();
+    Optional<ArubaSwitchInterfaceUsageHistory> findTopByObservedAtIsNotNullOrderByObservedAtDesc();
 
     @Query("""
             select h.associatedDevice

@@ -1,21 +1,18 @@
 HELP.md
 
-# 🔨 Build
+# Build
 target/
 build/
 dist/
 out/
 
-# Maven wrapper
-.mvn/wrapper/maven-wrapper.jar
-
-# Permitir target/build dentro de src (como tenías)
+# Permitir target/build dentro de src
 !**/src/main/**/target/
 !**/src/test/**/target/
 !**/src/main/**/build/
 !**/src/test/**/build/
 
-# 🧠 IDEs
+# IDEs
 ### STS ###
 .apt_generated
 .classpath
@@ -40,15 +37,14 @@ out/
 ### VS Code ###
 .vscode/
 
-# 🔐 SEGURIDAD (LO MÁS IMPORTANTE)
+# Seguridad
 
 # Variables de entorno (CLAVES, TOKENS, PASSWORDS)
 .env
 .env.*
 *.env
 
-# Configuración sensible
-application.properties
+# Configuracion sensible
 application.yml
 application-*.yml
 application-*.properties
@@ -66,13 +62,13 @@ application-*.properties
 .DS_Store
 Thumbs.db
 
-# 🗄️ Base de datos local
+# Base de datos local
 *.sqlite
 *.db
 
-# 📦 Dependencias (por si acaso)
+# Dependencias
 node_modules/
 
-# 🔑 Archivos de configuración secretos personalizados
+# Archivos de configuracion secretos personalizados
 secrets.*
 config.local.*

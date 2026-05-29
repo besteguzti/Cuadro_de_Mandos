@@ -5,19 +5,12 @@ import java.util.List;
 public class Microsoft365HealthStatusDto {
 
     private int percentage;
-
     private String color;
-
     private List<Microsoft365IndicatorStatusDto> indicators;
-
     private List<String> reasons;
-
     private boolean affectedService;
-
     private boolean criticalCondition;
-
     private int technicalDegradationValue;
-
     private boolean transversalReady;
 
     public int getPercentage() {

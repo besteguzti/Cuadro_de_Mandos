@@ -1,97 +1,40 @@
-package com.tfg.dashboard.model;
+package com.tfg.dashboard.dto.summary;
 
 import java.time.LocalDateTime;
 
+import com.tfg.dashboard.dto.KpiResultDto;
 import com.tfg.dashboard.dto.Microsoft365HealthStatusDto;
 
+/**
+ * Respuesta de la vista Microsoft 365.
+ *
+ * Contiene métricas simuladas de servicios, seguridad y dispositivos junto al
+ * índice de salud Microsoft 365 calculado en backend.
+ */
 public class Microsoft365Summary {
 
-    // =========================
-    // Uso y licenciamiento
-    // =========================
-
     private int activeUsers;
-
     private int unassignedLicenses;
-
-    // =========================
-    // Estado servicios Microsoft
-    // =========================
-
     private String outlookStatus;
-
     private String teamsStatus;
-
     private String sharePointStatus;
-
-    // =========================
-    // Exchange / SharePoint
-    // =========================
-
     private int nearlyFullMailboxes;
-
     private int emailsQuarantined;
-
     private int sharePointStoragePercent;
-
-    // =========================
-    // Seguridad e identidad
-    // =========================
-
     private int riskyUsers;
-
     private int failedSignIns;
-
     private int usersWithoutMfa;
-
-    // =========================
-    // Aplicaciones empresariales
-    // =========================
-
     private int appsSecretsExpiringSoon;
-
     private int unusedApplications;
-
     private int highPrivilegeApplications;
-
-    // =========================
-    // Intune / Endpoint Manager
-    // =========================
-
     private int nonCompliantDevices;
-
     private int outdatedWindowsDevices;
-
     private int devicesWithoutEncryption;
-
     private int staleDevices;
-
-    // =========================
-    // KPIs compuestos
-    // =========================
-
     private String microsoft365Health;
-
-    // Detalle normalizado del indice
-    // Microsoft 365. Se mantiene
-    // microsoft365Health como semaforo
-    // simple para no romper consumidores
-    // existentes.
     private Microsoft365HealthStatusDto microsoft365HealthDetails;
-
-    private int microsoft365OperationalRisk;
-
-    // =========================
-    // Frescura de datos
-    // =========================
-    //
-    // dataStatus permite saber si
-    // el snapshot de MySQL es OK,
-    // STALE o NO_DATA.
-    //
-
+    private KpiResultDto microsoft365HealthKpi;
     private LocalDateTime lastUpdated;
-
     private String dataStatus;
 
     public Microsoft365Summary() {
@@ -253,18 +196,16 @@ public class Microsoft365Summary {
         return microsoft365HealthDetails;
     }
 
-    public void setMicrosoft365HealthDetails(
-            Microsoft365HealthStatusDto microsoft365HealthDetails
-    ) {
+    public KpiResultDto getMicrosoft365HealthKpi() {
+        return microsoft365HealthKpi;
+    }
+
+    public void setMicrosoft365HealthDetails(Microsoft365HealthStatusDto microsoft365HealthDetails) {
         this.microsoft365HealthDetails = microsoft365HealthDetails;
     }
 
-    public int getMicrosoft365OperationalRisk() {
-        return microsoft365OperationalRisk;
-    }
-
-    public void setMicrosoft365OperationalRisk(int microsoft365OperationalRisk) {
-        this.microsoft365OperationalRisk = microsoft365OperationalRisk;
+    public void setMicrosoft365HealthKpi(KpiResultDto microsoft365HealthKpi) {
+        this.microsoft365HealthKpi = microsoft365HealthKpi;
     }
 
     public LocalDateTime getLastUpdated() {

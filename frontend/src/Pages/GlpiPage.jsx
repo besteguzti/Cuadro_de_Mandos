@@ -10,7 +10,7 @@ const glpiKpiInfo = {
     description:
       "Representa el número total de tickets abiertos en el entorno GLPI simulado.",
     algorithm:
-      "Se genera dinámicamente en GlpiService como carga operativa actual.",
+      "Se genera dinámicamente en GlpiService. De 0 a 100 tickets es verde, de 101 a 200 es amarillo y 201 o más es rojo.",
     interpretation:
       "Un valor alto indica mayor volumen de trabajo pendiente y puede requerir refuerzo operativo."
   },
@@ -18,7 +18,7 @@ const glpiKpiInfo = {
     description:
       "Indica tickets abiertos clasificados como críticos.",
     algorithm:
-      "Se genera dinámicamente en GlpiService manteniendo coherencia con el total de tickets abiertos.",
+      "Se genera dinámicamente en GlpiService manteniendo coherencia con el total de tickets abiertos. 0 es verde, de 1 a 10 es amarillo y más de 10 es rojo.",
     interpretation:
       "Cualquier valor mayor que cero requiere atención prioritaria por posible impacto en servicio."
   },
@@ -26,7 +26,7 @@ const glpiKpiInfo = {
     description:
       "Cuenta tickets que han superado el tiempo objetivo de resolución o atención.",
     algorithm:
-      "Se genera dinámicamente en GlpiService y se clasifica con umbrales de advertencia y criticidad.",
+      "Se genera dinámicamente en GlpiService como señal informativa de incumplimiento de SLA.",
     interpretation:
       "Un valor alto indica incumplimiento de compromisos de servicio y mayor riesgo operativo."
   },
@@ -34,7 +34,7 @@ const glpiKpiInfo = {
     description:
       "Mide el tiempo medio de resolución de tickets, expresado en horas.",
     algorithm:
-      "Se genera dinámicamente en GlpiService y se evalúa con umbrales de advertencia y criticidad.",
+      "Se genera dinámicamente en GlpiService como indicador informativo de rendimiento operativo.",
     interpretation:
       "Un valor alto indica lentitud en la resolución y posible saturación del equipo de soporte."
   },
@@ -58,7 +58,7 @@ const glpiKpiInfo = {
     description:
       "Indica tickets cerrados durante el día actual.",
     algorithm:
-      "Se genera dinámicamente en GlpiService y se compara visualmente con los tickets creados hoy.",
+      "Se genera dinámicamente en GlpiService y se usa para calcular el porcentaje de cierre diario. Si el cierre es igual o superior al 50% es verde; por debajo del 50% es amarillo.",
     interpretation:
       "Si es menor que los tickets creados hoy, puede crecer el trabajo pendiente diario."
   },
@@ -74,47 +74,37 @@ const glpiKpiInfo = {
     description:
       "Indica tickets cerrados durante la semana actual.",
     algorithm:
-      "Se genera dinámicamente en GlpiService, manteniendo una relación coherente con los tickets creados semanalmente.",
+      "Se genera dinámicamente en GlpiService y se usa para calcular el porcentaje de cierre semanal. Si el cierre es igual o superior al 50% es verde; por debajo del 50% es amarillo.",
     interpretation:
       "Si queda por debajo de los creados en la semana, el backlog puede aumentar."
   }
 };
 
 function GlpiPage() {
-  // =========================
-  // Estado resumen GLPI
-  // =========================
-  //
-  // Guarda los KPIs recibidos
-  // desde el backend.
-  //
   const [summary, setSummary] = useState(null);
-
-  // =========================
-  // Estado de carga
-  // =========================
-  //
-  // Permite mostrar un mensaje
-  // mientras se consulta la API.
-  //
+  const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // =========================
-  // Carga datos GLPI
-  // =========================
-  //
-  // Consume:
-  // GET /glpi/summary
-  //
   useEffect(() => {
+    // GLPI llega como consecuencia operativa calculada en backend; React solo
+    // muestra el resumen y sus estados.
     fetch(`${API_BASE_URL}/glpi/summary`)
-      .then((response) => response.json())
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("No se pudo cargar el resumen GLPI");
+        }
+
+        return response.json();
+      })
       .then((data) => {
         setSummary(data);
+        setError(null);
         setLoading(false);
       })
       .catch((error) => {
         console.error("Error cargando GLPI:", error);
+        setError("No se pudo conectar con el backend de GLPI.");
+        setSummary(null);
         setLoading(false);
       });
   }, []);
@@ -128,11 +118,11 @@ function GlpiPage() {
     );
   }
 
-  if (!summary) {
+  if (error || !summary) {
     return (
       <main className="dashboard">
         <h1>GLPI</h1>
-        <p className="loading">No se han podido cargar los datos de GLPI.</p>
+        <p className="loading">{error ?? "No se han podido cargar los datos de GLPI."}</p>
       </main>
     );
   }
@@ -140,6 +130,8 @@ function GlpiPage() {
   const glpiHealthDetails = summary.glpiHealthDetails;
   const glpiHealth = glpiHealthDetails?.color ?? "UNKNOWN";
   const glpiReasons = glpiHealthDetails?.reasons ?? [];
+  const indicatorStatus = (name) =>
+    findIndicatorStatus(glpiHealthDetails?.indicators, name);
 
   return (
     <main className="dashboard">
@@ -194,27 +186,21 @@ function GlpiPage() {
         <KpiCard
           title="Tickets abiertos"
           value={summary.openTickets}
-          status={summary.openTickets > 150 ? "warning" : "ok"}
+          status={indicatorStatus("Tickets abiertos")}
           info={glpiKpiInfo.openTickets}
         />
 
         <KpiCard
           title="Tickets críticos abiertos"
           value={summary.criticalOpenTickets}
-          status={summary.criticalOpenTickets > 0 ? "danger" : "ok"}
+          status={indicatorStatus("Tickets abiertos criticos")}
           info={glpiKpiInfo.criticalOpenTickets}
         />
 
         <KpiCard
           title="Tickets vencidos SLA"
           value={summary.slaBreachedTickets}
-          status={
-            summary.slaBreachedTickets > 15
-              ? "danger"
-              : summary.slaBreachedTickets > 5
-                ? "warning"
-                : "ok"
-          }
+          status="neutral"
           info={glpiKpiInfo.slaBreachedTickets}
         />
       </div>
@@ -228,20 +214,14 @@ function GlpiPage() {
         <KpiCard
           title="Tiempo medio resolución"
           value={`${summary.averageResolutionHours}h`}
-          status={
-            summary.averageResolutionHours > 24
-              ? "danger"
-              : summary.averageResolutionHours > 12
-                ? "warning"
-                : "ok"
-          }
+          status="neutral"
           info={glpiKpiInfo.averageResolutionHours}
         />
 
         <KpiCard
           title="Backlog operativo"
           value={summary.operationalBacklog}
-          status={summary.operationalBacklog > 150 ? "warning" : "ok"}
+          status="neutral"
           info={glpiKpiInfo.operationalBacklog}
         />
       </div>
@@ -262,11 +242,7 @@ function GlpiPage() {
         <KpiCard
           title="Tickets cerrados hoy"
           value={summary.closedToday}
-          status={
-            summary.closedToday < summary.createdToday
-              ? "warning"
-              : "ok"
-          }
+          status={indicatorStatus("Porcentaje de tickets cerrados")}
           info={glpiKpiInfo.closedToday}
         />
       </div>
@@ -287,11 +263,7 @@ function GlpiPage() {
         <KpiCard
           title="Tickets cerrados semana"
           value={summary.closedThisWeek}
-          status={
-            summary.closedThisWeek < summary.createdThisWeek
-              ? "warning"
-              : "ok"
-          }
+          status={indicatorStatus("Porcentaje de tickets cerrados semana")}
           info={glpiKpiInfo.closedThisWeek}
         />
       </div>
@@ -322,6 +294,11 @@ function formatGlpiStatus(status) {
   }
 
   return status;
+}
+
+function findIndicatorStatus(indicators, name) {
+  return indicators?.find((indicator) => indicator.name === name)?.color
+    ?? "neutral";
 }
 
 export default GlpiPage;

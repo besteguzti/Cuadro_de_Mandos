@@ -13,12 +13,7 @@ public class AnalyticsComparePoint {
     public AnalyticsComparePoint() {
     }
 
-    public AnalyticsComparePoint(
-            LocalDateTime timestamp,
-            Double x,
-            Double y
-    ) {
-
+    public AnalyticsComparePoint(LocalDateTime timestamp,Double x,Double y) {
         this.timestamp = timestamp;
         this.x = x;
         this.y = y;

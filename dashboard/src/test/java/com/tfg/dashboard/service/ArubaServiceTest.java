@@ -11,20 +11,21 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import com.tfg.dashboard.config.properties.KpiProperties;
 import com.tfg.dashboard.client.ArubaApiClient;
 import com.tfg.dashboard.dto.ArubaApInfo;
 import com.tfg.dashboard.dto.ArubaSwitchInfo;
 import com.tfg.dashboard.dto.ArubaWifiClientInfo;
 import com.tfg.dashboard.model.AccessPoint;
 import com.tfg.dashboard.model.ArubaDashboardMetrics;
-import com.tfg.dashboard.model.ArubaSummary;
+import com.tfg.dashboard.dto.summary.ArubaSummary;
 import com.tfg.dashboard.model.ArubaSwitch;
 import com.tfg.dashboard.model.ArubaSwitchClientUsage;
 import com.tfg.dashboard.model.ArubaSwitchInterfaceUsageHistory;
@@ -66,8 +67,59 @@ class ArubaServiceTest {
     private TransversalKpiHistoryRepository
             transversalKpiHistoryRepository;
 
-    @InjectMocks
     private ArubaService arubaService;
+    private KpiProperties kpiProperties;
+
+    @BeforeEach
+    void setUp() {
+
+        kpiProperties =
+                new KpiProperties();
+
+        ArubaWifiClientAggregationService wifiClientAggregationService =
+                new ArubaWifiClientAggregationService();
+
+        ArubaSwitchUsageService switchUsageService =
+                new ArubaSwitchUsageService(
+                        client,
+                        switchClientUsageRepository,
+                        switchInterfaceUsageHistoryRepository,
+                        kpiProperties);
+
+        ArubaNetworkStatusService networkStatusService =
+                new ArubaNetworkStatusService(
+                        networkStatusHistoryRepository,
+                        transversalKpiHistoryRepository,
+                        kpiProperties);
+
+        ArubaInventorySyncService inventorySyncService =
+                new ArubaInventorySyncService(
+                        client,
+                        accessPointRepository,
+                        arubaSwitchRepository,
+                        dashboardMetricsRepository,
+                        wifiClientAggregationService,
+                        switchUsageService);
+
+        ArubaSummaryService summaryService =
+                new ArubaSummaryService(
+                        accessPointRepository,
+                        arubaSwitchRepository,
+                        switchClientUsageRepository,
+                        switchInterfaceUsageHistoryRepository,
+                        dashboardMetricsRepository,
+                        switchUsageService,
+                        networkStatusService,
+                        kpiProperties);
+
+        arubaService =
+                new ArubaService(
+                        inventorySyncService,
+                        wifiClientAggregationService,
+                        switchUsageService,
+                        networkStatusService,
+                        summaryService);
+    }
 
     @Test
     void getSummaryCalculatesArubaKpis() throws Exception {

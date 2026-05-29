@@ -19,9 +19,6 @@ public class OAuthToken {
     @Column(name = "expires_at")
     private Long expiresAt;
 
-    // getters y setters
-
-
     public Long getId() {
         return id;
     }

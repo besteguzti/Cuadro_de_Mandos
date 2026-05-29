@@ -5,15 +5,10 @@ import java.util.List;
 public class SwitchStatusDto {
 
     private int percentageContribution;
-
     private String color;
-
     private int totalSwitches;
-
     private int downSwitches;
-
     private int pendingFirmwareSwitches;
-
     private List<String> reasons;
 
     public int getPercentageContribution() {

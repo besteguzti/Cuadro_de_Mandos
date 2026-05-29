@@ -1,46 +1,34 @@
-package com.tfg.dashboard.model;
+package com.tfg.dashboard.dto.summary;
 
 import java.time.LocalDateTime;
 
 import com.tfg.dashboard.dto.CitrixHealthStatusDto;
+import com.tfg.dashboard.dto.KpiResultDto;
 
+/**
+ * Respuesta de la vista Citrix.
+ *
+ * Expone el último snapshot Citrix, su índice de salud normalizado y el estado
+ * de frescura usado por el dashboard.
+ */
 public class CitrixSummary {
 
     private int activeSessions;
-
     private int activeLicenses;
-
     private int availableDeliveryControllers;
-
     private int totalDeliveryControllers;
-
     private int disconnectedSessions;
-
     private int averageLogonDurationSeconds;
-
     private int serverLoadPercent;
-
     private int failedLogons;
-
     private String citrixHealth;
 
-    // Detalle normalizado del indice
-    // Citrix. Mantiene citrixHealth
-    // como semaforo simple para no
-    // romper consumidores actuales.
-    private CitrixHealthStatusDto citrixHealthDetails;
+    // Detalle normalizado del indice Citrix. Mantiene citrixHealth como semaforo.
 
-    // =========================
-    // Frescura de datos
-    // =========================
-    //
-    // dataStatus indica si el último
-    // snapshot usado es reciente,
-    // antiguo o inexistente.
-    //
+    private CitrixHealthStatusDto citrixHealthDetails;
+    private KpiResultDto citrixHealthKpi;
 
     private LocalDateTime lastUpdated;
-
     private String dataStatus;
 
     public CitrixSummary() {
@@ -122,10 +110,16 @@ public class CitrixSummary {
         return citrixHealthDetails;
     }
 
-    public void setCitrixHealthDetails(
-            CitrixHealthStatusDto citrixHealthDetails
-    ) {
+    public KpiResultDto getCitrixHealthKpi() {
+        return citrixHealthKpi;
+    }
+
+    public void setCitrixHealthDetails(CitrixHealthStatusDto citrixHealthDetails) {
         this.citrixHealthDetails = citrixHealthDetails;
+    }
+
+    public void setCitrixHealthKpi(KpiResultDto citrixHealthKpi) {
+        this.citrixHealthKpi = citrixHealthKpi;
     }
 
     public LocalDateTime getLastUpdated() {

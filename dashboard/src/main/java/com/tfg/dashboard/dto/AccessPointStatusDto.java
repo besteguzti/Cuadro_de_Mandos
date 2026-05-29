@@ -5,23 +5,14 @@ import java.util.List;
 public class AccessPointStatusDto {
 
     private int percentageContribution;
-
     private String color;
-
     private int totalAps;
-
     private int downAps;
-
     private int inactiveAps;
-
     private int pendingFirmwareAps;
-
     private int totalWifiClients;
-
     private int mutualiaApsClients;
-
     private int mutualiaWifiClients;
-
     private List<String> reasons;
 
     public int getPercentageContribution() {

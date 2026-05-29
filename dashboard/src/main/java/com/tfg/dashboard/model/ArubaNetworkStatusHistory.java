@@ -9,47 +9,31 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
+/**
+ * Histórico del estado normalizado de red Aruba.
+ *
+ * Guarda porcentaje, color, contribución de APs/switches y motivos para poder
+ * explicar el semáforo y alimentar el análisis transversal.
+ */
 @Entity
 @Table(name = "aruba_network_status_history")
 public class ArubaNetworkStatusHistory {
 
-    // =========================
-    // Historico estado red Aruba
-    // =========================
-    //
-    // Guarda snapshots del calculo
-    // normalizado de afectacion de
-    // red Aruba. Este historico evita
-    // depender solo del semaforo visual
-    // y permite usar Aruba en el modulo
-    // de analisis transversal.
-    //
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
     private int percentage;
-
     private String color;
-
     private int accessPointContribution;
-
     private String accessPointColor;
-
     private int switchContribution;
-
     private String switchColor;
-
     private boolean affectedService;
-
     private boolean criticalCondition;
-
     private int technicalDegradationValue;
 
     @Column(length = 2000)
     private String reasons;
-
     private LocalDateTime collectedAt;
 
     public Long getId() {

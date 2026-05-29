@@ -42,6 +42,16 @@ body {
   font-weight: 800;
 }
 
+.kpi-card-ok {
+  border-color: #9ed9b6;
+  background: #f3fbf6;
+}
+
+.kpi-card-ok h2,
+.kpi-card-ok p {
+  color: #228b5a;
+}
+
 .kpi-card-critical {
   border-color: #ef9a9a;
   background: #fff5f5;
@@ -60,4 +70,14 @@ body {
 .kpi-card-warning h2,
 .kpi-card-warning p {
   color: #9a5b00;
+}
+
+.kpi-card-no-data {
+  border-color: #cbd5e1;
+  background: #f8fafc;
+}
+
+.kpi-card-no-data h2,
+.kpi-card-no-data p {
+  color: #526173;
 }

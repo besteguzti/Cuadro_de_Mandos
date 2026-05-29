@@ -12,6 +12,14 @@ El proyecto combina un backend Spring Boot, una base de datos MySQL y un fronten
 - Aruba Central: fuente real para APs, switches, firmware, clientes WiFi y puertos.
 - Citrix, Microsoft 365 y GLPI: datos simulados dinamicos persistidos cada minuto.
 
+## Fuentes reales y simuladas
+
+- Aruba Central es la unica integracion real del proyecto. Se consulta mediante API y se sincronizan APs, switches, firmware, clientes WiFi y puertos.
+- Citrix, Microsoft 365 y GLPI son fuentes simuladas dinamicas. No representan integraciones reales de produccion con esas plataformas.
+- Las fuentes simuladas no son arrays fijos del frontend: se generan en el backend, se persisten como snapshots en MySQL y alimentan las vistas y KPIs.
+- El dashboard de analisis trabaja con snapshots persistidos. Si no hay historico suficiente, el sistema puede generar escenarios de demostracion persistidos e identificables mediante `generatedScenario`.
+- El analisis exploratorio no demuestra causalidad directa. Muestra relaciones aparentes, co-ocurrencias y patrones operativos que deben interpretarse como ayuda a la investigacion.
+
 ## Tablas principales
 
 - `access_points`: APs Aruba, una fila por numero de serie.
@@ -19,9 +27,11 @@ El proyecto combina un backend Spring Boot, una base de datos MySQL y un fronten
 - `aruba_dashboard_metrics`: KPIs agregados Aruba, como firmware y clientes WiFi.
 - `aruba_switch_client_usage`: ultimo recuento de interfaces down por switch.
 - `aruba_switch_interface_usage_history`: historico de interfaces down por switch.
+- `aruba_network_status_history`: historico del estado de red Aruba calculado.
 - `citrix_metrics_history`: snapshots historicos Citrix.
 - `microsoft365_metrics_history`: snapshots historicos Microsoft 365.
 - `glpi_metrics_history`: snapshots historicos GLPI.
+- `analysis_snapshots`: snapshots historicos usados por el panel de analisis.
 - `oauth_tokens`: token OAuth usado para Aruba Central.
 
 ## Requisitos
@@ -158,12 +168,15 @@ Criterios actuales:
 
 El dashboard principal no debe aparecer como `GREEN` si alguna fuente esta `STALE` o `NO_DATA`.
 
-## Endpoints principales
+## Endpoints
 
-Dashboard principal:
+### Consumidos directamente por React
+
+Dashboard principal y diagnostico operativo:
 
 ```http
 GET http://localhost:8080/dashboard/summary
+GET http://localhost:8080/api/dashboard/executive-summary
 ```
 
 Aruba:
@@ -191,12 +204,41 @@ GET http://localhost:8080/microsoft365/summary
 GET http://localhost:8080/glpi/summary
 ```
 
+Panel de analisis:
+
+```http
+GET http://localhost:8080/api/analysis/glpi-platform-relation?platform=aruba&period=30d
+```
+
+El endpoint de analisis anterior devuelve la relacion GLPI-plataforma,
+los bloques de impacto tecnico-operativo y la evolucion temporal que necesita
+la pantalla actual.
+
+### Auxiliares disponibles en backend
+
+Documentacion de KPIs:
+
+```http
+GET http://localhost:8080/api/kpis/definitions
+```
+
+Consultas especificas del modulo de analisis:
+
+```http
+GET http://localhost:8080/api/analysis/technical-degradation-impact?period=30d
+GET http://localhost:8080/api/analysis/platform-evolution?period=30d
+GET http://localhost:8080/api/analysis/snapshots?period=30d
+```
+
+Estos endpoints auxiliares sirven para pruebas, validacion tecnica o consulta
+directa del backend. No son llamadas directas del flujo principal de React.
+
 ## Vistas React
 
 El frontend tiene estas paginas:
 
 - Principal: KPIs transversales.
-- Analisis: comparacion exploratoria entre KPIs transversales.
+- Analisis: relacion operativa aparente entre GLPI y plataformas tecnicas.
 - Aruba: APs, clientes WiFi, switches y switches infrautilizados.
 - Citrix: KPIs simulados persistidos.
 - Microsoft 365: KPIs simulados persistidos.
@@ -206,33 +248,72 @@ Las tarjetas KPI pueden mostrar informacion explicativa desplegable cuando tiene
 
 ## Modulo de analisis exploratorio
 
-La pagina `Análisis` permite seleccionar un KPI transversal como eje X y despues un KPI relacionado como eje Y. Los KPIs no relacionados se opacan y no se pueden seleccionar. Cuando hay dos KPIs seleccionados, se muestra una grafica de dispersion, correlacion de Pearson e interpretacion automatica.
+La pagina `Analisis` se centra en comprobar relaciones operativas aparentes, no causalidad directa. GLPI se interpreta como consecuencia operativa y Aruba, Citrix y Microsoft 365 como posibles origenes tecnicos.
 
-Endpoints:
+El panel actual muestra:
+
+- Presion operativa GLPI.
+- Relacion Aruba-GLPI, Citrix-GLPI y Microsoft365-GLPI.
+- Presion media de GLPI segun nivel de afeccion de la plataforma seleccionada.
+- Co-ocurrencia alta-alta entre afeccion tecnica y presion GLPI.
+- Degradacion tecnica frente a impacto en usuarios.
+- Evolucion temporal conjunta de Aruba, Citrix y Microsoft 365.
+
+Endpoint consumido por el panel:
 
 ```http
-GET http://localhost:8080/api/analytics/transversal-kpis
-GET http://localhost:8080/api/analytics/compare?kpiX=global_criticality&kpiY=global_health&period=30d
+GET http://localhost:8080/api/analysis/glpi-platform-relation?platform=aruba&period=30d
 ```
 
-Los snapshots transversales se guardan en:
+Endpoints auxiliares de consulta:
+
+```http
+GET http://localhost:8080/api/analysis/technical-degradation-impact?period=30d
+GET http://localhost:8080/api/analysis/platform-evolution?period=30d
+GET http://localhost:8080/api/analysis/snapshots?period=30d
+```
+
+El panel actual usa exclusivamente los endpoints bajo `/api/analysis`.
+
+Los snapshots de analisis se guardan en:
 
 ```text
-transversal_kpi_history
+analysis_snapshots
 ```
+
+## Diagnostico operativo
+
+El dashboard principal muestra una tarjeta superior de diagnostico operativo alimentada por:
+
+```http
+GET http://localhost:8080/api/dashboard/executive-summary
+```
+
+Este endpoint devuelve una lectura ejecutiva con estado global, servicios afectados, plataforma principal, origen probable, impacto, prioridad, primera accion recomendada y tendencia.
+
+## Definiciones de KPIs
+
+Las definiciones documentales de KPIs se exponen en:
+
+```http
+GET http://localhost:8080/api/kpis/definitions
+```
+
+Devuelve una lista de KPIs con identificador, nombre, tipo, plataforma, descripcion, formula, umbrales y fuentes. Este endpoint no calcula valores actuales; sirve para explicar los indicadores usados por el dashboard.
 
 ## KPIs principales
 
 ### Dashboard principal
 
 - Estado global.
-- Riesgo operativo global.
-- Servicios con alerta.
-- Actividad agregada observada.
-- Elementos que requieren accion.
-- Tickets criticos abiertos.
-- Riesgos de seguridad.
-- Presion de capacidad.
+- Criticidad global.
+- Disponibilidad global.
+- Presion operativa.
+- Degradacion tecnica.
+- Riesgo SLA.
+- Backlog operativo.
+- Impacto en usuarios.
+- Servicios afectados.
 
 ### Aruba
 
@@ -271,7 +352,6 @@ Los switches infrautilizados son los que han estado `Up` y con mas de 17 interfa
 - Almacenamiento SharePoint.
 - Riesgos de identidad, MFA, aplicaciones y dispositivos.
 - Indice salud Microsoft 365.
-- Riesgo operativo Microsoft.
 
 ### GLPI
 
@@ -319,6 +399,9 @@ Comprobaciones utiles:
 
 ```powershell
 curl.exe http://localhost:8080/dashboard/summary
+curl.exe http://localhost:8080/api/dashboard/executive-summary
+curl.exe http://localhost:8080/api/kpis/definitions
+curl.exe "http://localhost:8080/api/analysis/glpi-platform-relation?platform=aruba&period=30d"
 curl.exe http://localhost:8080/aruba/summary
 curl.exe http://localhost:8080/citrix/summary
 curl.exe http://localhost:8080/microsoft365/summary
@@ -337,3 +420,4 @@ No subir artefactos generados ni dependencias descargadas:
 - `*.log`
 - `*.tmp`
 - `*.zip`
+- `.git/` dentro del ZIP de entrega

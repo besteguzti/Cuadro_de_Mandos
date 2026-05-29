@@ -8,8 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.tfg.dashboard.model.CitrixMetricsHistory;
 
-public interface CitrixMetricsHistoryRepository
-        extends JpaRepository<CitrixMetricsHistory, Long> {
+public interface CitrixMetricsHistoryRepository extends JpaRepository<CitrixMetricsHistory, Long> {
 
     Optional<CitrixMetricsHistory> findTopByOrderByCollectedAtDesc();
 

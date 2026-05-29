@@ -4,6 +4,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import com.tfg.dashboard.model.ArubaNetworkStatusHistory;
 
-public interface ArubaNetworkStatusHistoryRepository
-        extends JpaRepository<ArubaNetworkStatusHistory, Long> {
+public interface ArubaNetworkStatusHistoryRepository extends JpaRepository<ArubaNetworkStatusHistory, Long> {
 }

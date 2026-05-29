@@ -5,22 +5,18 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 public class ArubaApInfo {
 
     private String name;
-
     private String status;
-
+    
     @JsonProperty("ip_address")
     private String ipAddress;
-
+    
     @JsonProperty("public_ip_address")
     private String publicIpAddress;
-
     private String serial;
-
     private String site;
 
     @JsonProperty("firmware_version")
     private String firmwareVersion;
-
     private String macaddr;
 
     @JsonProperty("swarm_name")

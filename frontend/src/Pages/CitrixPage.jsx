@@ -42,7 +42,7 @@ const citrixKpiInfo = {
     description:
       "Indica el tiempo medio de inicio de sesión en Citrix, expresado en segundos.",
     algorithm:
-      "Se genera dinámicamente en CitrixService. El valor se evalúa con umbrales: correcto, advertencia o crítico.",
+      "Se genera dinámicamente en CitrixService. De 0 a 20 segundos es verde, más de 20 y hasta 60 segundos es amarillo y más de 60 segundos es rojo.",
     interpretation:
       "Un tiempo alto puede indicar lentitud en perfiles, scripts de inicio, carga de servidores o problemas de infraestructura."
   },
@@ -50,7 +50,7 @@ const citrixKpiInfo = {
     description:
       "Representa la carga media simulada de los servidores Citrix.",
     algorithm:
-      "Se genera en CitrixService como porcentaje dinámico. Se clasifica mediante umbrales de advertencia y criticidad.",
+      "Se genera en CitrixService como porcentaje dinámico. De 0 a 33% es verde, de 34% a 66% es amarillo y de 67% a 100% es rojo.",
     interpretation:
       "Una carga elevada puede afectar al rendimiento de las sesiones y anticipar saturación de la plataforma."
   },
@@ -58,7 +58,7 @@ const citrixKpiInfo = {
     description:
       "Indica intentos de inicio de sesión fallidos en el entorno Citrix simulado.",
     algorithm:
-      "Se genera dinámicamente en CitrixService y se usa como señal de degradación cuando supera determinados umbrales.",
+      "Se genera dinámicamente en CitrixService. De 0 a 10 errores es verde, de 11 a 30 es amarillo y más de 30 es rojo.",
     interpretation:
       "Un número elevado puede indicar problemas de autenticación, disponibilidad o acceso a recursos publicados."
   },
@@ -66,7 +66,7 @@ const citrixKpiInfo = {
     description:
       "Resume el estado general del entorno Citrix mediante un semáforo GREEN, YELLOW o RED.",
     algorithm:
-      "El índice se calcula mediante reglas heurísticas. Devuelve RED si algún Delivery Controller no está disponible, si el Average Logon Duration supera 40 segundos, si la carga de servidores supera el 85% o si los errores de inicio son mayores que 10. Devuelve YELLOW si el tiempo de inicio supera 25 segundos, la carga supera el 70% o los errores de inicio son mayores que 5. En caso contrario devuelve GREEN.",
+      "El índice usa ponderación uniforme entre sesiones activas, Delivery Controllers, Average Logon Duration, carga de servidores y errores de inicio. Cada indicador aporta 0, 50 o 100 puntos de afección según sus umbrales.",
     interpretation:
       "GREEN indica funcionamiento correcto, YELLOW indica degradación moderada y RED indica situación crítica que requiere revisión."
   }
@@ -78,6 +78,8 @@ function CitrixPage() {
   const [loading, setLoading] = useState(true);
 
   const loadCitrixDashboard = () => {
+    // Citrix se muestra desde el último snapshot persistido; el frontend no
+    // recalcula el índice de salud.
     fetch(`${API_BASE_URL}/citrix/summary`)
       .then((response) => {
         if (!response.ok) {
@@ -121,6 +123,8 @@ function CitrixPage() {
   const citrixHealth =
     citrixHealthDetails?.color ?? summary?.citrixHealth ?? "UNKNOWN";
   const citrixReasons = citrixHealthDetails?.reasons ?? [];
+  const indicatorStatus = (name) =>
+    findIndicatorStatus(citrixHealthDetails?.indicators, name);
 
   return (
     <main className="dashboard">
@@ -179,70 +183,49 @@ function CitrixPage() {
             <KpiCard
               title="Sesiones activas"
               value={summary.activeSessions}
+              status={indicatorStatus("Sesiones activas")}
               info={citrixKpiInfo.activeSessions}
             />
 
             <KpiCard
               title="Licencias activas"
               value={summary.activeLicenses}
+              status="neutral"
               info={citrixKpiInfo.activeLicenses}
             />
 
             <KpiCard
               title="Delivery Controllers disponibles"
               value={`${summary.availableDeliveryControllers}/${summary.totalDeliveryControllers}`}
-              status={
-                summary.availableDeliveryControllers <
-                summary.totalDeliveryControllers
-                  ? "danger"
-                  : "ok"
-              }
+              status={indicatorStatus("Delivery Controllers disponibles")}
               info={citrixKpiInfo.deliveryControllers}
             />
 
             <KpiCard
               title="Sesiones desconectadas"
               value={summary.disconnectedSessions}
-              status={summary.disconnectedSessions > 25 ? "warning" : "ok"}
+              status="neutral"
               info={citrixKpiInfo.disconnectedSessions}
             />
 
             <KpiCard
               title="Average Logon Duration"
               value={`${summary.averageLogonDurationSeconds}s`}
-              status={
-                summary.averageLogonDurationSeconds > 40
-                  ? "danger"
-                  : summary.averageLogonDurationSeconds > 25
-                    ? "warning"
-                    : "ok"
-              }
+              status={indicatorStatus("Average Logon Duration")}
               info={citrixKpiInfo.averageLogonDuration}
             />
 
             <KpiCard
               title="Carga de servidores"
               value={`${summary.serverLoadPercent}%`}
-              status={
-                summary.serverLoadPercent > 85
-                  ? "danger"
-                  : summary.serverLoadPercent > 70
-                    ? "warning"
-                    : "ok"
-              }
+              status={indicatorStatus("Carga de servidores")}
               info={citrixKpiInfo.serverLoad}
             />
 
             <KpiCard
               title="Errores de inicio"
               value={summary.failedLogons}
-              status={
-                summary.failedLogons > 10
-                  ? "danger"
-                  : summary.failedLogons > 5
-                    ? "warning"
-                    : "ok"
-              }
+              status={indicatorStatus("Errores de inicio")}
               info={citrixKpiInfo.failedLogons}
             />
 
@@ -278,6 +261,11 @@ function formatCitrixStatus(status) {
   }
 
   return status;
+}
+
+function findIndicatorStatus(indicators, name) {
+  return indicators?.find((indicator) => indicator.name === name)?.color
+    ?? "neutral";
 }
 
 export default CitrixPage;
