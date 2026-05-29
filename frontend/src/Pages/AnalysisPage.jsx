@@ -5,15 +5,9 @@ import "../App.css";
 import AnalysisErrorState from "../components/analysis/AnalysisErrorState";
 import AnalysisHeader from "../components/analysis/AnalysisHeader";
 import AnalysisLoadingState from "../components/analysis/AnalysisLoadingState";
-import AnalysisSelectionPanel from "../components/analysis/AnalysisSelectionPanel";
-import GlpiPlatformRelationSection from "../components/analysis/GlpiPlatformRelationSection";
-import GlpiPressureBuckets from "../components/analysis/GlpiPressureBuckets";
-import GlpiRelationSummaryCards from "../components/analysis/GlpiRelationSummaryCards";
-import PeriodSelector from "../components/analysis/PeriodSelector";
 import PlatformEvolutionTimeline from "../components/analysis/PlatformEvolutionTimeline";
-import PlatformSelector from "../components/analysis/PlatformSelector";
 import RelationshipBarChart from "../components/analysis/RelationshipBarChart";
-import TechnicalImpactSection from "../components/analysis/TechnicalImpactSection";
+import SpecificKpiRelationsSection from "../components/analysis/SpecificKpiRelationsSection";
 import TechnicalRelationTable from "../components/analysis/TechnicalRelationTable";
 import { API_BASE_URL } from "../config/api";
 
@@ -23,14 +17,8 @@ const periods = [
   { label: "90 dias", value: "90d" }
 ];
 
-const platforms = [
-  { label: "Aruba", value: "aruba" },
-  { label: "Citrix", value: "citrix" },
-  { label: "Microsoft 365", value: "microsoft365" }
-];
-
 function AnalysisPage() {
-  const [platform, setPlatform] = useState("aruba");
+  const platform = "aruba";
   const [period, setPeriod] = useState("30d");
   const [analysis, setAnalysis] = useState(null);
   const [visibleSeries, setVisibleSeries] = useState({
@@ -66,13 +54,7 @@ function AnalysisPage() {
       });
   }, [platform, period]);
 
-  const selectedPlatformLabel =
-    platforms.find((item) => item.value === platform)?.label ?? "Aruba";
-
-  const handlePlatformChange = (event) => {
-    setLoading(true);
-    setPlatform(event.target.value);
-  };
+  
 
   const handlePeriodChange = (event) => {
     setLoading(true);
@@ -98,21 +80,7 @@ function AnalysisPage() {
 
   return (
     <main className="dashboard">
-      <AnalysisHeader>
-        <div className="analysis-actions">
-          <PlatformSelector
-            platforms={platforms}
-            selectedPlatform={platform}
-            onChange={handlePlatformChange}
-          />
-
-          <PeriodSelector
-            periods={periods}
-            selectedPeriod={period}
-            onChange={handlePeriodChange}
-          />
-        </div>
-      </AnalysisHeader>
+      <AnalysisHeader />
 
       <AnalysisErrorState message={error} />
 
@@ -120,31 +88,22 @@ function AnalysisPage() {
 
       {analysis && !loading && (
         <>
-          <GlpiRelationSummaryCards analysis={analysis} />
-
-          <AnalysisSelectionPanel
-            selectedPlatformLabel={selectedPlatformLabel}
-            selectedPlatformAffection={analysis.selectedPlatformAffection}
-          />
-
-          <GlpiPressureBuckets
-            buckets={analysis.buckets ?? []}
-            selectedPlatformLabel={selectedPlatformLabel}
-          />
-
-          <GlpiPlatformRelationSection analysis={analysis} />
-
           <RelationshipBarChart analysis={analysis} />
 
           <TechnicalRelationTable relations={analysis.technicalRelations ?? []} />
-
-          <TechnicalImpactSection analysis={analysis} />
 
           <PlatformEvolutionTimeline
             points={analysis.technicalTimeline ?? []}
             visibleSeries={visibleSeries}
             onToggle={toggleSeries}
             warning={visibilityWarning}
+          />
+
+          <SpecificKpiRelationsSection
+            relations={analysis.specificKpiRelations ?? []}
+            periods={periods}
+            selectedPeriod={period}
+            onPeriodChange={handlePeriodChange}
           />
         </>
       )}

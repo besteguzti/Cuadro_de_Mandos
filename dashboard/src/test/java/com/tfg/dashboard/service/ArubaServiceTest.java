@@ -67,6 +67,9 @@ class ArubaServiceTest {
     private TransversalKpiHistoryRepository
             transversalKpiHistoryRepository;
 
+    @Mock
+    private GlpiPlatformTicketService glpiPlatformTicketService;
+
     private ArubaService arubaService;
     private KpiProperties kpiProperties;
 
@@ -110,6 +113,7 @@ class ArubaServiceTest {
                         dashboardMetricsRepository,
                         switchUsageService,
                         networkStatusService,
+                        glpiPlatformTicketService,
                         kpiProperties);
 
         arubaService =
@@ -153,6 +157,8 @@ class ArubaServiceTest {
         when(accessPointRepository
                 .countBySerialIsNotNullAndLastSeenAtBefore(any()))
                 .thenReturn(4L);
+        when(glpiPlatformTicketService.getArubaOpenTickets())
+                .thenReturn(35);
 
         ArubaSummary summary =
                 arubaService.getSummary();
@@ -172,6 +178,7 @@ class ArubaServiceTest {
         assertThat(summary.getUnderusedSwitches().get(0).getDownInterfaces())
                 .isEqualTo(18);
         assertThat(summary.getTotalWifiClients()).isEqualTo(6);
+        assertThat(summary.getArubaOpenTickets()).isEqualTo(35);
         assertThat(summary.getMutualiaApsClients()).isEqualTo(1);
         assertThat(summary.getMutualiaWifiClients()).isEqualTo(5);
         assertThat(summary.getMutualiaClients()).isEqualTo(2);

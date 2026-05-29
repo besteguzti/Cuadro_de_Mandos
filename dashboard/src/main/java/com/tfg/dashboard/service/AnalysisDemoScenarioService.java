@@ -1,5 +1,6 @@
 package com.tfg.dashboard.service;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Map;
 
@@ -20,15 +21,29 @@ import com.tfg.dashboard.repository.AnalysisSnapshotRepository;
 public class AnalysisDemoScenarioService {
 
         private static final int MINIMUM_REAL_SNAPSHOTS = 2;
-        private static final int DEMO_SNAPSHOT_COUNT = 12;
-        private static final int FIRST_DEMO_SNAPSHOT_INDEX = 0;
+        private static final int DEMO_SNAPSHOTS_PER_DAY = 4;
+        private static final int DEMO_BUCKET_HOURS = 6;
         private static final double DEMO_WAVE_STEP = 0.9;
         private static final double DEMO_WAVE_AMPLITUDE = 24;
         private static final double DEMO_CITRIX_WAVE_FACTOR = 0.7;
         private static final double DEMO_MICROSOFT365_WAVE_FACTOR = 0.45;
         private static final double DEMO_GLPI_PLATFORM_INFLUENCE = 0.18;
         private static final double DEMO_GLPI_WAVE_FACTOR = 0.35;
-        private static final int MINIMUM_DAYS_BETWEEN_DEMO_SNAPSHOTS = 1;
+        private static final int DEMO_BASE_WIFI_CLIENTS = 230;
+        private static final int DEMO_BASE_CITRIX_SESSIONS = 460;
+        private static final int DEMO_BASE_NON_COMPLIANT_DEVICES = 20;
+        private static final int DEMO_LOGON_BASE_SECONDS = 12;
+        private static final int DEMO_ARUBA_CLIENT_LOSS_FACTOR = 2;
+        private static final int DEMO_CITRIX_SESSION_LOSS_FACTOR = 2;
+        private static final int DEMO_LOGON_AFFECTION_DIVISOR = 2;
+        private static final int DEMO_FAILED_LOGON_CITRIX_DIVISOR = 4;
+        private static final int DEMO_FAILED_LOGON_GLPI_DIVISOR = 10;
+        private static final int DEMO_ARUBA_TICKET_BASE = 15;
+        private static final int DEMO_CITRIX_TICKET_BASE = 25;
+        private static final int DEMO_MICROSOFT365_TICKET_BASE = 12;
+        private static final int DEMO_ARUBA_TICKET_DIVISOR = 2;
+        private static final int DEMO_CITRIX_TICKET_DIVISOR = 1;
+        private static final int DEMO_MICROSOFT365_TICKET_DIVISOR = 2;
 
         private final AnalysisSnapshotRepository analysisSnapshotRepository;
         private final AnalysisSnapshotService analysisSnapshotService;
@@ -59,10 +74,18 @@ public class AnalysisDemoScenarioService {
          */
         public void ensureAnalysisSnapshots(String period) {
 
-                LocalDateTime since =
-                                LocalDateTime.now().minusDays(analysisSnapshotService.daysFromPeriod(period));
+                int days = analysisSnapshotService.daysFromPeriod(period);
+                LocalDateTime since = LocalDateTime.now().minusDays(days);
+                long daysWithUsableSnapshots = analysisSnapshotService.getSnapshots(period)
+                                .stream()
+                                .filter(snapshot -> snapshot.getTimestamp() != null)
+                                .filter(this::hasSpecificRelationData)
+                                .map(snapshot -> snapshot.getTimestamp().toLocalDate())
+                                .distinct()
+                                .count();
 
-                if (analysisSnapshotRepository.countByTimestampAfter(since) >= MINIMUM_REAL_SNAPSHOTS) {
+                if (analysisSnapshotRepository.countByTimestampAfter(since) >= MINIMUM_REAL_SNAPSHOTS
+                                && daysWithUsableSnapshots >= days) {
                         return;
                 }
 
@@ -78,9 +101,11 @@ public class AnalysisDemoScenarioService {
                 Map<String, Double> values = historyService.calculateCurrentValues();
                 int days = analysisSnapshotService.daysFromPeriod(period);
 
-                for (int index = DEMO_SNAPSHOT_COUNT - 1; index >= FIRST_DEMO_SNAPSHOT_INDEX; index--) {
+                for (int dayIndex = days - 1; dayIndex >= 0; dayIndex--) {
+                        for (int bucket = 0; bucket < DEMO_SNAPSHOTS_PER_DAY; bucket++) {
 
-                        double wave = Math.sin(index * DEMO_WAVE_STEP) * DEMO_WAVE_AMPLITUDE;
+                        int sequence = dayIndex * DEMO_SNAPSHOTS_PER_DAY + bucket;
+                        double wave = Math.sin(sequence * DEMO_WAVE_STEP) * DEMO_WAVE_AMPLITUDE;
                         AnalysisSnapshot snapshot = new AnalysisSnapshot();
 
                         int aruba = kpiScoringService.clampToInt(
@@ -117,11 +142,26 @@ public class AnalysisDemoScenarioService {
                                                         + citrix * globalWeights.getCitrix()
                                                         + microsoft365 * globalWeights.getMicrosoft365()
                                                         + glpiPressure * globalWeights.getGlpi());
+                        int affectedServicesPercent = affectedServicesPercent(
+                                        aruba,
+                                        citrix,
+                                        microsoft365,
+                                        glpiPressure);
+                        int arubaOpenTickets = DEMO_ARUBA_TICKET_BASE + aruba / DEMO_ARUBA_TICKET_DIVISOR;
+                        int citrixOpenTickets = DEMO_CITRIX_TICKET_BASE + citrix / DEMO_CITRIX_TICKET_DIVISOR;
+                        int microsoft365OpenTickets =
+                                        DEMO_MICROSOFT365_TICKET_BASE
+                                                        + microsoft365 / DEMO_MICROSOFT365_TICKET_DIVISOR;
+                        int glpiOpenTickets =
+                                        arubaOpenTickets
+                                                        + citrixOpenTickets
+                                                        + microsoft365OpenTickets;
 
-                        snapshot.setTimestamp(LocalDateTime.now().minusDays(
-                                        Math.max(
-                                                        MINIMUM_DAYS_BETWEEN_DEMO_SNAPSHOTS,
-                                                        days / DEMO_SNAPSHOT_COUNT) * index));
+                        snapshot.setTimestamp(
+                                        LocalDate.now()
+                                                        .minusDays(dayIndex)
+                                                        .atStartOfDay()
+                                                        .plusHours((long) bucket * DEMO_BUCKET_HOURS));
                         snapshot.setArubaHealth(aruba);
                         snapshot.setCitrixHealth(citrix);
                         snapshot.setMicrosoft365Health(microsoft365);
@@ -130,6 +170,24 @@ public class AnalysisDemoScenarioService {
                         snapshot.setTechnicalDegradation(technicalDegradation);
                         snapshot.setUserImpact(userImpact);
                         snapshot.setGlobalStatus(global);
+                        snapshot.setArubaWifiClients(Math.max(
+                                        0,
+                                        DEMO_BASE_WIFI_CLIENTS - aruba * DEMO_ARUBA_CLIENT_LOSS_FACTOR));
+                        snapshot.setCitrixAverageLogonDurationSeconds(
+                                        DEMO_LOGON_BASE_SECONDS + citrix / DEMO_LOGON_AFFECTION_DIVISOR);
+                        snapshot.setCitrixActiveSessions(Math.max(
+                                        0,
+                                        DEMO_BASE_CITRIX_SESSIONS - aruba * DEMO_CITRIX_SESSION_LOSS_FACTOR));
+                        snapshot.setCitrixFailedLogons(Math.max(
+                                        0,
+                                        citrix / DEMO_FAILED_LOGON_CITRIX_DIVISOR
+                                                        + glpiPressure / DEMO_FAILED_LOGON_GLPI_DIVISOR));
+                        snapshot.setGlpiOpenTickets(glpiOpenTickets);
+                        snapshot.setArubaOpenTickets(arubaOpenTickets);
+                        snapshot.setCitrixOpenTickets(citrixOpenTickets);
+                        snapshot.setMicrosoft365OpenTickets(microsoft365OpenTickets);
+                        snapshot.setMicrosoft365NonCompliantDevices(DEMO_BASE_NON_COMPLIANT_DEVICES + microsoft365);
+                        snapshot.setAffectedServicesPercent(affectedServicesPercent);
                         snapshot.setArubaStatus(kpiScoringService.statusFromAffection(aruba));
                         snapshot.setCitrixStatus(kpiScoringService.statusFromAffection(citrix));
                         snapshot.setMicrosoft365Status(kpiScoringService.statusFromAffection(microsoft365));
@@ -137,6 +195,7 @@ public class AnalysisDemoScenarioService {
                         snapshot.setGeneratedScenario(true);
 
                         analysisSnapshotRepository.save(snapshot);
+                        }
                 }
         }
 
@@ -150,6 +209,48 @@ public class AnalysisDemoScenarioService {
                 return value != null
                                 ? value
                                 : kpiProperties.getAffection().getGreen();
+        }
+
+        private boolean hasSpecificRelationData(AnalysisSnapshot snapshot) {
+
+                return snapshot.getArubaHealth() != null
+                                && snapshot.getCitrixAverageLogonDurationSeconds() != null
+                                && snapshot.getArubaWifiClients() != null
+                                && snapshot.getCitrixActiveSessions() != null
+                                && snapshot.getCitrixFailedLogons() != null
+                                && snapshot.getCitrixOpenTickets() != null
+                                && snapshot.getMicrosoft365NonCompliantDevices() != null
+                                && snapshot.getMicrosoft365OpenTickets() != null
+                                && snapshot.getAffectedServicesPercent() != null
+                                && snapshot.getGlpiOperationalPressure() != null;
+        }
+
+        private int affectedServicesPercent(
+                        int aruba,
+                        int citrix,
+                        int microsoft365,
+                        int glpiPressure) {
+
+                int affectedPlatforms = 0;
+                int threshold = kpiProperties.getStatus().getYellowMin();
+
+                if (aruba >= threshold) {
+                        affectedPlatforms++;
+                }
+
+                if (citrix >= threshold) {
+                        affectedPlatforms++;
+                }
+
+                if (microsoft365 >= threshold) {
+                        affectedPlatforms++;
+                }
+
+                if (glpiPressure >= threshold) {
+                        affectedPlatforms++;
+                }
+
+                return affectedPlatforms * (kpiProperties.getStatus().getMax() / 4);
         }
 
 }

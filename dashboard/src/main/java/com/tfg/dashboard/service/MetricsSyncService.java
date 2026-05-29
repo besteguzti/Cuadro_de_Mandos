@@ -290,6 +290,9 @@ public class MetricsSyncService {
                 new GlpiMetricsHistory();
 
         history.setOpenTickets(summary.getOpenTickets());
+        history.setArubaOpenTickets(summary.getArubaOpenTickets());
+        history.setCitrixOpenTickets(summary.getCitrixOpenTickets());
+        history.setMicrosoft365OpenTickets(summary.getMicrosoft365OpenTickets());
         history.setCriticalOpenTickets(summary.getCriticalOpenTickets());
         history.setSlaBreachedTickets(summary.getSlaBreachedTickets());
         history.setAverageResolutionHours(

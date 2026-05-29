@@ -62,6 +62,14 @@ const citrixKpiInfo = {
     interpretation:
       "Un número elevado puede indicar problemas de autenticación, disponibilidad o acceso a recursos publicados."
   },
+  citrixOpenTickets: {
+    description:
+      "Tickets abiertos GLPI asociados a Citrix.",
+    algorithm:
+      "El backend lee el último snapshot GLPI y devuelve citrixOpenTickets dentro del resumen Citrix.",
+    interpretation:
+      "Permite conectar señales técnicas de Citrix con carga operativa clasificada como Citrix, sin afirmar causalidad."
+  },
   citrixHealth: {
     description:
       "Resume el estado general del entorno Citrix mediante un semáforo GREEN, YELLOW o RED.",
@@ -227,6 +235,13 @@ function CitrixPage() {
               value={summary.failedLogons}
               status={indicatorStatus("Errores de inicio")}
               info={citrixKpiInfo.failedLogons}
+            />
+
+            <KpiCard
+              title="Tickets abiertos Citrix"
+              value={summary.citrixOpenTickets}
+              status="neutral"
+              info={citrixKpiInfo.citrixOpenTickets}
             />
 
           </div>

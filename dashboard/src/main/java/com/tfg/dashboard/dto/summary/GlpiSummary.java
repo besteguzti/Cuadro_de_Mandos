@@ -14,6 +14,9 @@ import com.tfg.dashboard.dto.KpiResultDto;
 public class GlpiSummary {
 
     private int openTickets;
+    private int arubaOpenTickets;
+    private int citrixOpenTickets;
+    private int microsoft365OpenTickets;
     private int criticalOpenTickets;
     private int slaBreachedTickets;
     private int averageResolutionHours;
@@ -37,6 +40,30 @@ public class GlpiSummary {
 
     public void setOpenTickets(int openTickets) {
         this.openTickets = openTickets;
+    }
+
+    public int getArubaOpenTickets() {
+        return arubaOpenTickets;
+    }
+
+    public void setArubaOpenTickets(int arubaOpenTickets) {
+        this.arubaOpenTickets = arubaOpenTickets;
+    }
+
+    public int getCitrixOpenTickets() {
+        return citrixOpenTickets;
+    }
+
+    public void setCitrixOpenTickets(int citrixOpenTickets) {
+        this.citrixOpenTickets = citrixOpenTickets;
+    }
+
+    public int getMicrosoft365OpenTickets() {
+        return microsoft365OpenTickets;
+    }
+
+    public void setMicrosoft365OpenTickets(int microsoft365OpenTickets) {
+        this.microsoft365OpenTickets = microsoft365OpenTickets;
     }
 
     public int getCriticalOpenTickets() {

@@ -23,6 +23,9 @@ public class GlpiMetricsHistory {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     private Integer openTickets;
+    private Integer arubaOpenTickets;
+    private Integer citrixOpenTickets;
+    private Integer microsoft365OpenTickets;
     private Integer criticalOpenTickets;
     private Integer slaBreachedTickets;
     private Integer averageResolutionHours;
@@ -44,6 +47,18 @@ public class GlpiMetricsHistory {
 
     public int getOpenTickets() {
         return openTickets == null ? 0 : openTickets;
+    }
+
+    public int getArubaOpenTickets() {
+        return arubaOpenTickets == null ? 0 : arubaOpenTickets;
+    }
+
+    public int getCitrixOpenTickets() {
+        return citrixOpenTickets == null ? 0 : citrixOpenTickets;
+    }
+
+    public int getMicrosoft365OpenTickets() {
+        return microsoft365OpenTickets == null ? 0 : microsoft365OpenTickets;
     }
 
     public int getCriticalOpenTickets() {
@@ -90,6 +105,18 @@ public class GlpiMetricsHistory {
 
     public void setOpenTickets(Integer openTickets) {
         this.openTickets = openTickets;
+    }
+
+    public void setArubaOpenTickets(Integer arubaOpenTickets) {
+        this.arubaOpenTickets = arubaOpenTickets;
+    }
+
+    public void setCitrixOpenTickets(Integer citrixOpenTickets) {
+        this.citrixOpenTickets = citrixOpenTickets;
+    }
+
+    public void setMicrosoft365OpenTickets(Integer microsoft365OpenTickets) {
+        this.microsoft365OpenTickets = microsoft365OpenTickets;
     }
 
     public void setCriticalOpenTickets(Integer criticalOpenTickets) {

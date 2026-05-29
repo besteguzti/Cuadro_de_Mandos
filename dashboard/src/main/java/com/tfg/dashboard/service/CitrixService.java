@@ -30,10 +30,15 @@ public class CitrixService {
         private static final String YELLOW = "YELLOW";
         private static final String RED = "RED";
         private final CitrixMetricsHistoryRepository metricsHistoryRepository;
+        private final GlpiPlatformTicketService glpiPlatformTicketService;
         private final KpiProperties kpiProperties;
 
-        public CitrixService(CitrixMetricsHistoryRepository metricsHistoryRepository,KpiProperties kpiProperties) {
+        public CitrixService(
+                        CitrixMetricsHistoryRepository metricsHistoryRepository,
+                        GlpiPlatformTicketService glpiPlatformTicketService,
+                        KpiProperties kpiProperties) {
                 this.metricsHistoryRepository = metricsHistoryRepository;
+                this.glpiPlatformTicketService = glpiPlatformTicketService;
                 this.kpiProperties = kpiProperties;
         }
 
@@ -81,6 +86,7 @@ public class CitrixService {
                 summary.setAverageLogonDurationSeconds(averageLogonDurationSeconds);
                 summary.setServerLoadPercent(serverLoadPercent);
                 summary.setFailedLogons(failedLogons);
+                summary.setCitrixOpenTickets(glpiPlatformTicketService.getCitrixOpenTickets());
                 summary.setCitrixHealth(citrixHealthDetails.getColor());
                 summary.setCitrixHealthDetails(citrixHealthDetails);
                 summary.setCitrixHealthKpi(buildCitrixHealthKpi(citrixHealthDetails,LocalDateTime.now(),"SIMULATED"));
@@ -100,6 +106,7 @@ public class CitrixService {
                 summary.setAverageLogonDurationSeconds(history.getAverageLogonDurationSeconds());
                 summary.setServerLoadPercent(history.getServerLoadPercent());
                 summary.setFailedLogons(history.getFailedLogons());
+                summary.setCitrixOpenTickets(glpiPlatformTicketService.getCitrixOpenTickets());
                 CitrixHealthStatusDto citrixHealthDetails = calculateCitrixHealthDetails(
                                 history.getActiveSessions(),
                                 history.getAvailableDeliveryControllers(),

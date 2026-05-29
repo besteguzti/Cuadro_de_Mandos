@@ -28,6 +28,7 @@ public class Microsoft365Summary {
     private int unusedApplications;
     private int highPrivilegeApplications;
     private int nonCompliantDevices;
+    private int microsoft365OpenTickets;
     private int outdatedWindowsDevices;
     private int devicesWithoutEncryption;
     private int staleDevices;
@@ -156,8 +157,16 @@ public class Microsoft365Summary {
         return nonCompliantDevices;
     }
 
+    public int getMicrosoft365OpenTickets() {
+        return microsoft365OpenTickets;
+    }
+
     public void setNonCompliantDevices(int nonCompliantDevices) {
         this.nonCompliantDevices = nonCompliantDevices;
+    }
+
+    public void setMicrosoft365OpenTickets(int microsoft365OpenTickets) {
+        this.microsoft365OpenTickets = microsoft365OpenTickets;
     }
 
     public int getOutdatedWindowsDevices() {

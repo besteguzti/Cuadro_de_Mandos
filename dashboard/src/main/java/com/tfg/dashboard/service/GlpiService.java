@@ -67,6 +67,10 @@ public class GlpiService {
                 int openTickets = 80
                                 +
                                 random.nextInt(120);
+                int arubaOpenTickets = random.nextInt(openTickets + 1);
+                int remainingAfterAruba = openTickets - arubaOpenTickets;
+                int citrixOpenTickets = random.nextInt(remainingAfterAruba + 1);
+                int microsoft365OpenTickets = remainingAfterAruba - citrixOpenTickets;
 
                 int criticalOpenTickets = random.nextInt(
                                 Math.max(
@@ -104,6 +108,9 @@ public class GlpiService {
 
                 summary.setOpenTickets(
                                 openTickets);
+                summary.setArubaOpenTickets(arubaOpenTickets);
+                summary.setCitrixOpenTickets(citrixOpenTickets);
+                summary.setMicrosoft365OpenTickets(microsoft365OpenTickets);
 
                 summary.setCriticalOpenTickets(
                                 criticalOpenTickets);
@@ -151,6 +158,9 @@ public class GlpiService {
                 GlpiSummary summary = new GlpiSummary();
 
                 summary.setOpenTickets(history.getOpenTickets());
+                summary.setArubaOpenTickets(history.getArubaOpenTickets());
+                summary.setCitrixOpenTickets(history.getCitrixOpenTickets());
+                summary.setMicrosoft365OpenTickets(history.getMicrosoft365OpenTickets());
                 summary.setCriticalOpenTickets(history.getCriticalOpenTickets());
                 summary.setSlaBreachedTickets(history.getSlaBreachedTickets());
                 summary.setAverageResolutionHours(

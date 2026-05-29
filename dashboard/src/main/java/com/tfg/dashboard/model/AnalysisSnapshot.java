@@ -30,6 +30,16 @@ public class AnalysisSnapshot {
     private Integer technicalDegradation;
     private Integer userImpact;
     private Integer globalStatus;
+    private Integer arubaWifiClients;
+    private Integer citrixAverageLogonDurationSeconds;
+    private Integer citrixActiveSessions;
+    private Integer citrixFailedLogons;
+    private Integer glpiOpenTickets;
+    private Integer arubaOpenTickets;
+    private Integer citrixOpenTickets;
+    private Integer microsoft365OpenTickets;
+    private Integer microsoft365NonCompliantDevices;
+    private Integer affectedServicesPercent;
     private String arubaStatus;
     private String citrixStatus;
     private String microsoft365Status;
@@ -74,6 +84,46 @@ public class AnalysisSnapshot {
 
     public Integer getGlobalStatus() {
         return globalStatus;
+    }
+
+    public Integer getArubaWifiClients() {
+        return arubaWifiClients;
+    }
+
+    public Integer getCitrixAverageLogonDurationSeconds() {
+        return citrixAverageLogonDurationSeconds;
+    }
+
+    public Integer getCitrixActiveSessions() {
+        return citrixActiveSessions;
+    }
+
+    public Integer getCitrixFailedLogons() {
+        return citrixFailedLogons;
+    }
+
+    public Integer getGlpiOpenTickets() {
+        return glpiOpenTickets;
+    }
+
+    public Integer getArubaOpenTickets() {
+        return arubaOpenTickets;
+    }
+
+    public Integer getCitrixOpenTickets() {
+        return citrixOpenTickets;
+    }
+
+    public Integer getMicrosoft365OpenTickets() {
+        return microsoft365OpenTickets;
+    }
+
+    public Integer getMicrosoft365NonCompliantDevices() {
+        return microsoft365NonCompliantDevices;
+    }
+
+    public Integer getAffectedServicesPercent() {
+        return affectedServicesPercent;
     }
 
     public String getArubaStatus() {
@@ -134,6 +184,46 @@ public class AnalysisSnapshot {
 
     public void setGlobalStatus(Integer globalStatus) {
         this.globalStatus = globalStatus;
+    }
+
+    public void setArubaWifiClients(Integer arubaWifiClients) {
+        this.arubaWifiClients = arubaWifiClients;
+    }
+
+    public void setCitrixAverageLogonDurationSeconds(Integer citrixAverageLogonDurationSeconds) {
+        this.citrixAverageLogonDurationSeconds = citrixAverageLogonDurationSeconds;
+    }
+
+    public void setCitrixActiveSessions(Integer citrixActiveSessions) {
+        this.citrixActiveSessions = citrixActiveSessions;
+    }
+
+    public void setCitrixFailedLogons(Integer citrixFailedLogons) {
+        this.citrixFailedLogons = citrixFailedLogons;
+    }
+
+    public void setGlpiOpenTickets(Integer glpiOpenTickets) {
+        this.glpiOpenTickets = glpiOpenTickets;
+    }
+
+    public void setArubaOpenTickets(Integer arubaOpenTickets) {
+        this.arubaOpenTickets = arubaOpenTickets;
+    }
+
+    public void setCitrixOpenTickets(Integer citrixOpenTickets) {
+        this.citrixOpenTickets = citrixOpenTickets;
+    }
+
+    public void setMicrosoft365OpenTickets(Integer microsoft365OpenTickets) {
+        this.microsoft365OpenTickets = microsoft365OpenTickets;
+    }
+
+    public void setMicrosoft365NonCompliantDevices(Integer microsoft365NonCompliantDevices) {
+        this.microsoft365NonCompliantDevices = microsoft365NonCompliantDevices;
+    }
+
+    public void setAffectedServicesPercent(Integer affectedServicesPercent) {
+        this.affectedServicesPercent = affectedServicesPercent;
     }
 
     public void setArubaStatus(String arubaStatus) {

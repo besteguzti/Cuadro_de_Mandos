@@ -126,6 +126,14 @@ const microsoft365KpiInfo = {
     interpretation:
       "Un valor alto puede implicar dispositivos con configuración insegura o fuera de estándar."
   },
+  microsoft365OpenTickets: {
+    description:
+      "Tickets abiertos GLPI asociados a Microsoft 365.",
+    algorithm:
+      "El backend lee el último snapshot GLPI y devuelve microsoft365OpenTickets dentro del resumen Microsoft 365.",
+    interpretation:
+      "Permite relacionar señales técnicas de Microsoft 365 con trabajo operativo clasificado como Microsoft 365, sin afirmar causalidad."
+  },
   outdatedWindowsDevices: {
     description:
       "Cuenta dispositivos Windows simulados con versiones desactualizadas.",
@@ -403,6 +411,13 @@ function Microsoft365Page() {
           value={summary.nonCompliantDevices}
           status={indicatorStatus("Equipos no conformes")}
           info={microsoft365KpiInfo.nonCompliantDevices}
+        />
+
+        <KpiCard
+          title="Tickets abiertos Microsoft 365"
+          value={summary.microsoft365OpenTickets}
+          status="neutral"
+          info={microsoft365KpiInfo.microsoft365OpenTickets}
         />
 
         <KpiCard

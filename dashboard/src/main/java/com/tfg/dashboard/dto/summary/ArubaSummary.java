@@ -35,6 +35,7 @@ public class ArubaSummary {
     private int switchesFirmwareUpgradeRequired;
     private List<ArubaSwitchClientUsage> underusedSwitches;
     private int totalWifiClients;
+    private int arubaOpenTickets;
     private int mutualiaApsClients;
     private int mutualiaWifiClients;
     private int mutualiaLangileakClients;
@@ -117,6 +118,10 @@ public class ArubaSummary {
 
     public int getTotalWifiClients() {
         return totalWifiClients;
+    }
+
+    public int getArubaOpenTickets() {
+        return arubaOpenTickets;
     }
 
     public int getMutualiaApsClients() {
@@ -227,6 +232,10 @@ public class ArubaSummary {
 
     public void setTotalWifiClients(int totalWifiClients) {
         this.totalWifiClients = totalWifiClients;
+    }
+
+    public void setArubaOpenTickets(int arubaOpenTickets) {
+        this.arubaOpenTickets = arubaOpenTickets;
     }
 
     public void setMutualiaApsClients(int mutualiaApsClients) {

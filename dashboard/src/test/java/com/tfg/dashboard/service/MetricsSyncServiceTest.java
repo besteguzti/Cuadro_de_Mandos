@@ -87,6 +87,16 @@ class MetricsSyncServiceTest {
                 .isEqualTo(1200);
         assertThat(glpiCaptor.getValue().getOpenTickets())
                 .isEqualTo(80);
+        assertThat(glpiCaptor.getValue().getArubaOpenTickets())
+                .isEqualTo(20);
+        assertThat(glpiCaptor.getValue().getCitrixOpenTickets())
+                .isEqualTo(45);
+        assertThat(glpiCaptor.getValue().getMicrosoft365OpenTickets())
+                .isEqualTo(15);
+        assertThat(glpiCaptor.getValue().getOpenTickets())
+                .isEqualTo(glpiCaptor.getValue().getArubaOpenTickets()
+                        + glpiCaptor.getValue().getCitrixOpenTickets()
+                        + glpiCaptor.getValue().getMicrosoft365OpenTickets());
         assertThat(citrixCaptor.getValue().getCollectedAt()).isNotNull();
         assertThat(microsoftCaptor.getValue().getCollectedAt()).isNotNull();
         assertThat(glpiCaptor.getValue().getCollectedAt()).isNotNull();
@@ -194,6 +204,9 @@ class MetricsSyncServiceTest {
                 new GlpiSummary();
 
         summary.setOpenTickets(80);
+        summary.setArubaOpenTickets(20);
+        summary.setCitrixOpenTickets(45);
+        summary.setMicrosoft365OpenTickets(15);
 
         return summary;
     }

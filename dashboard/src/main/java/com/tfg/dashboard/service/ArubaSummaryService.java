@@ -37,6 +37,7 @@ public class ArubaSummaryService {
         private final ArubaDashboardMetricsRepository dashboardMetricsRepository;
         private final ArubaSwitchUsageService switchUsageService;
         private final ArubaNetworkStatusService networkStatusService;
+        private final GlpiPlatformTicketService glpiPlatformTicketService;
         private final KpiProperties kpiProperties;
 
         public ArubaSummaryService(
@@ -47,6 +48,7 @@ public class ArubaSummaryService {
                         ArubaDashboardMetricsRepository dashboardMetricsRepository,
                         ArubaSwitchUsageService switchUsageService,
                         ArubaNetworkStatusService networkStatusService,
+                        GlpiPlatformTicketService glpiPlatformTicketService,
                         KpiProperties kpiProperties) {
 
                 this.accessPointRepository = accessPointRepository;
@@ -56,6 +58,7 @@ public class ArubaSummaryService {
                 this.dashboardMetricsRepository = dashboardMetricsRepository;
                 this.switchUsageService = switchUsageService;
                 this.networkStatusService = networkStatusService;
+                this.glpiPlatformTicketService = glpiPlatformTicketService;
                 this.kpiProperties = kpiProperties;
         }
 
@@ -131,6 +134,7 @@ public class ArubaSummaryService {
                 summary.setSwitchesFirmwareUpgradeRequired(switchesFirmwareUpgradeRequired);
                 summary.setUnderusedSwitches(switchUsageService.getUnderusedSwitches());
                 summary.setTotalWifiClients(metrics.getTotalWifiClients());
+                summary.setArubaOpenTickets(glpiPlatformTicketService.getArubaOpenTickets());
                 summary.setMutualiaApsClients(metrics.getMutualiaApsClients());
                 summary.setMutualiaWifiClients(metrics.getMutualiaWifiClients());
                 summary.setMutualiaLangileakClients(metrics.getMutualiaLangileakClients());

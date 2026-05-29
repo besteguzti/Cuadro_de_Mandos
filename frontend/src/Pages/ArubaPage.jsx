@@ -55,6 +55,11 @@ const arubaKpiInfo = {
     algorithm: 'Se calcula desde los clientes WiFi obtenidos por Aruba y agregados en el resumen almacenado.',
     interpretation: 'Indica actividad inalámbrica total observada en el momento de la sincronización.'
   },
+  arubaOpenTickets: {
+    description: 'Tickets abiertos GLPI asociados a Aruba.',
+    algorithm: 'El backend lee el último snapshot GLPI y devuelve arubaOpenTickets dentro del resumen Aruba.',
+    interpretation: 'Permite relacionar la afección de red con carga operativa clasificada como Aruba, sin afirmar causalidad.'
+  },
   mutualiaApsClients: {
     description: 'Clientes WiFi asociados al grupo MUTUALIA-APs.',
     algorithm: 'Se filtran los clientes WiFi por group_name MUTUALIA-APs en los datos recibidos de Aruba.',
@@ -301,6 +306,19 @@ function ArubaPage() {
               ) : (
                 <p>Sin motivos activos</p>
               )}
+            </div>
+          </section>
+
+          <section className="dashboard-section">
+            <h2>Soporte GLPI asociado</h2>
+
+            <div className="kpi-grid">
+              <KpiCard
+                title="Tickets abiertos Aruba"
+                value={summary.arubaOpenTickets}
+                status="neutral"
+                info={arubaKpiInfo.arubaOpenTickets}
+              />
             </div>
           </section>
 

@@ -31,6 +31,9 @@ class DataFreshnessServiceTest {
     @Mock
     private GlpiMetricsHistoryRepository glpiRepository;
 
+    @Mock
+    private GlpiPlatformTicketService glpiPlatformTicketService;
+
     private final KpiProperties kpiProperties =
             new KpiProperties();
 
@@ -46,7 +49,7 @@ class DataFreshnessServiceTest {
                 .thenReturn(Optional.of(history));
 
         CitrixService service =
-                new CitrixService(citrixRepository, kpiProperties);
+                new CitrixService(citrixRepository, glpiPlatformTicketService, kpiProperties);
 
         assertThat(service.getSummary().getDataStatus())
                 .isEqualTo("OK");
@@ -59,7 +62,7 @@ class DataFreshnessServiceTest {
                 .thenReturn(Optional.empty());
 
         CitrixService service =
-                new CitrixService(citrixRepository, kpiProperties);
+                new CitrixService(citrixRepository, glpiPlatformTicketService, kpiProperties);
 
         assertThat(service.getSummary().getDataStatus())
                 .isEqualTo("NO_DATA");
@@ -77,7 +80,7 @@ class DataFreshnessServiceTest {
                 .thenReturn(Optional.of(history));
 
         Microsoft365Service service =
-                new Microsoft365Service(microsoft365Repository, kpiProperties);
+                new Microsoft365Service(microsoft365Repository, glpiPlatformTicketService, kpiProperties);
 
         assertThat(service.getSummary().getDataStatus())
                 .isEqualTo("STALE");

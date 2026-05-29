@@ -34,13 +34,16 @@ public class Microsoft365Service {
         private static final String RED = "RED";
 
         private final Microsoft365MetricsHistoryRepository metricsHistoryRepository;
+        private final GlpiPlatformTicketService glpiPlatformTicketService;
         private final KpiProperties kpiProperties;
 
         public Microsoft365Service(
                         Microsoft365MetricsHistoryRepository metricsHistoryRepository,
+                        GlpiPlatformTicketService glpiPlatformTicketService,
                         KpiProperties kpiProperties) {
 
                 this.metricsHistoryRepository = metricsHistoryRepository;
+                this.glpiPlatformTicketService = glpiPlatformTicketService;
                 this.kpiProperties = kpiProperties;
         }
 
@@ -152,6 +155,8 @@ public class Microsoft365Service {
 
                 summary.setNonCompliantDevices(
                                 nonCompliantDevices);
+                summary.setMicrosoft365OpenTickets(
+                                glpiPlatformTicketService.getMicrosoft365OpenTickets());
 
                 summary.setOutdatedWindowsDevices(
                                 outdatedWindowsDevices);
@@ -197,6 +202,7 @@ public class Microsoft365Service {
                 summary.setHighPrivilegeApplications(
                                 history.getHighPrivilegeApplications());
                 summary.setNonCompliantDevices(history.getNonCompliantDevices());
+                summary.setMicrosoft365OpenTickets(glpiPlatformTicketService.getMicrosoft365OpenTickets());
                 summary.setOutdatedWindowsDevices(
                                 history.getOutdatedWindowsDevices());
                 summary.setDevicesWithoutEncryption(

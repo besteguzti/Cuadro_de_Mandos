@@ -12,9 +12,16 @@ import com.tfg.dashboard.dto.KpiResultDto;
 import com.tfg.dashboard.dto.OperationalImpactAnalysisResponse;
 import com.tfg.dashboard.dto.OperationalImpactBucketDto;
 import com.tfg.dashboard.dto.TechnicalTimelinePointDto;
+import com.tfg.dashboard.dto.summary.ArubaSummary;
 import com.tfg.dashboard.model.AnalysisSnapshot;
+import com.tfg.dashboard.model.CitrixMetricsHistory;
+import com.tfg.dashboard.model.GlpiMetricsHistory;
+import com.tfg.dashboard.model.Microsoft365MetricsHistory;
 import com.tfg.dashboard.dto.summary.MainDashboardSummary;
 import com.tfg.dashboard.repository.AnalysisSnapshotRepository;
+import com.tfg.dashboard.repository.CitrixMetricsHistoryRepository;
+import com.tfg.dashboard.repository.GlpiMetricsHistoryRepository;
+import com.tfg.dashboard.repository.Microsoft365MetricsHistoryRepository;
 
 /**
  * Orquesta los datos del panel de análisis exploratorio.
@@ -45,6 +52,11 @@ public class AnalysisSnapshotOrchestrator {
         private final GlpiPlatformRelationService glpiPlatformRelationService;
         private final TechnicalImpactAnalysisService technicalImpactAnalysisService;
         private final TechnicalTimelineService technicalTimelineService;
+        private final SpecificKpiRelationService specificKpiRelationService;
+        private final ArubaService arubaService;
+        private final CitrixMetricsHistoryRepository citrixRepository;
+        private final Microsoft365MetricsHistoryRepository microsoft365Repository;
+        private final GlpiMetricsHistoryRepository glpiRepository;
         private final KpiProperties kpiProperties;
 
         public AnalysisSnapshotOrchestrator(
@@ -57,6 +69,11 @@ public class AnalysisSnapshotOrchestrator {
                         GlpiPlatformRelationService glpiPlatformRelationService,
                         TechnicalImpactAnalysisService technicalImpactAnalysisService,
                         TechnicalTimelineService technicalTimelineService,
+                        SpecificKpiRelationService specificKpiRelationService,
+                        ArubaService arubaService,
+                        CitrixMetricsHistoryRepository citrixRepository,
+                        Microsoft365MetricsHistoryRepository microsoft365Repository,
+                        GlpiMetricsHistoryRepository glpiRepository,
                         KpiProperties kpiProperties) {
 
                 this.analysisSnapshotRepository = analysisSnapshotRepository;
@@ -68,6 +85,11 @@ public class AnalysisSnapshotOrchestrator {
                 this.glpiPlatformRelationService = glpiPlatformRelationService;
                 this.technicalImpactAnalysisService = technicalImpactAnalysisService;
                 this.technicalTimelineService = technicalTimelineService;
+                this.specificKpiRelationService = specificKpiRelationService;
+                this.arubaService = arubaService;
+                this.citrixRepository = citrixRepository;
+                this.microsoft365Repository = microsoft365Repository;
+                this.glpiRepository = glpiRepository;
                 this.kpiProperties = kpiProperties;
         }
 
@@ -214,6 +236,8 @@ public class AnalysisSnapshotOrchestrator {
                                 technicalImpactAnalysisService.buildTechnicalImpactPoints(technicalSnapshots));
                 response.setTechnicalTimeline(
                                 technicalTimelineService.buildPlatformEvolution(technicalSnapshots));
+                response.setSpecificKpiRelations(
+                                specificKpiRelationService.buildRelations(technicalSnapshots));
                 response.setDemoData(demoData);
                 response.setInterpretation(
                                 operationalInterpretation(
@@ -271,6 +295,13 @@ public class AnalysisSnapshotOrchestrator {
 
                 Map<String, Double> values = historyService.calculateCurrentValues();
                 MainDashboardSummary summary = mainDashboardService.getSummary();
+                ArubaSummary arubaSummary = arubaService.getSummary();
+                CitrixMetricsHistory citrixSnapshot =
+                                citrixRepository.findTopByOrderByCollectedAtDesc().orElse(null);
+                Microsoft365MetricsHistory microsoft365Snapshot =
+                                microsoft365Repository.findTopByOrderByCollectedAtDesc().orElse(null);
+                GlpiMetricsHistory glpiSnapshot =
+                                glpiRepository.findTopByOrderByCollectedAtDesc().orElse(null);
                 AnalysisSnapshot snapshot = new AnalysisSnapshot();
 
                 int aruba = safeCurrentScore(values, TransversalKpiHistoryService.ARUBA_NETWORK_AFFECTATION);
@@ -294,6 +325,31 @@ public class AnalysisSnapshotOrchestrator {
                 snapshot.setTechnicalDegradation(summary.getTechnicalDegradation());
                 snapshot.setUserImpact(summary.getUserImpact());
                 snapshot.setGlobalStatus(summary.getGlobalHealthPercentage());
+                snapshot.setArubaWifiClients(
+                                "NO_DATA".equalsIgnoreCase(arubaSummary.getDataStatus())
+                                                ? null
+                                                : arubaSummary.getTotalWifiClients());
+                snapshot.setCitrixAverageLogonDurationSeconds(
+                                citrixSnapshot == null
+                                                ? null
+                                                : citrixSnapshot.getAverageLogonDurationSeconds());
+                snapshot.setCitrixActiveSessions(
+                                citrixSnapshot == null ? null : citrixSnapshot.getActiveSessions());
+                snapshot.setCitrixFailedLogons(
+                                citrixSnapshot == null ? null : citrixSnapshot.getFailedLogons());
+                snapshot.setGlpiOpenTickets(
+                                glpiSnapshot == null ? null : glpiSnapshot.getOpenTickets());
+                snapshot.setArubaOpenTickets(
+                                glpiSnapshot == null ? null : glpiSnapshot.getArubaOpenTickets());
+                snapshot.setCitrixOpenTickets(
+                                glpiSnapshot == null ? null : glpiSnapshot.getCitrixOpenTickets());
+                snapshot.setMicrosoft365OpenTickets(
+                                glpiSnapshot == null ? null : glpiSnapshot.getMicrosoft365OpenTickets());
+                snapshot.setMicrosoft365NonCompliantDevices(
+                                microsoft365Snapshot == null
+                                                ? null
+                                                : microsoft365Snapshot.getNonCompliantDevices());
+                snapshot.setAffectedServicesPercent(summary.getAffectedServicesPercent());
                 snapshot.setArubaStatus(kpiScoringService.statusFromAffection(aruba));
                 snapshot.setCitrixStatus(kpiScoringService.statusFromAffection(citrix));
                 snapshot.setMicrosoft365Status(kpiScoringService.statusFromAffection(microsoft365));

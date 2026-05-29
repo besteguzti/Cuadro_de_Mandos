@@ -49,6 +49,7 @@ public class OperationalImpactAnalysisResponse {
     private String technicalOperationalConversionStatus;
     private List<AnalyticsComparePoint> technicalImpactPoints;
     private List<TechnicalTimelinePointDto> technicalTimeline;
+    private List<SpecificKpiRelationDto> specificKpiRelations;
     private List<KpiResultDto> kpis;
     private boolean demoData;
     private String interpretation;
@@ -212,6 +213,10 @@ public class OperationalImpactAnalysisResponse {
 
     public List<TechnicalTimelinePointDto> getTechnicalTimeline() {
         return technicalTimeline;
+    }
+
+    public List<SpecificKpiRelationDto> getSpecificKpiRelations() {
+        return specificKpiRelations;
     }
 
     public List<KpiResultDto> getKpis() {
@@ -388,6 +393,10 @@ public class OperationalImpactAnalysisResponse {
 
     public void setTechnicalTimeline(List<TechnicalTimelinePointDto> technicalTimeline) {
         this.technicalTimeline = technicalTimeline;
+    }
+
+    public void setSpecificKpiRelations(List<SpecificKpiRelationDto> specificKpiRelations) {
+        this.specificKpiRelations = specificKpiRelations;
     }
 
     public void setKpis(List<KpiResultDto> kpis) {

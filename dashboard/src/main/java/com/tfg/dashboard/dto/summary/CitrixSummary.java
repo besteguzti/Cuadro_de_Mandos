@@ -21,6 +21,7 @@ public class CitrixSummary {
     private int averageLogonDurationSeconds;
     private int serverLoadPercent;
     private int failedLogons;
+    private int citrixOpenTickets;
     private String citrixHealth;
 
     // Detalle normalizado del indice Citrix. Mantiene citrixHealth como semaforo.
@@ -102,8 +103,16 @@ public class CitrixSummary {
         return citrixHealth;
     }
 
+    public int getCitrixOpenTickets() {
+        return citrixOpenTickets;
+    }
+
     public void setCitrixHealth(String citrixHealth) {
         this.citrixHealth = citrixHealth;
+    }
+
+    public void setCitrixOpenTickets(int citrixOpenTickets) {
+        this.citrixOpenTickets = citrixOpenTickets;
     }
 
     public CitrixHealthStatusDto getCitrixHealthDetails() {
