@@ -17,7 +17,7 @@ import com.tfg.dashboard.dto.SpecificKpiRelationPointDto;
 import com.tfg.dashboard.model.AnalysisSnapshot;
 
 /**
- * Construye relaciones exploratorias entre indicadores concretos.
+ * Construye relaciónes exploratorias entre indicadores concretos.
  *
  * Los puntos se agregan por dia para evitar nubes de snapshots demasiado densas
  * y la lectura distingue co-ocurrencia de tendencia visual.
@@ -33,6 +33,7 @@ public class SpecificKpiRelationService {
     private static final double MINIMUM_RELATIVE_VARIATION = 0.10;
     private static final double STRONG_POSITIVE_TREND = 0.45;
     private static final double MODERATE_POSITIVE_TREND = 0.25;
+    private static final double PLATFORM_TICKET_CATEGORY_COUNT = 3.0;
     private static final String UNKNOWN_STATUS = "UNKNOWN";
 
     private final KpiProperties kpiProperties;
@@ -47,8 +48,8 @@ public class SpecificKpiRelationService {
     }
 
     /**
-     * Devuelve las cinco relaciones especificas predefinidas para el bloque
-     * final del panel de analisis.
+     * Devuelve las relaciónes específicas predefinidas para el bloque final del
+     * panel de análisis.
      */
         public List<SpecificKpiRelationDto> buildRelations(List<AnalysisSnapshot> snapshots) {
                 List<SpecificKpiRelationDto> relations = new ArrayList<>(List.of(
@@ -91,7 +92,7 @@ public class SpecificKpiRelationService {
                         AnalysisSnapshot::getCitrixFailedLogons,
                         AnalysisSnapshot::getCitrixOpenTickets,
                         (double) kpiProperties.getCitrix().getFailedLogonsYellowAbove() + 1,
-                        (double) kpiProperties.getGlpi().getOpenTicketsYellowMin()),
+                        categorizedOpenTicketsThreshold()),
                 highHighRelation(
                         "microsoft365_non_compliant_devices_vs_microsoft365_open_tickets",
                         "Microsoft 365 equipos no conformes vs tickets abiertos Microsoft 365",
@@ -105,7 +106,7 @@ public class SpecificKpiRelationService {
                         AnalysisSnapshot::getMicrosoft365NonCompliantDevices,
                         AnalysisSnapshot::getMicrosoft365OpenTickets,
                         (double) kpiProperties.getMicrosoft365().getNonCompliantDevicesYellowAbove() + 1,
-                        (double) kpiProperties.getGlpi().getOpenTicketsYellowMin()),
+                        categorizedOpenTicketsThreshold()),
                 highHighRelation(
                         "affected_services_vs_glpi_pressure",
                         "Servicios afectados vs presión operativa GLPI",
@@ -130,7 +131,7 @@ public class SpecificKpiRelationService {
                 "%",
                 "%",
                         "Permite ver si los momentos con mayor deterioro técnico coinciden con mayor impacto potencial sobre los usuarios.",
-                        "No demuestra causalidad: la coincidencia observada puede orientar la revisión y ayudar a priorizar investigaciones. Usa expresiones como 'coincide con', 'puede orientar la revisión' y 'relación aparente'.",
+                        "No demuestra causalidad: la coincidencia observada puede orientar la revisión y ayudar a priorizar investigaciones. Usa expresiónes como 'coincide con', 'puede orientar la revisión' y 'relación aparente'.",
                 snapshots,
                 AnalysisSnapshot::getTechnicalDegradation,
                 AnalysisSnapshot::getUserImpact,
@@ -441,6 +442,10 @@ public class SpecificKpiRelationService {
 
         return range >= MINIMUM_ABSOLUTE_VARIATION
                 || range / reference >= MINIMUM_RELATIVE_VARIATION;
+    }
+
+    private double categorizedOpenTicketsThreshold() {
+        return Math.ceil(kpiProperties.getGlpi().getOpenTicketsYellowMin() / PLATFORM_TICKET_CATEGORY_COUNT);
     }
 
     private double pearson(List<SpecificKpiRelationPointDto> points) {

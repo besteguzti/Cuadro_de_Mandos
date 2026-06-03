@@ -8,8 +8,8 @@ import com.tfg.dashboard.repository.GlpiMetricsHistoryRepository;
 /**
  * Centraliza la lectura del ultimo reparto de tickets GLPI por plataforma.
  *
- * Permite que las paginas de Aruba, Citrix y Microsoft 365 muestren su carga
- * operativa asociada sin duplicar consultas al historico GLPI.
+ * Permite que las páginas de Aruba, Citrix y Microsoft 365 muestren su carga
+ * operativa asociada sin duplicar consultas al histórico GLPI.
  */
 @Service
 public class GlpiPlatformTicketService {

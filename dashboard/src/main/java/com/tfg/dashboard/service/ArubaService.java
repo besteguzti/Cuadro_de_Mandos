@@ -9,6 +9,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import com.tfg.dashboard.dto.ArubaApInfo;
+import com.tfg.dashboard.dto.ArubaApAnnotationDto;
+import com.tfg.dashboard.dto.ArubaApAnnotationRequest;
+import com.tfg.dashboard.dto.ArubaInactiveApDto;
 import com.tfg.dashboard.dto.ArubaNetworkStatusDto;
 import com.tfg.dashboard.dto.ArubaSwitchInfo;
 import com.tfg.dashboard.dto.ArubaWifiClientInfo;
@@ -65,6 +68,18 @@ public class ArubaService {
         public ArubaNetworkStatusDto getNetworkStatus() {
 
                 return summaryService.getNetworkStatus();
+        }
+
+        public List<ArubaInactiveApDto> getInactiveAps() {
+
+                return summaryService.getInactiveAps();
+        }
+
+        public ArubaApAnnotationDto saveInactiveApAnnotation(
+                        String serial,
+                        ArubaApAnnotationRequest request) {
+
+                return summaryService.saveInactiveApAnnotation(serial, request);
         }
 
         public List<ArubaApInfo> getApsList() {
@@ -134,9 +149,9 @@ public class ArubaService {
                         networkStatusService.saveNetworkStatusSnapshot(getNetworkStatus(), LocalDateTime.now());
                 } catch (Exception exception) {
 
-                        // El historico de afectacion alimenta el analisis transversal, pero no debe
+                        // El histórico de afectacion alimenta el análisis transversal, pero no debe
                         // bloquear la sincronizacion real de APs, switches y clientes Aruba.
-                        log.error("Error guardando historico de estado de red Aruba", exception);
+                        log.error("Error guardando histórico de estado de red Aruba", exception);
                 }
         }
 }

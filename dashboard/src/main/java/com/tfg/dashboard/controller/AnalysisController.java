@@ -16,8 +16,9 @@ import com.tfg.dashboard.service.TransversalKpiAnalyticsService;
 /**
  * Endpoints del panel "Análisis exploratorio de KPIs transversales".
  *
- * El panel compara presión operativa GLPI con afección técnica de Aruba, Citrix Microsoft 365.
- * Las respuestas proceden de datos de mysql y, si no hay histórico suficiente, genera escenarios de desarrollo marcados.
+ * El panel compara relaciónes aparentes entre plataformas, evolución temporal
+ * y relaciónes específicas entre indicadores. Las respuestas proceden de
+ * snapshots persistidos y no demuestran causalidad directa.
  */
 @RestController
 @RequestMapping("/api/analysis")
@@ -29,26 +30,27 @@ public class AnalysisController {
         this.analyticsService = analyticsService;
     }
 
-    //Devuelve las capturas históricas que sirven de base para las gráficas.
-
     @GetMapping("/snapshots")
     public List<AnalysisSnapshot> snapshots(@RequestParam(defaultValue = "30d") String period) {
         return analyticsService.getAnalysisSnapshots(period);
     }
 
-    //Respuesta principal del panel: relación GLPI-plataforma, co-ocurrencia, impacto técnico-operativo y evolución temporal.
-     
+    /**
+     * Respuesta principal del panel actual. El parametro platform queda como
+     * opcional por compatibilidad con versiones anteriores, pero ya no modifica
+     * el contenido devuelto.
+     */
     @GetMapping("/glpi-platform-relation")
     public OperationalImpactAnalysisResponse glpiPlatformRelation(
-            @RequestParam(defaultValue = "aruba") String platform,
+            @RequestParam(required = false) String platform,
             @RequestParam(defaultValue = "30d") String period) {
 
-        return analyticsService.getGlpiPlatformRelation(platform, period);
+        return analyticsService.getGlpiPlatformRelation(period);
     }
 
     /**
-     * Devuelve puntos de comparación entre número de tickets GLPI y número de incidencias técnicas detectadas en la plataforma,
-     * para evaluar si hay casos de degradación técnica que no se reflejan en tickets o viceversa.
+     * Devuelve puntos de degradación técnica frente a impacto en usuarios para
+     * consultas auxiliares del módulo de análisis.
      */
     @GetMapping("/technical-degradation-impact")
     public List<AnalyticsComparePoint> technicalDegradationImpact(
@@ -57,8 +59,6 @@ public class AnalysisController {
         return analyticsService.getTechnicalDegradationImpact(period);
     }
 
-    //Devuelve la evolución temporal conjunta de afección Aruba, Citrix y Microsoft 365.
-    
     @GetMapping("/platform-evolution")
     public List<TechnicalTimelinePointDto> platformEvolution(
             @RequestParam(defaultValue = "30d") String period) {

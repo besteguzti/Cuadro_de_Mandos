@@ -1,5 +1,7 @@
 package com.tfg.dashboard.dto;
 
+import java.time.LocalDateTime;
+
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class ArubaApInfo {
@@ -21,6 +23,7 @@ public class ArubaApInfo {
 
     @JsonProperty("swarm_name")
     private String swarmName;
+    private LocalDateTime lastSeenAt;
 
     public String getName() {
         return name;
@@ -93,6 +96,14 @@ public class ArubaApInfo {
 
     public void setSwarmName(String swarmName) {
         this.swarmName = swarmName;
+    }
+
+    public LocalDateTime getLastSeenAt() {
+        return lastSeenAt;
+    }
+
+    public void setLastSeenAt(LocalDateTime lastSeenAt) {
+        this.lastSeenAt = lastSeenAt;
     }
 
 }

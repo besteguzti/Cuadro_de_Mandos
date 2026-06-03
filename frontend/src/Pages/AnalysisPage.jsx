@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 
 import "../App.css";
 
@@ -6,19 +6,17 @@ import AnalysisErrorState from "../components/analysis/AnalysisErrorState";
 import AnalysisHeader from "../components/analysis/AnalysisHeader";
 import AnalysisLoadingState from "../components/analysis/AnalysisLoadingState";
 import PlatformEvolutionTimeline from "../components/analysis/PlatformEvolutionTimeline";
-import RelationshipBarChart from "../components/analysis/RelationshipBarChart";
 import SpecificKpiRelationsSection from "../components/analysis/SpecificKpiRelationsSection";
 import TechnicalRelationTable from "../components/analysis/TechnicalRelationTable";
 import { API_BASE_URL } from "../config/api";
 
 const periods = [
-  { label: "7 dias", value: "7d" },
-  { label: "30 dias", value: "30d" },
-  { label: "90 dias", value: "90d" }
+  { label: "7 días", value: "7d" },
+  { label: "30 días", value: "30d" },
+  { label: "90 días", value: "90d" }
 ];
 
 function AnalysisPage() {
-  const platform = "aruba";
   const [period, setPeriod] = useState("30d");
   const [analysis, setAnalysis] = useState(null);
   const [visibleSeries, setVisibleSeries] = useState({
@@ -34,11 +32,11 @@ function AnalysisPage() {
   // datos demo ni calcula relaciones, solo renderiza la respuesta persistida.
   useEffect(() => {
     fetch(
-      `${API_BASE_URL}/api/analysis/glpi-platform-relation?platform=${platform}&period=${period}`
+      `${API_BASE_URL}/api/analysis/glpi-platform-relation?period=${period}`
     )
       .then((response) => {
         if (!response.ok) {
-          throw new Error("No se pudo cargar el analisis");
+          throw new Error("No se pudo cargar el análisis");
         }
 
         return response.json();
@@ -49,10 +47,10 @@ function AnalysisPage() {
         setLoading(false);
       })
       .catch(() => {
-        setError("No se han podido cargar los datos del analisis.");
+        setError("No se han podido cargar los datos del análisis.");
         setLoading(false);
       });
-  }, [platform, period]);
+  }, [period]);
 
   
 
@@ -88,8 +86,6 @@ function AnalysisPage() {
 
       {analysis && !loading && (
         <>
-          <RelationshipBarChart analysis={analysis} />
-
           <TechnicalRelationTable relations={analysis.technicalRelations ?? []} />
 
           <PlatformEvolutionTimeline

@@ -1,9 +1,9 @@
-function AnalysisHeader({ children }) {
+﻿function AnalysisHeader({ children }) {
   return (
     <header className="dashboard-header">
       <div>
-        <p className="eyebrow">Modulo de analisis</p>
-        <h1>Analisis exploratorio de KPIs transversales</h1>
+        <p className="eyebrow">Modulo de análisis</p>
+        <h1>Análisis exploratorio de KPIs transversales</h1>
       </div>
 
       {children}

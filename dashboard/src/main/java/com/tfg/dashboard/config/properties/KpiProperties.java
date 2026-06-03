@@ -21,6 +21,7 @@ public class KpiProperties {
         private Microsoft365 microsoft365 = new Microsoft365();
         private Glpi glpi = new Glpi();
         private Aruba aruba = new Aruba();
+        private Transversal transversal = new Transversal();
         private Executive executive = new Executive();
 
         public Status getStatus() {
@@ -77,6 +78,14 @@ public class KpiProperties {
 
         public void setAruba(Aruba aruba) {
                 this.aruba = aruba;
+        }
+
+        public Transversal getTransversal() {
+                return transversal;
+        }
+
+        public void setTransversal(Transversal transversal) {
+                this.transversal = transversal;
         }
 
         public Executive getExecutive() {
@@ -435,6 +444,7 @@ public class KpiProperties {
                 private int nonCompliantDevicesYellowAbove = 50;
                 private int nonCompliantDevicesRedAbove = 100;
                 private int outdatedWindowsYellowAbove = 0;
+                private int devicesWithoutEncryptionYellowAbove = 0;
                 private int devicesWithoutEncryptionRedAbove = 5;
 
                 public int getSharePointYellowMin() {
@@ -505,6 +515,14 @@ public class KpiProperties {
                         return devicesWithoutEncryptionRedAbove;
                 }
 
+                public int getDevicesWithoutEncryptionYellowAbove() {
+                        return devicesWithoutEncryptionYellowAbove;
+                }
+
+                public void setDevicesWithoutEncryptionYellowAbove(int devicesWithoutEncryptionYellowAbove) {
+                        this.devicesWithoutEncryptionYellowAbove = devicesWithoutEncryptionYellowAbove;
+                }
+
                 public void setDevicesWithoutEncryptionRedAbove(int devicesWithoutEncryptionRedAbove) {
                         this.devicesWithoutEncryptionRedAbove = devicesWithoutEncryptionRedAbove;
                 }
@@ -564,8 +582,16 @@ public class KpiProperties {
                 private int freshnessMinutes = 10;
                 private int underusedSwitchDownInterfaceLimit = 17;
                 private int underusedSwitchDays = 30;
-                private int accessPointDownRedPercent = 50;
+                private int inactiveApDaysThreshold = 30;
+                private int accessPointDownYellowPercent = 50;
+                private int accessPointDownRedPercent = 100;
                 private int switchDownYellowMin = 2;
+                private int pendingFirmwareApsYellowAbove = 0;
+                private int inactiveApsYellowAbove = 0;
+                private int pendingFirmwareSwitchesYellowAbove = 0;
+                private int criticalClientsGreenAbove = 0;
+                private int accessPointBlockWeight = 50;
+                private int switchBlockWeight = 50;
                 private int blockYellowContribution = 25;
                 private int blockRedContribution = 50;
 
@@ -593,8 +619,24 @@ public class KpiProperties {
                         this.underusedSwitchDays = underusedSwitchDays;
                 }
 
+                public int getInactiveApDaysThreshold() {
+                        return inactiveApDaysThreshold;
+                }
+
+                public void setInactiveApDaysThreshold(int inactiveApDaysThreshold) {
+                        this.inactiveApDaysThreshold = inactiveApDaysThreshold;
+                }
+
                 public int getAccessPointDownRedPercent() {
                         return accessPointDownRedPercent;
+                }
+
+                public int getAccessPointDownYellowPercent() {
+                        return accessPointDownYellowPercent;
+                }
+
+                public void setAccessPointDownYellowPercent(int accessPointDownYellowPercent) {
+                        this.accessPointDownYellowPercent = accessPointDownYellowPercent;
                 }
 
                 public void setAccessPointDownRedPercent(int accessPointDownRedPercent) {
@@ -607,6 +649,54 @@ public class KpiProperties {
 
                 public void setSwitchDownYellowMin(int switchDownYellowMin) {
                         this.switchDownYellowMin = switchDownYellowMin;
+                }
+
+                public int getPendingFirmwareApsYellowAbove() {
+                        return pendingFirmwareApsYellowAbove;
+                }
+
+                public void setPendingFirmwareApsYellowAbove(int pendingFirmwareApsYellowAbove) {
+                        this.pendingFirmwareApsYellowAbove = pendingFirmwareApsYellowAbove;
+                }
+
+                public int getInactiveApsYellowAbove() {
+                        return inactiveApsYellowAbove;
+                }
+
+                public void setInactiveApsYellowAbove(int inactiveApsYellowAbove) {
+                        this.inactiveApsYellowAbove = inactiveApsYellowAbove;
+                }
+
+                public int getPendingFirmwareSwitchesYellowAbove() {
+                        return pendingFirmwareSwitchesYellowAbove;
+                }
+
+                public void setPendingFirmwareSwitchesYellowAbove(int pendingFirmwareSwitchesYellowAbove) {
+                        this.pendingFirmwareSwitchesYellowAbove = pendingFirmwareSwitchesYellowAbove;
+                }
+
+                public int getCriticalClientsGreenAbove() {
+                        return criticalClientsGreenAbove;
+                }
+
+                public void setCriticalClientsGreenAbove(int criticalClientsGreenAbove) {
+                        this.criticalClientsGreenAbove = criticalClientsGreenAbove;
+                }
+
+                public int getAccessPointBlockWeight() {
+                        return accessPointBlockWeight;
+                }
+
+                public void setAccessPointBlockWeight(int accessPointBlockWeight) {
+                        this.accessPointBlockWeight = accessPointBlockWeight;
+                }
+
+                public int getSwitchBlockWeight() {
+                        return switchBlockWeight;
+                }
+
+                public void setSwitchBlockWeight(int switchBlockWeight) {
+                        this.switchBlockWeight = switchBlockWeight;
                 }
 
                 public int getBlockYellowContribution() {
@@ -623,6 +713,162 @@ public class KpiProperties {
 
                 public void setBlockRedContribution(int blockRedContribution) {
                         this.blockRedContribution = blockRedContribution;
+                }
+        }
+
+        public static class Transversal {
+
+                private TransversalKpiThreshold globalStatus = TransversalKpiThreshold.risk();
+                private TransversalKpiThreshold globalCriticality = TransversalKpiThreshold.risk();
+                private TransversalKpiThreshold globalAvailability = TransversalKpiThreshold.health();
+                private TransversalKpiThreshold operationalPressure = TransversalKpiThreshold.risk();
+                private TransversalKpiThreshold technicalDegradation = TransversalKpiThreshold.risk();
+                private TransversalKpiThreshold slaRisk = TransversalKpiThreshold.risk();
+                private TransversalKpiThreshold operationalBacklog = TransversalKpiThreshold.risk();
+                private TransversalKpiThreshold userImpact = TransversalKpiThreshold.risk();
+                private TransversalKpiThreshold affectedServices = TransversalKpiThreshold.risk();
+
+                public TransversalKpiThreshold thresholdFor(String metricKey) {
+                        return switch (metricKey) {
+                                case "transversal.globalStatus" -> globalStatus;
+                                case "transversal.globalCriticality" -> globalCriticality;
+                                case "transversal.globalAvailability" -> globalAvailability;
+                                case "transversal.operationalPressure" -> operationalPressure;
+                                case "transversal.technicalDegradation" -> technicalDegradation;
+                                case "transversal.slaRisk" -> slaRisk;
+                                case "transversal.operationalBacklog" -> operationalBacklog;
+                                case "transversal.userImpact" -> userImpact;
+                                case "transversal.affectedServices" -> affectedServices;
+                                default -> globalStatus;
+                        };
+                }
+
+                public TransversalKpiThreshold getGlobalStatus() {
+                        return globalStatus;
+                }
+
+                public void setGlobalStatus(TransversalKpiThreshold globalStatus) {
+                        this.globalStatus = globalStatus;
+                }
+
+                public TransversalKpiThreshold getGlobalCriticality() {
+                        return globalCriticality;
+                }
+
+                public void setGlobalCriticality(TransversalKpiThreshold globalCriticality) {
+                        this.globalCriticality = globalCriticality;
+                }
+
+                public TransversalKpiThreshold getGlobalAvailability() {
+                        return globalAvailability;
+                }
+
+                public void setGlobalAvailability(TransversalKpiThreshold globalAvailability) {
+                        this.globalAvailability = globalAvailability;
+                }
+
+                public TransversalKpiThreshold getOperationalPressure() {
+                        return operationalPressure;
+                }
+
+                public void setOperationalPressure(TransversalKpiThreshold operationalPressure) {
+                        this.operationalPressure = operationalPressure;
+                }
+
+                public TransversalKpiThreshold getTechnicalDegradation() {
+                        return technicalDegradation;
+                }
+
+                public void setTechnicalDegradation(TransversalKpiThreshold technicalDegradation) {
+                        this.technicalDegradation = technicalDegradation;
+                }
+
+                public TransversalKpiThreshold getSlaRisk() {
+                        return slaRisk;
+                }
+
+                public void setSlaRisk(TransversalKpiThreshold slaRisk) {
+                        this.slaRisk = slaRisk;
+                }
+
+                public TransversalKpiThreshold getOperationalBacklog() {
+                        return operationalBacklog;
+                }
+
+                public void setOperationalBacklog(TransversalKpiThreshold operationalBacklog) {
+                        this.operationalBacklog = operationalBacklog;
+                }
+
+                public TransversalKpiThreshold getUserImpact() {
+                        return userImpact;
+                }
+
+                public void setUserImpact(TransversalKpiThreshold userImpact) {
+                        this.userImpact = userImpact;
+                }
+
+                public TransversalKpiThreshold getAffectedServices() {
+                        return affectedServices;
+                }
+
+                public void setAffectedServices(TransversalKpiThreshold affectedServices) {
+                        this.affectedServices = affectedServices;
+                }
+        }
+
+        public static class TransversalKpiThreshold {
+
+                private String direction = "RISK";
+                private int yellowMin = 34;
+                private int redMin = 67;
+                private int greenMin = 67;
+
+                public static TransversalKpiThreshold risk() {
+                        TransversalKpiThreshold threshold = new TransversalKpiThreshold();
+                        threshold.setDirection("RISK");
+                        threshold.setYellowMin(34);
+                        threshold.setRedMin(67);
+                        return threshold;
+                }
+
+                public static TransversalKpiThreshold health() {
+                        TransversalKpiThreshold threshold = new TransversalKpiThreshold();
+                        threshold.setDirection("HEALTH");
+                        threshold.setYellowMin(34);
+                        threshold.setGreenMin(67);
+                        return threshold;
+                }
+
+                public String getDirection() {
+                        return direction;
+                }
+
+                public void setDirection(String direction) {
+                        this.direction = direction;
+                }
+
+                public int getYellowMin() {
+                        return yellowMin;
+                }
+
+                public void setYellowMin(int yellowMin) {
+                        this.yellowMin = yellowMin;
+                }
+
+                public int getRedMin() {
+                        return redMin;
+                }
+
+                public void setRedMin(int redMin) {
+                        this.redMin = redMin;
+                }
+
+                public int getGreenMin() {
+                        return greenMin;
+                }
+
+                public void setGreenMin(int greenMin) {
+                        this.greenMin = greenMin;
                 }
         }
 

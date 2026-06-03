@@ -1,19 +1,32 @@
 package com.tfg.dashboard.service;
 
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.tfg.dashboard.config.properties.KpiProperties;
+import com.tfg.dashboard.dto.ArubaApAnnotationDto;
+import com.tfg.dashboard.dto.ArubaApAnnotationRequest;
+import com.tfg.dashboard.dto.ArubaInactiveApDto;
 import com.tfg.dashboard.dto.ArubaNetworkStatusDto;
 import com.tfg.dashboard.model.AccessPoint;
+import com.tfg.dashboard.model.ArubaApAnnotation;
 import com.tfg.dashboard.model.ArubaDashboardMetrics;
 import com.tfg.dashboard.dto.summary.ArubaSummary;
 import com.tfg.dashboard.model.ArubaSwitch;
 import com.tfg.dashboard.model.ArubaSwitchClientUsage;
 import com.tfg.dashboard.model.ArubaSwitchInterfaceUsageHistory;
 import com.tfg.dashboard.repository.AccessPointRepository;
+import com.tfg.dashboard.repository.ArubaApAnnotationRepository;
 import com.tfg.dashboard.repository.ArubaDashboardMetricsRepository;
 import com.tfg.dashboard.repository.ArubaSwitchClientUsageRepository;
 import com.tfg.dashboard.repository.ArubaSwitchInterfaceUsageHistoryRepository;
@@ -29,8 +42,11 @@ import com.tfg.dashboard.repository.ArubaSwitchRepository;
 @Service
 public class ArubaSummaryService {
 
+        private static final Logger log = LoggerFactory.getLogger(ArubaSummaryService.class);
         private static final long METRICS_ID = 1L;
+        private static final int MAX_ANNOTATION_LENGTH = 1000;
         private final AccessPointRepository accessPointRepository;
+        private final ArubaApAnnotationRepository annotationRepository;
         private final ArubaSwitchRepository arubaSwitchRepository;
         private final ArubaSwitchClientUsageRepository switchClientUsageRepository;
         private final ArubaSwitchInterfaceUsageHistoryRepository switchInterfaceUsageHistoryRepository;
@@ -42,6 +58,7 @@ public class ArubaSummaryService {
 
         public ArubaSummaryService(
                         AccessPointRepository accessPointRepository,
+                        ArubaApAnnotationRepository annotationRepository,
                         ArubaSwitchRepository arubaSwitchRepository,
                         ArubaSwitchClientUsageRepository switchClientUsageRepository,
                         ArubaSwitchInterfaceUsageHistoryRepository switchInterfaceUsageHistoryRepository,
@@ -52,6 +69,7 @@ public class ArubaSummaryService {
                         KpiProperties kpiProperties) {
 
                 this.accessPointRepository = accessPointRepository;
+                this.annotationRepository = annotationRepository;
                 this.arubaSwitchRepository = arubaSwitchRepository;
                 this.switchClientUsageRepository = switchClientUsageRepository;
                 this.switchInterfaceUsageHistoryRepository = switchInterfaceUsageHistoryRepository;
@@ -90,8 +108,15 @@ public class ArubaSummaryService {
                 int switchesFirmwareUpgradeRequired = (int) switches.stream().filter(ArubaSwitch::isUpgradeRequired)
                                 .count();
 
-                LocalDateTime limitDate = LocalDateTime.now().minusMonths(3);
+                // El umbral de APs inactivos define cuantos dias puede estar un AP
+                // sin aparecer antes de considerarse no visto recientemente.
+                // Por defecto son 30 dias, pero puede modificarse desde el panel
+                // de configuración.
+                int inactiveApDaysThreshold = kpiProperties.getAruba().getInactiveApDaysThreshold();
+                LocalDateTime limitDate = LocalDateTime.now()
+                                .minusDays(inactiveApDaysThreshold);
                 long inactiveAps = accessPointRepository.countBySerialIsNotNullAndLastSeenAtBefore(limitDate);
+                logInactiveApDiagnostics(inactiveApDaysThreshold, limitDate, inactiveAps);
 
                 ArubaNetworkStatusDto networkStatusDetails = networkStatusService.buildNetworkStatusDetails(
                                 totalAps,
@@ -150,12 +175,138 @@ public class ArubaSummaryService {
                 return summary;
         }
 
+        private void logInactiveApDiagnostics(
+                        int inactiveApDaysThreshold,
+                        LocalDateTime limitDate,
+                        long inactiveAps) {
+
+                LocalDateTime oldestLastSeenAt = accessPointRepository
+                                .findTopByLastSeenAtIsNotNullOrderByLastSeenAtAsc()
+                                .map(AccessPoint::getLastSeenAt)
+                                .orElse(null);
+                LocalDateTime newestLastSeenAt = accessPointRepository
+                                .findTopByLastSeenAtIsNotNullOrderByLastSeenAtDesc()
+                                .map(AccessPoint::getLastSeenAt)
+                                .orElse(null);
+                Long apsWithoutLastSeenAt = accessPointRepository.countBySerialIsNotNullAndLastSeenAtIsNull();
+
+                log.info(
+                                "APs inactivos Aruba: umbral={} dias, fechaLimite={}, inactivos={}, oldestLastSeenAt={}, newestLastSeenAt={}, apsSinLastSeenAt={}",
+                                inactiveApDaysThreshold,
+                                limitDate,
+                                inactiveAps,
+                                oldestLastSeenAt,
+                                newestLastSeenAt,
+                                apsWithoutLastSeenAt == null ? 0 : apsWithoutLastSeenAt);
+        }
+
         /**
          * Devuelve solo el bloque normalizado de estado de red Aruba.
          */
         public ArubaNetworkStatusDto getNetworkStatus() {
 
                 return getSummary().getNetworkStatusDetails();
+        }
+
+        /**
+         * Devuelve los APs que explican el contador de "APs inactivos".
+         *
+         * El criterio usa AccessPoint.lastSeenAt, que representa la ultima fecha
+         * real conocida de visualizacion/contacto en Aruba. No se usa collectedAt
+         * porque collectedAt solo indica cuando la aplicacion guardo el snapshot.
+         * daysInactive facilita interpretar cuanto tiempo lleva cada AP sin verse.
+         */
+        public List<ArubaInactiveApDto> getInactiveAps() {
+
+                int inactiveApDaysThreshold = kpiProperties.getAruba().getInactiveApDaysThreshold();
+                LocalDateTime now = LocalDateTime.now();
+                LocalDateTime limitDate = now.minusDays(inactiveApDaysThreshold);
+                List<AccessPoint> inactiveAps = accessPointRepository
+                                .findBySerialIsNotNullAndLastSeenAtBeforeOrderByLastSeenAtAsc(limitDate);
+
+                if (inactiveAps.isEmpty()) {
+                        return List.of();
+                }
+
+                Map<String, ArubaApAnnotation> annotationsBySerial = annotationRepository
+                                .findBySerialIn(inactiveAps.stream()
+                                                .map(AccessPoint::getSerial)
+                                                .toList())
+                                .stream()
+                                .collect(Collectors.toMap(
+                                                ArubaApAnnotation::getSerial,
+                                                Function.identity(),
+                                                (first, ignored) -> first));
+
+                return inactiveAps
+                                .stream()
+                                .map(ap -> toInactiveApDto(ap, now, annotationsBySerial.get(ap.getSerial())))
+                                .toList();
+        }
+
+        /**
+         * Guarda una anotacion manual asociada a un AP por numero de serie.
+         *
+         * La anotacion no procede de Aruba y no se sobrescribe durante la
+         * sincronizacion. Se permite texto vacio para que el usuario pueda limpiar
+         * una nota existente.
+         */
+        public ArubaApAnnotationDto saveInactiveApAnnotation(
+                        String serial,
+                        ArubaApAnnotationRequest request) {
+
+                if (serial == null || serial.isBlank()) {
+                        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El serial del AP es obligatorio.");
+                }
+
+                String annotation = request == null || request.getAnnotation() == null
+                                ? ""
+                                : request.getAnnotation();
+
+                if (annotation.length() > MAX_ANNOTATION_LENGTH) {
+                        throw new ResponseStatusException(
+                                        HttpStatus.BAD_REQUEST,
+                                        "La anotacion no puede superar 1000 caracteres.");
+                }
+
+                ArubaApAnnotation entity = annotationRepository
+                                .findBySerial(serial)
+                                .orElseGet(ArubaApAnnotation::new);
+                entity.setSerial(serial);
+                entity.setAnnotation(annotation);
+                entity.setUpdatedAt(LocalDateTime.now());
+
+                ArubaApAnnotation saved = annotationRepository.save(entity);
+                return toAnnotationDto(saved);
+        }
+
+        private ArubaInactiveApDto toInactiveApDto(
+                        AccessPoint ap,
+                        LocalDateTime now,
+                        ArubaApAnnotation annotation) {
+
+                LocalDateTime lastSeenAt = ap.getLastSeenAt();
+                long daysInactive = lastSeenAt == null
+                                ? 0
+                                : ChronoUnit.DAYS.between(lastSeenAt, now);
+
+                return new ArubaInactiveApDto(
+                                ap.getSerial(),
+                                ap.getName(),
+                                ap.getStatus(),
+                                ap.getSite(),
+                                ap.getSwarmName(),
+                                lastSeenAt,
+                                daysInactive,
+                                annotation == null ? "" : annotation.getAnnotation());
+        }
+
+        private ArubaApAnnotationDto toAnnotationDto(ArubaApAnnotation annotation) {
+
+                return new ArubaApAnnotationDto(
+                                annotation.getSerial(),
+                                annotation.getAnnotation(),
+                                annotation.getUpdatedAt());
         }
 
         /**

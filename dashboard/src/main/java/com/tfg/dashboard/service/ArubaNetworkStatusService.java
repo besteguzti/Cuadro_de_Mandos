@@ -108,7 +108,7 @@ public class ArubaNetworkStatusService {
                                 "Estado de red Aruba",
                                 details.getPercentage(),
                                 KpiStatus.from(details.getColor()),
-                                "Afeccion normalizada de la red Aruba.",
+                                "Afección normalizada de la red Aruba.",
                                 "Access Points aportan hasta 50 puntos y switches hasta 50 puntos, con prevalencia de condiciones rojas.",
                                 timestamp,
                                 freshness,
@@ -181,39 +181,42 @@ public class ArubaNetworkStatusService {
                 } else {
 
                         if (downAps >= totalAps) {
-                                redReasons.add("Todos los APs estan caidos");
+                                redReasons.add("Todos los APs están caidos");
                         } else if (downAps * 100 >= totalAps * kpiProperties.getAruba().getAccessPointDownRedPercent()) {
 
-                                redReasons.add("El 50 % o mas de los APs estan caidos");
+                                redReasons.add("El porcentaje de APs caidos alcanza el umbral rojo configurado");
+                        } else if (downAps * 100 >= totalAps * kpiProperties.getAruba().getAccessPointDownYellowPercent()) {
+
+                                yellowReasons.add("El porcentaje de APs caidos alcanza el umbral amarillo configurado");
                         } else if (downAps > 0) {
 
                                 yellowReasons.add("Hay APs caidos");
                         }
                 }
 
-                if (totalWifiClients <= 0) {
+                if (totalWifiClients <= kpiProperties.getAruba().getCriticalClientsGreenAbove()) {
 
                         // La condicion global de ausencia de clientes WiFi se evalua una sola vez para no duplicar motivos por cada grupo.
                         redReasons.add("No hay clientes WiFi");
                 } else {
 
-                        if (mutualiaApsClients <= 0) {
+                        if (mutualiaApsClients <= kpiProperties.getAruba().getCriticalClientsGreenAbove()) {
 
                                 redReasons.add("No hay clientes MUTUALIA-APs");
                         }
 
-                        if (mutualiaWifiClients <= 0) {
+                        if (mutualiaWifiClients <= kpiProperties.getAruba().getCriticalClientsGreenAbove()) {
 
                                 redReasons.add("No hay clientes MUTUALIA-WIFI");
                         }
                 }
 
-                if (pendingFirmwareAps > 0) {
+                if (pendingFirmwareAps > kpiProperties.getAruba().getPendingFirmwareApsYellowAbove()) {
 
                         yellowReasons.add("Firmware pendiente en Access Points");
                 }
 
-                if (inactiveAps > 0) {
+                if (inactiveAps > kpiProperties.getAruba().getInactiveApsYellowAbove()) {
 
                         yellowReasons.add("Hay APs inactivos");
                 }
@@ -222,9 +225,7 @@ public class ArubaNetworkStatusService {
                                 ? yellowReasons.isEmpty() ? GREEN : YELLOW
                                 : RED;
 
-                int contribution = RED.equals(color)
-                                ? kpiProperties.getAruba().getBlockRedContribution()
-                                : YELLOW.equals(color) ? kpiProperties.getAruba().getBlockYellowContribution() : 0;
+                int contribution = contributionByColor(color,kpiProperties.getAruba().getAccessPointBlockWeight());
 
                 AccessPointStatusDto status = new AccessPointStatusDto();
 
@@ -255,13 +256,13 @@ public class ArubaNetworkStatusService {
                         redReasons.add("No hay switches registrados");
                 } else if (downSwitches >= totalSwitches) {
 
-                        redReasons.add("Todos los switches estan caidos");
+                        redReasons.add("Todos los switches están caidos");
                 } else if (downSwitches >= kpiProperties.getAruba().getSwitchDownYellowMin()) {
 
                         yellowReasons.add("Hay 2 o mas switches caidos");
                 }
 
-                if (pendingFirmwareSwitches > 0) {
+                if (pendingFirmwareSwitches > kpiProperties.getAruba().getPendingFirmwareSwitchesYellowAbove()) {
 
                         yellowReasons.add("Firmware pendiente en switches");
                 }
@@ -270,9 +271,7 @@ public class ArubaNetworkStatusService {
                                 ? yellowReasons.isEmpty() ? GREEN : YELLOW
                                 : RED;
 
-                int contribution = RED.equals(color)
-                                ? kpiProperties.getAruba().getBlockRedContribution()
-                                : YELLOW.equals(color) ? kpiProperties.getAruba().getBlockYellowContribution() : 0;
+                int contribution = contributionByColor(color,kpiProperties.getAruba().getSwitchBlockWeight());
 
                 SwitchStatusDto status = new SwitchStatusDto();
 
@@ -301,6 +300,21 @@ public class ArubaNetworkStatusService {
                 return GREEN;
         }
 
+        private int contributionByColor(String color,int blockWeight) {
+
+                if (RED.equals(color)) {
+
+                        return blockWeight;
+                }
+
+                if (YELLOW.equals(color)) {
+
+                        return blockWeight / 2;
+                }
+
+                return 0;
+        }
+
         private String applyCriticalPrecedence(String percentageColor,String accessPointColor,String switchColor) {
 
                 // El rojo prevalece sobre el amarillo y el amarillo sobre el verde. Asi una condicion
@@ -325,8 +339,8 @@ public class ArubaNetworkStatusService {
          */
         private void saveArubaTransversalSnapshot(ArubaNetworkStatusDto status,LocalDateTime collectedAt) {
 
-                // Estos tres codigos dejan Aruba preparado para el modulo de analisis exploratorio.
-                // La afectacion y la degradacion son valores donde 100 es malo; la salud se calcula como inversa.
+                // Estos tres codigos dejan Aruba preparado para el módulo de análisis exploratorio.
+                // La afectacion y la degradación son valores donde 100 es malo; la salud se calcula como inversa.
 
                 List<TransversalKpiHistory> histories = List.of(
                                 transversalHistory(
@@ -337,7 +351,7 @@ public class ArubaNetworkStatusService {
                                                 collectedAt),
                                 transversalHistory(
                                                 "aruba_network_degradation",
-                                                "Degradacion de red Aruba",
+                                                "Degradación de red Aruba",
                                                 "indice 0-100",
                                                 (double) status.getTechnicalDegradationValue(),
                                                 collectedAt),

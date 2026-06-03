@@ -1,8 +1,10 @@
-import { useEffect, useState } from 'react'
+﻿import { useEffect, useState } from 'react'
 
 import "../App.css";
+import InactiveApsPanel from '../components/InactiveApsPanel'
 import KpiCard from '../components/KpiCard'
 import { API_BASE_URL } from '../config/api'
+import { formatDataStatus, formatStatus } from '../utils/statusFormatters'
 
 const arubaKpiInfo = {
   totalAps: {
@@ -111,6 +113,7 @@ function ArubaPage() {
 
   const [summary, setSummary] = useState(null)
   const [error, setError] = useState(null)
+  const [showInactiveApsPanel, setShowInactiveApsPanel] = useState(false)
 
   const loadDashboard = () => {
     // ArubaPage pinta datos ya sincronizados y calculados en backend; no llama
@@ -189,7 +192,8 @@ function ArubaPage() {
         title: 'APs inactivos',
         value: summary.inactiveAps,
         status: zeroIsOkStatus(summary.inactiveAps),
-        info: arubaKpiInfo.inactiveAps
+        info: arubaKpiInfo.inactiveAps,
+        onValueClick: () => setShowInactiveApsPanel(true)
       }
     ]
     : []
@@ -268,12 +272,12 @@ function ArubaPage() {
         {summary && (
           <div className="freshness">
             <p className="updated">
-              Ultima actualizacion: {formatSnapshotDate(summary.lastUpdated)}
+              Última actualización: {formatSnapshotDate(summary.lastUpdated)}
             </p>
             <p className="updated">
               Estado de datos:{" "}
               <span className={`freshness-status freshness-status-${(summary.dataStatus ?? "NO_DATA").toLowerCase()}`}>
-                {summary.dataStatus ?? "NO_DATA"}
+                {formatDataStatus(summary.dataStatus)}
               </span>
             </p>
           </div>
@@ -286,13 +290,17 @@ function ArubaPage() {
         </section>
       )}
 
-      {summary && (
+      {summary && showInactiveApsPanel && (
+        <InactiveApsPanel onBack={() => setShowInactiveApsPanel(false)} />
+      )}
+
+      {summary && !showInactiveApsPanel && (
         <>
           <section className={`status status-${status.toLowerCase()}`}>
             <div className="status-main">
               <span>Estado de red</span>
-              <strong>Afectacion: {networkStatusDetails?.percentage ?? 0} %</strong>
-              <p>Estado: {formatNetworkStatus(status)}</p>
+              <strong>Afección: {networkStatusDetails?.percentage ?? 0} %</strong>
+              <p>Estado: {formatStatus(status)}</p>
             </div>
 
             <div className="status-reasons">
@@ -333,6 +341,7 @@ function ArubaPage() {
                   value={card.value}
                   status={card.status}
                   info={card.info}
+                  onValueClick={card.onValueClick}
                 />
               ))}
             </div>
@@ -463,22 +472,6 @@ function formatSnapshotDate(value) {
   }
 
   return new Date(value).toLocaleString();
-}
-
-function formatNetworkStatus(status) {
-  if (status === 'GREEN') {
-    return 'Verde'
-  }
-
-  if (status === 'YELLOW') {
-    return 'Amarillo'
-  }
-
-  if (status === 'RED') {
-    return 'Rojo'
-  }
-
-  return status
 }
 
 export default ArubaPage

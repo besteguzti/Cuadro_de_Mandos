@@ -86,17 +86,17 @@ public class TechnicalImpactAnalysisService {
 
         if (technicalAffected && userAffected) {
 
-            return "Existe degradacion tecnica con impacto operativo visible sobre usuarios.";
+            return "Existe degradación técnica con impacto operativo visible sobre usuarios.";
         }
 
         if (technicalAffected) {
 
-            return "Hay degradacion tecnica, pero no se observa impacto visible alto en usuarios.";
+            return "Hay degradación técnica, pero no se observa impacto visible alto en usuarios.";
         }
 
         if (userAffected) {
 
-            return "El impacto en usuarios es alto aunque la degradacion tecnica monitorizada sea baja; puede existir una causa no detectada.";
+            return "El impacto en usuarios es alto aunque la degradación técnica monitorizada sea baja; puede existir una causa no detectada.";
         }
 
         return "Ambos indicadores son bajos; la situacion se interpreta como normal.";

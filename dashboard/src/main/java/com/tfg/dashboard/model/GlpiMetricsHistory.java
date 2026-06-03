@@ -53,12 +53,24 @@ public class GlpiMetricsHistory {
         return arubaOpenTickets == null ? 0 : arubaOpenTickets;
     }
 
+    public Integer getArubaOpenTicketsRaw() {
+        return arubaOpenTickets;
+    }
+
     public int getCitrixOpenTickets() {
         return citrixOpenTickets == null ? 0 : citrixOpenTickets;
     }
 
+    public Integer getCitrixOpenTicketsRaw() {
+        return citrixOpenTickets;
+    }
+
     public int getMicrosoft365OpenTickets() {
         return microsoft365OpenTickets == null ? 0 : microsoft365OpenTickets;
+    }
+
+    public Integer getMicrosoft365OpenTicketsRaw() {
+        return microsoft365OpenTickets;
     }
 
     public int getCriticalOpenTickets() {

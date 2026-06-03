@@ -7,7 +7,6 @@ import java.util.Optional;
 import org.springframework.stereotype.Service;
 
 import com.tfg.dashboard.config.properties.KpiProperties;
-import com.tfg.dashboard.dto.ArubaNetworkStatusDto;
 import com.tfg.dashboard.dto.KpiResultDto;
 import com.tfg.dashboard.dto.summary.ArubaSummary;
 import com.tfg.dashboard.model.CitrixMetricsHistory;
@@ -29,6 +28,15 @@ import com.tfg.dashboard.repository.Microsoft365MetricsHistoryRepository;
 public class MainDashboardService {
 
     private static final int MONITORED_PLATFORM_COUNT = 4;
+    private static final String KPI_GLOBAL_STATUS = "transversal.globalStatus";
+    private static final String KPI_GLOBAL_CRITICALITY = "transversal.globalCriticality";
+    private static final String KPI_GLOBAL_AVAILABILITY = "transversal.globalAvailability";
+    private static final String KPI_OPERATIONAL_PRESSURE = "transversal.operationalPressure";
+    private static final String KPI_TECHNICAL_DEGRADATION = "transversal.technicalDegradation";
+    private static final String KPI_SLA_RISK = "transversal.slaRisk";
+    private static final String KPI_OPERATIONAL_BACKLOG = "transversal.operationalBacklog";
+    private static final String KPI_USER_IMPACT = "transversal.userImpact";
+    private static final String KPI_AFFECTED_SERVICES = "transversal.affectedServices";
 
     // Aruba se obtiene del flujo real persistido y las demás plataformas de snapshots MySQL.
     // desde las últimas muestras
@@ -127,6 +135,75 @@ public class MainDashboardService {
                         glpiDataStatus
                 );
 
+        return buildSummary(
+                aruba,
+                citrix,
+                microsoft365,
+                glpi,
+                arubaDataStatus,
+                citrixDataStatus,
+                microsoft365DataStatus,
+                glpiDataStatus,
+                dataStatus,
+                citrixSnapshot,
+                microsoft365Snapshot,
+                glpiSnapshot
+        );
+    }
+
+    public MainDashboardSummary evaluateSummary(
+            ArubaSummary aruba,
+            CitrixMetricsHistory citrix,
+            Microsoft365MetricsHistory microsoft365,
+            GlpiMetricsHistory glpi
+    ) {
+        String arubaDataStatus =
+                dashboardFreshnessService.normalizeDataStatus(
+                        aruba.getDataStatus()
+                );
+
+        String citrixDataStatus = "OK";
+        String microsoft365DataStatus = "OK";
+        String glpiDataStatus = "OK";
+
+        String dataStatus =
+                dashboardFreshnessService.calculateGlobalDataStatus(
+                        arubaDataStatus,
+                        citrixDataStatus,
+                        microsoft365DataStatus,
+                        glpiDataStatus
+                );
+
+        return buildSummary(
+                aruba,
+                citrix,
+                microsoft365,
+                glpi,
+                arubaDataStatus,
+                citrixDataStatus,
+                microsoft365DataStatus,
+                glpiDataStatus,
+                dataStatus,
+                Optional.of(citrix),
+                Optional.of(microsoft365),
+                Optional.of(glpi)
+        );
+    }
+
+    private MainDashboardSummary buildSummary(
+            ArubaSummary aruba,
+            CitrixMetricsHistory citrix,
+            Microsoft365MetricsHistory microsoft365,
+            GlpiMetricsHistory glpi,
+            String arubaDataStatus,
+            String citrixDataStatus,
+            String microsoft365DataStatus,
+            String glpiDataStatus,
+            String dataStatus,
+            Optional<CitrixMetricsHistory> citrixSnapshot,
+            Optional<Microsoft365MetricsHistory> microsoft365Snapshot,
+            Optional<GlpiMetricsHistory> glpiSnapshot
+    ) {
         MainDashboardSummary summary =
                 new MainDashboardSummary();
 
@@ -180,13 +257,15 @@ public class MainDashboardService {
                         glpi
                 );
 
-        int globalAvailability =
+        int globalAvailabilityAffection =
                 globalKpiCalculationService.calculateGlobalAvailability(
                         aruba,
                         citrix,
                         microsoft365,
                         glpi
                 );
+        int globalAvailability =
+                kpiProperties.getStatus().getMax() - globalAvailabilityAffection;
 
         int operationalPressure =
                 globalKpiCalculationService.calculateOperationalPressure(
@@ -238,7 +317,8 @@ public class MainDashboardService {
 
         summary.setGlobalHealth(
                 dashboardFreshnessService.applyFreshnessToColor(
-                        kpiScoringService.statusFromAffection(
+                        kpiScoringService.statusFromTransversalKpi(
+                                KPI_GLOBAL_STATUS,
                                 globalHealthPercentage
                         ),
                         dataStatus
@@ -248,40 +328,37 @@ public class MainDashboardService {
         summary.setGlobalHealthStatus(summary.getGlobalHealth());
         summary.setGlobalCriticality(globalCriticality);
         summary.setGlobalCriticalityStatus(
-                kpiScoringService.statusFromAffection(globalCriticality)
+                statusWithFreshness(KPI_GLOBAL_CRITICALITY, globalCriticality, dataStatus)
         );
         summary.setGlobalAvailability(globalAvailability);
         summary.setGlobalAvailabilityStatus(
-                kpiScoringService.statusFromAffection(globalAvailability)
+                statusWithFreshness(KPI_GLOBAL_AVAILABILITY, globalAvailability, dataStatus)
         );
         summary.setUserImpact(userImpact);
         summary.setUserImpactStatus(
-                kpiScoringService.statusFromAffection(userImpact)
+                statusWithFreshness(KPI_USER_IMPACT, userImpact, dataStatus)
         );
         summary.setAffectedServicesPercent(affectedServicesPercent);
         summary.setAffectedServicesStatus(
-                kpiScoringService.statusFromAffection(affectedServicesPercent)
+                statusWithFreshness(KPI_AFFECTED_SERVICES, affectedServicesPercent, dataStatus)
         );
         summary.setTechnicalDegradation(technicalDegradation);
         summary.setTechnicalDegradationStatus(
-                kpiScoringService.statusFromAffection(technicalDegradation)
+                statusWithFreshness(KPI_TECHNICAL_DEGRADATION, technicalDegradation, dataStatus)
         );
         summary.setOperationalPressure(operationalPressure);
         summary.setOperationalPressureStatus(
-                kpiScoringService.statusFromAffection(operationalPressure)
+                statusWithFreshness(KPI_OPERATIONAL_PRESSURE, operationalPressure, dataStatus)
         );
         summary.setOperationalBacklog(operationalBacklog);
         summary.setOperationalBacklogStatus(
-                kpiScoringService.statusFromAffection(operationalBacklog)
+                statusWithFreshness(KPI_OPERATIONAL_BACKLOG, operationalBacklog, dataStatus)
         );
         summary.setSlaRisk(slaRisk);
         summary.setSlaRiskStatus(
-                kpiScoringService.statusFromAffection(slaRisk)
+                statusWithFreshness(KPI_SLA_RISK, slaRisk, dataStatus)
         );
 
-        summary.setCriticalOpenTickets(
-                glpi.getCriticalOpenTickets()
-        );
         summary.setLastUpdated(
                 dashboardFreshnessService.latestCollectedAt(
                         aruba.getLastUpdated(),
@@ -383,7 +460,7 @@ public class MainDashboardService {
                         "Criticidad global",
                         summary.getGlobalCriticality(),
                         summary.getGlobalCriticalityStatus(),
-                        "Media de indicadores criticos normalizados.",
+                        "Media de indicadores críticos normalizados.",
                         "Promedio de senales rojas/amarillas/verdes de Aruba, Citrix, Microsoft 365 y GLPI.",
                         timestamp,
                         freshness,
@@ -394,7 +471,7 @@ public class MainDashboardService {
                         "Disponibilidad global",
                         summary.getGlobalAvailability(),
                         summary.getGlobalAvailabilityStatus(),
-                        "Afeccion sobre la disponibilidad de los servicios principales.",
+                        "Disponibilidad estimada de los servicios principales.",
                         formula(kpiProperties.getWeights().getAvailability()),
                         timestamp,
                         freshness,
@@ -402,10 +479,10 @@ public class MainDashboardService {
                 ),
                 kpiScoringService.kpi(
                         "operational_pressure",
-                        "Presion operativa",
+                        "Presión operativa",
                         summary.getOperationalPressure(),
                         summary.getOperationalPressureStatus(),
-                        "Carga de trabajo tecnica y operativa acumulada.",
+                        "Carga de trabajo técnica y operativa acumulada.",
                         formula(
                                 "GLPI",
                                 kpiProperties.getWeights().getOperationalPressure().getGlpi(),
@@ -422,7 +499,7 @@ public class MainDashboardService {
                 ),
                 kpiScoringService.kpi(
                         "technical_degradation",
-                        "Degradacion tecnica",
+                        "Degradación técnica",
                         summary.getTechnicalDegradation(),
                         summary.getTechnicalDegradationStatus(),
                         "Deterioro tecnico aunque no exista caida total.",
@@ -476,7 +553,7 @@ public class MainDashboardService {
                         "Impacto en usuarios",
                         summary.getUserImpact(),
                         summary.getUserImpactStatus(),
-                        "Afeccion que pueden percibir los usuarios.",
+                        "Afección que pueden percibir los usuarios.",
                         formula(
                                 "Citrix",
                                 kpiProperties.getWeights().getUserImpact().getCitrix(),
@@ -544,6 +621,14 @@ public class MainDashboardService {
     private String formulaTerm(String platform,double weight) {
 
         return platform + "*" + kpiProperties.formatWeight(weight);
+    }
+
+    private String statusWithFreshness(String metricKey, int value, String dataStatus) {
+
+        return dashboardFreshnessService.applyFreshnessToColor(
+                kpiScoringService.statusFromTransversalKpi(metricKey, value),
+                dataStatus
+        );
     }
 
     private int affectedServiceContributionPercent() {

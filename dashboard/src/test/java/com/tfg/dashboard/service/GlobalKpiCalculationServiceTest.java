@@ -80,7 +80,7 @@ class GlobalKpiCalculationServiceTest {
         assertThat(service.calculateCitrixHealthAffection(citrix))
                 .isEqualTo(40);
         assertThat(service.calculateMicrosoft365HealthAffection(microsoft365))
-                .isEqualTo(50);
+                .isEqualTo(58);
         assertThat(service.calculateGlpiHealthAffection(glpi))
                 .isEqualTo(37);
     }
@@ -106,19 +106,19 @@ class GlobalKpiCalculationServiceTest {
                 );
 
         assertThat(globalStatus)
-                .isEqualTo(55);
+                .isEqualTo(57);
         assertThat(service.calculateGlobalCriticality(aruba,citrix,microsoft365,glpi))
-                .isEqualTo(37);
+                .isEqualTo(40);
         assertThat(service.calculateGlobalAvailability(aruba,citrix,microsoft365,glpi))
                 .isEqualTo(24);
         assertThat(service.calculateOperationalPressure(aruba,citrix,microsoft365,glpi))
-                .isEqualTo(45);
+                .isEqualTo(48);
         assertThat(service.calculateTechnicalDegradation(aruba,citrix,microsoft365,glpi))
-                .isEqualTo(51);
+                .isEqualTo(54);
         assertThat(service.calculateSlaRisk(aruba,citrix,microsoft365,glpi))
                 .isEqualTo(44);
         assertThat(service.calculateOperationalBacklog(aruba,citrix,microsoft365,glpi))
-                .isEqualTo(38);
+                .isEqualTo(40);
         assertThat(service.calculateUserImpact(aruba,citrix,microsoft365,glpi))
                 .isEqualTo(33);
         assertThat(service.calculateAffectedServicesPercent(75,40,50,37))

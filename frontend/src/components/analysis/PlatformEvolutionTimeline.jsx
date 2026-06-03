@@ -1,4 +1,4 @@
-import AnalysisErrorState from "./AnalysisErrorState";
+﻿import AnalysisErrorState from "./AnalysisErrorState";
 
 // Línea temporal comparativa de afección técnica. El padre impide ocultar todas las series.
 function PlatformEvolutionTimeline({ points, visibleSeries, onToggle, warning }) {
@@ -30,7 +30,7 @@ function PlatformEvolutionTimeline({ points, visibleSeries, onToggle, warning })
 
   return (
     <section className="dashboard-section">
-      <h2>Evolucion temporal conjunta de afeccion tecnica</h2>
+      <h2>Evolucion temporal conjunta de afección técnica</h2>
       <AnalysisErrorState message={warning} />
       <div className="analysis-chart-card analysis-timeline-card">
         <div className="analysis-legend">
@@ -51,7 +51,7 @@ function PlatformEvolutionTimeline({ points, visibleSeries, onToggle, warning })
           className="analysis-chart"
           viewBox={`0 0 ${width} ${height}`}
           role="img"
-          aria-label="Evolucion temporal conjunta de afeccion tecnica"
+          aria-label="Evolucion temporal conjunta de afección técnica"
         >
           <line x1={padding} y1={height - padding} x2={width - padding} y2={height - padding} />
           <line x1={padding} y1={padding} x2={padding} y2={height - padding} />

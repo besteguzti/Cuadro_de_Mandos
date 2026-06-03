@@ -110,6 +110,14 @@ class MainDashboardServiceTest {
 
         assertThat(summary.getDataStatus()).isEqualTo("STALE");
         assertThat(summary.getGlobalHealth()).isNotEqualTo("GREEN");
+        assertThat(summary.getGlobalCriticalityStatus()).isNotEqualTo("GREEN");
+        assertThat(summary.getGlobalAvailabilityStatus()).isNotEqualTo("GREEN");
+        assertThat(summary.getOperationalPressureStatus()).isNotEqualTo("GREEN");
+        assertThat(summary.getTechnicalDegradationStatus()).isNotEqualTo("GREEN");
+        assertThat(summary.getSlaRiskStatus()).isNotEqualTo("GREEN");
+        assertThat(summary.getOperationalBacklogStatus()).isNotEqualTo("GREEN");
+        assertThat(summary.getUserImpactStatus()).isNotEqualTo("GREEN");
+        assertThat(summary.getAffectedServicesStatus()).isNotEqualTo("GREEN");
     }
 
     @Test
@@ -125,6 +133,26 @@ class MainDashboardServiceTest {
 
         assertThat(summary.getDataStatus()).isEqualTo("NO_DATA");
         assertThat(summary.getGlobalHealth()).isNotEqualTo("GREEN");
+        assertThat(summary.getGlobalCriticalityStatus()).isEqualTo("NO_DATA");
+        assertThat(summary.getGlobalAvailabilityStatus()).isEqualTo("NO_DATA");
+        assertThat(summary.getOperationalPressureStatus()).isEqualTo("NO_DATA");
+        assertThat(summary.getTechnicalDegradationStatus()).isEqualTo("NO_DATA");
+        assertThat(summary.getSlaRiskStatus()).isEqualTo("NO_DATA");
+        assertThat(summary.getOperationalBacklogStatus()).isEqualTo("NO_DATA");
+        assertThat(summary.getUserImpactStatus()).isEqualTo("NO_DATA");
+        assertThat(summary.getAffectedServicesStatus()).isEqualTo("NO_DATA");
+    }
+
+    @Test
+    void globalAvailabilityIsExposedAsHealthKpi() {
+
+        baseHealthyData();
+
+        MainDashboardSummary summary =
+                service.getSummary();
+
+        assertThat(summary.getGlobalAvailability()).isGreaterThanOrEqualTo(67);
+        assertThat(summary.getGlobalAvailabilityStatus()).isEqualTo("GREEN");
     }
 
     private void baseHealthyData() {
@@ -149,6 +177,9 @@ class MainDashboardServiceTest {
         summary.setNetworkStatus("GREEN");
         summary.setDataStatus("OK");
         summary.setLastUpdated(LocalDateTime.now());
+        summary.setTotalAps(10);
+        summary.setTotalSwitches(5);
+        summary.setTotalWifiClients(10);
 
         return summary;
     }
@@ -161,6 +192,7 @@ class MainDashboardServiceTest {
                 new CitrixMetricsHistory();
 
         history.setCitrixHealth("GREEN");
+        history.setActiveSessions(10);
         history.setTotalDeliveryControllers(4);
         history.setAvailableDeliveryControllers(4);
         history.setCollectedAt(collectedAt);

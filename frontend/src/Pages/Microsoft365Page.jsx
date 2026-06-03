@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 
 import "../App.css";
 
 import KpiCard from "../components/KpiCard";
 import { API_BASE_URL } from "../config/api";
+import { formatDataStatus, formatStatus } from "../utils/statusFormatters";
 
 const microsoft365KpiInfo = {
   activeUsers: {
@@ -26,25 +27,25 @@ const microsoft365KpiInfo = {
     description:
       "Muestra el estado simulado del servicio Outlook.",
     algorithm:
-      "Microsoft365Service genera un estado dinámico: HEALTHY, DEGRADED o INCIDENT.",
+      "Microsoft365Service genera un estado dinámico: correcto, degradado o con incidencia.",
     interpretation:
-      "HEALTHY indica funcionamiento correcto, DEGRADED degradación parcial e INCIDENT una incidencia relevante."
+      "Correcto indica funcionamiento normal, degradado indica degradación parcial e incidencia indica una situación relevante."
   },
   teamsStatus: {
     description:
       "Muestra el estado simulado del servicio Teams.",
     algorithm:
-      "Microsoft365Service genera un estado dinámico: HEALTHY, DEGRADED o INCIDENT.",
+      "Microsoft365Service genera un estado dinámico: correcto, degradado o con incidencia.",
     interpretation:
-      "HEALTHY indica funcionamiento correcto, DEGRADED degradación parcial e INCIDENT una incidencia relevante."
+      "Correcto indica funcionamiento normal, degradado indica degradación parcial e incidencia indica una situación relevante."
   },
   sharePointStatus: {
     description:
       "Muestra el estado simulado del servicio SharePoint.",
     algorithm:
-      "Microsoft365Service genera un estado dinámico: HEALTHY, DEGRADED o INCIDENT.",
+      "Microsoft365Service genera un estado dinámico: correcto, degradado o con incidencia.",
     interpretation:
-      "HEALTHY indica funcionamiento correcto, DEGRADED degradación parcial e INCIDENT una incidencia relevante."
+      "Correcto indica funcionamiento normal, degradado indica degradación parcial e incidencia indica una situación relevante."
   },
   nearlyFullMailboxes: {
     description:
@@ -160,11 +161,11 @@ const microsoft365KpiInfo = {
   },
   microsoft365Health: {
     description:
-      "Resume el estado general simulado de Microsoft 365 mediante GREEN, YELLOW o RED.",
+      "Resume el estado general simulado de Microsoft 365 mediante un semáforo: correcto, advertencia o crítico.",
     algorithm:
-      "Combina los indicadores principales de Microsoft 365 en una escala comun de afeccion.",
+      "Combina los indicadores principales de Microsoft 365 en una escala comun de afección.",
     interpretation:
-      "GREEN indica estabilidad, YELLOW degradacion moderada y RED una situacion que requiere atencion prioritaria."
+      "Correcto indica estabilidad, advertencia indica degradación moderada y crítico una situación que requiere atención prioritaria."
   }
 };
 
@@ -231,12 +232,12 @@ function Microsoft365Page() {
         </div>
         <div className="freshness">
           <p className="updated">
-            Ultima actualizacion: {formatSnapshotDate(summary.lastUpdated)}
+            Última actualización: {formatSnapshotDate(summary.lastUpdated)}
           </p>
           <p className="updated">
             Estado de datos:{" "}
             <span className={`freshness-status freshness-status-${(summary.dataStatus ?? "NO_DATA").toLowerCase()}`}>
-              {summary.dataStatus ?? "NO_DATA"}
+              {formatDataStatus(summary.dataStatus)}
             </span>
           </p>
         </div>
@@ -244,9 +245,9 @@ function Microsoft365Page() {
 
       <section className={`status status-${microsoft365Health.toLowerCase()}`}>
         <div className="status-main">
-          <span>Indice de salud Microsoft 365</span>
-          <strong>Afeccion: {microsoft365HealthDetails?.percentage ?? 0} %</strong>
-          <p>Estado: {formatMicrosoft365Status(microsoft365Health)}</p>
+          <span>Índice de salud Microsoft 365</span>
+          <strong>Afección: {microsoft365HealthDetails?.percentage ?? 0} %</strong>
+          <p>Estado: {formatStatus(microsoft365Health)}</p>
         </div>
 
         <div className="status-reasons">
@@ -296,21 +297,21 @@ function Microsoft365Page() {
       <div className="kpi-grid">
         <KpiCard
           title="Outlook"
-          value={summary.outlookStatus}
+          value={formatStatus(summary.outlookStatus)}
           status={summary.outlookStatus}
           info={microsoft365KpiInfo.outlookStatus}
         />
 
         <KpiCard
           title="Teams"
-          value={summary.teamsStatus}
+          value={formatStatus(summary.teamsStatus)}
           status={summary.teamsStatus}
           info={microsoft365KpiInfo.teamsStatus}
         />
 
         <KpiCard
           title="SharePoint"
-          value={summary.sharePointStatus}
+          value={formatStatus(summary.sharePointStatus)}
           status={summary.sharePointStatus}
           info={microsoft365KpiInfo.sharePointStatus}
         />
@@ -453,22 +454,6 @@ function formatSnapshotDate(value) {
   }
 
   return new Date(value).toLocaleString();
-}
-
-function formatMicrosoft365Status(status) {
-  if (status === "GREEN") {
-    return "Verde";
-  }
-
-  if (status === "YELLOW") {
-    return "Amarillo";
-  }
-
-  if (status === "RED") {
-    return "Rojo";
-  }
-
-  return status;
 }
 
 // Reutiliza el color calculado por backend para cada indicador del índice Microsoft 365.

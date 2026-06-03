@@ -355,7 +355,9 @@ public class Microsoft365Service {
                         return indicator(
                                         "Almacenamiento de SharePoint",
                                         RED,
-                                        "SharePoint supera el 90 % de almacenamiento usado");
+                                        "SharePoint supera el "
+                                                        + kpiProperties.getMicrosoft365().getSharePointRedAbove()
+                                                        + " % de almacenamiento usado");
                 }
 
                 if (sharePointStoragePercent >= kpiProperties.getMicrosoft365().getSharePointYellowMin()) {
@@ -363,13 +365,19 @@ public class Microsoft365Service {
                         return indicator(
                                         "Almacenamiento de SharePoint",
                                         YELLOW,
-                                        "SharePoint esta entre el 80 % y el 90 % de almacenamiento usado");
+                                        "SharePoint esta entre el "
+                                                        + kpiProperties.getMicrosoft365().getSharePointYellowMin()
+                                                        + " % y el "
+                                                        + kpiProperties.getMicrosoft365().getSharePointRedAbove()
+                                                        + " % de almacenamiento usado");
                 }
 
                 return indicator(
                                 "Almacenamiento de SharePoint",
                                 GREEN,
-                                "SharePoint esta por debajo del 80 % de almacenamiento usado");
+                                "SharePoint esta por debajo del "
+                                                + kpiProperties.getMicrosoft365().getSharePointYellowMin()
+                                                + " % de almacenamiento usado");
         }
 
         private Microsoft365IndicatorStatusDto evaluateUsersWithoutMfa(
@@ -380,7 +388,9 @@ public class Microsoft365Service {
                         return indicator(
                                         "Usuarios sin MFA",
                                         RED,
-                                        "Hay mas de 3 usuarios sin MFA");
+                                        "Hay mas de "
+                                                        + kpiProperties.getMicrosoft365().getUsersWithoutMfaRedAbove()
+                                                        + " usuarios sin MFA");
                 }
 
                 if (usersWithoutMfa > kpiProperties.getMicrosoft365().getUsersWithoutMfaYellowAbove()) {
@@ -388,7 +398,11 @@ public class Microsoft365Service {
                         return indicator(
                                         "Usuarios sin MFA",
                                         YELLOW,
-                                        "Hay entre 1 y 3 usuarios sin MFA");
+                                        "Hay entre "
+                                                        + (kpiProperties.getMicrosoft365().getUsersWithoutMfaYellowAbove() + 1)
+                                                        + " y "
+                                                        + kpiProperties.getMicrosoft365().getUsersWithoutMfaRedAbove()
+                                                        + " usuarios sin MFA");
                 }
 
                 return indicator(
@@ -422,7 +436,9 @@ public class Microsoft365Service {
                         return indicator(
                                         "Equipos no conformes",
                                         RED,
-                                        "Hay mas de 100 equipos no conformes");
+                                        "Hay mas de "
+                                                        + kpiProperties.getMicrosoft365().getNonCompliantDevicesRedAbove()
+                                                        + " equipos no conformes");
                 }
 
                 if (nonCompliantDevices > kpiProperties.getMicrosoft365().getNonCompliantDevicesYellowAbove()) {
@@ -430,13 +446,19 @@ public class Microsoft365Service {
                         return indicator(
                                         "Equipos no conformes",
                                         YELLOW,
-                                        "Hay entre 51 y 100 equipos no conformes");
+                                        "Hay entre "
+                                                        + (kpiProperties.getMicrosoft365().getNonCompliantDevicesYellowAbove() + 1)
+                                                        + " y "
+                                                        + kpiProperties.getMicrosoft365().getNonCompliantDevicesRedAbove()
+                                                        + " equipos no conformes");
                 }
 
                 return indicator(
                                 "Equipos no conformes",
                                 GREEN,
-                                "Hay entre 0 y 50 equipos no conformes");
+                                "Hay entre 0 y "
+                                                + kpiProperties.getMicrosoft365().getNonCompliantDevicesYellowAbove()
+                                                + " equipos no conformes");
         }
 
         private Microsoft365IndicatorStatusDto evaluateOutdatedWindowsDevices(
@@ -464,13 +486,27 @@ public class Microsoft365Service {
                         return indicator(
                                         "Equipos sin cifrado",
                                         RED,
-                                        "Hay mas de 5 equipos sin cifrado");
+                                        "Hay mas de "
+                                                        + kpiProperties.getMicrosoft365().getDevicesWithoutEncryptionRedAbove()
+                                                        + " equipos sin cifrado");
+                }
+
+                if (devicesWithoutEncryption > kpiProperties.getMicrosoft365().getDevicesWithoutEncryptionYellowAbove()) {
+
+                        return indicator(
+                                        "Equipos sin cifrado",
+                                        YELLOW,
+                                        "Hay entre "
+                                                        + (kpiProperties.getMicrosoft365().getDevicesWithoutEncryptionYellowAbove() + 1)
+                                                        + " y "
+                                                        + kpiProperties.getMicrosoft365().getDevicesWithoutEncryptionRedAbove()
+                                                        + " equipos sin cifrado");
                 }
 
                 return indicator(
                                 "Equipos sin cifrado",
                                 GREEN,
-                                "Hay entre 0 y 5 equipos sin cifrado");
+                                "No hay equipos sin cifrado");
         }
 
         private Microsoft365IndicatorStatusDto indicator(
@@ -551,7 +587,7 @@ public class Microsoft365Service {
                                 "Indice de salud Microsoft 365",
                                 details.getPercentage(),
                                 KpiStatus.from(details.getColor()),
-                                "Afeccion normalizada de Microsoft 365.",
+                                "Afección normalizada de Microsoft 365.",
                                 "Media uniforme de almacenamiento SharePoint, usuarios sin MFA, secretos proximos a caducar, equipos no conformes, Windows desactualizados y equipos sin cifrado.",
                                 timestamp,
                                 freshness,

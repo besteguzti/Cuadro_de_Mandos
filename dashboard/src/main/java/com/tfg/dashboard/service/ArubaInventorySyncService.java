@@ -3,6 +3,8 @@ package com.tfg.dashboard.service;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -27,6 +29,7 @@ import com.tfg.dashboard.repository.ArubaSwitchRepository;
 @Service
 public class ArubaInventorySyncService {
 
+        private static final Logger log = LoggerFactory.getLogger(ArubaInventorySyncService.class);
         private static final long METRICS_ID = 1L;
 
         private final ArubaApiClient client;
@@ -146,10 +149,34 @@ public class ArubaInventorySyncService {
                                 entity.setFirstSeenAt(now);
                         }
 
-                        entity.setLastSeenAt(now);
+                        LocalDateTime realLastSeenAt = resolveAccessPointLastSeenAt(ap, now);
+
+                        if (realLastSeenAt != null) {
+                                entity.setLastSeenAt(realLastSeenAt);
+                        } else if (entity.getLastSeenAt() == null) {
+                                log.debug(
+                                                "AP {} no trae fecha real de ultimo contacto desde Aruba; lastSeenAt queda sin dato.",
+                                                serial);
+                        }
 
                         accessPointRepository.save(entity);
                 }
+        }
+
+        private LocalDateTime resolveAccessPointLastSeenAt(ArubaApInfo ap,LocalDateTime syncTime) {
+
+                if (ap.getLastSeenAt() != null) {
+                        return ap.getLastSeenAt();
+                }
+
+                // Si Aruba informa el AP como Up en la respuesta actual, se considera visto en
+                // esta consulta. Para APs Down no se usa syncTime, porque eso solo indicaria
+                // cuando nuestra aplicacion guardo el inventario, no cuando Aruba vio el AP.
+                if (ap.getStatus() != null && ap.getStatus().equalsIgnoreCase("Up")) {
+                        return syncTime;
+                }
+
+                return null;
         }
 
         private void syncSwitches(List<ArubaSwitchInfo> switches) {

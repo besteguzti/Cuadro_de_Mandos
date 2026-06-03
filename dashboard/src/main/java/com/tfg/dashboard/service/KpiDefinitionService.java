@@ -37,7 +37,7 @@ public class KpiDefinitionService {
                         "Aruba estado de red",
                         "PLATFORM",
                         "ARUBA",
-                        "Mide la afeccion de red Aruba combinando Access Points, switches y clientes WiFi.",
+                        "Mide la afección de red Aruba combinando Access Points, switches y clientes WiFi.",
                         arubaNetworkStatusFormula(),
                         commonAffectionThresholds(),
                         List.of(
@@ -51,7 +51,7 @@ public class KpiDefinitionService {
                         "Citrix indice de salud Citrix",
                         "PLATFORM",
                         "CITRIX",
-                        "Mide la afeccion del entorno Citrix a partir de indicadores internos normalizados.",
+                        "Mide la afección del entorno Citrix a partir de indicadores internos normalizados.",
                         citrixHealthFormula(),
                         commonAffectionThresholds(),
                         List.of(
@@ -67,7 +67,7 @@ public class KpiDefinitionService {
                         "Microsoft 365 indice de salud Microsoft 365",
                         "PLATFORM",
                         "MICROSOFT365",
-                        "Mide la afeccion de Microsoft 365 a partir de capacidad, identidad, seguridad y dispositivos.",
+                        "Mide la afección de Microsoft 365 a partir de capacidad, identidad, seguridad y dispositivos.",
                         microsoft365HealthFormula(),
                         commonAffectionThresholds(),
                         List.of(
@@ -84,12 +84,12 @@ public class KpiDefinitionService {
                         "GLPI indice de salud GLPI",
                         "PLATFORM",
                         "GLPI",
-                        "Mide la afeccion operativa de GLPI a partir de volumen y capacidad de cierre de tickets.",
+                        "Mide la afección operativa de GLPI a partir de volumen y capacidad de cierre de tickets.",
                         glpiHealthFormula(),
                         commonAffectionThresholds(),
                         List.of(
                                 "Tickets abiertos",
-                                "Tickets criticos abiertos",
+                                "Tickets críticos abiertos",
                                 "Porcentaje de tickets cerrados",
                                 "Porcentaje de tickets cerrados semana"
                         )
@@ -99,14 +99,14 @@ public class KpiDefinitionService {
                         "Estado global",
                         "TRANSVERSAL",
                         "GLOBAL",
-                        "Mide la afeccion global ponderada de la infraestructura monitorizada.",
+                        "Mide la afección global ponderada de la infraestructura monitorizada.",
                         platformWeightFormula(
                                 "Aruba estado de red",
                                 "Citrix indice de salud",
                                 "Microsoft 365 indice de salud",
                                 "GLPI indice de salud",
                                 kpiProperties.getWeights().getGlobalStatus()),
-                        commonAffectionThresholds(),
+                        transversalRiskThresholds("transversal.globalStatus"),
                         platformHealthSources()
                 ),
                 definition(
@@ -114,14 +114,14 @@ public class KpiDefinitionService {
                         "Criticidad global",
                         "TRANSVERSAL",
                         "GLOBAL",
-                        "Mide la presencia de condiciones criticas en rojo dentro de las plataformas.",
-                        "Media de indicadores criticos normalizados: correcto 0, advertencia 50 y critico 100.",
-                        commonAffectionThresholds(),
+                        "Mide la presencia de condiciones críticas en rojo dentro de las plataformas.",
+                        "Media de indicadores críticos normalizados: correcto 0, advertencia 50 y critico 100.",
+                        transversalRiskThresholds("transversal.globalCriticality"),
                         List.of(
-                                "Condiciones criticas Aruba",
-                                "Condiciones criticas Citrix",
-                                "Condiciones criticas Microsoft 365",
-                                "Condiciones criticas GLPI"
+                                "Condiciones críticas Aruba",
+                                "Condiciones críticas Citrix",
+                                "Condiciones críticas Microsoft 365",
+                                "Condiciones críticas GLPI"
                         )
                 ),
                 definition(
@@ -129,14 +129,14 @@ public class KpiDefinitionService {
                         "Disponibilidad global",
                         "TRANSVERSAL",
                         "GLOBAL",
-                        "Mide la afeccion sobre la disponibilidad de los servicios principales.",
+                        "Mide la disponibilidad estimada de los servicios principales.",
                         platformWeightFormula(
                                 "Aruba disponibilidad",
                                 "Citrix disponibilidad",
                                 "Microsoft 365 disponibilidad",
                                 "GLPI disponibilidad",
                                 kpiProperties.getWeights().getAvailability()),
-                        commonAffectionThresholds(),
+                        transversalHealthThresholds("transversal.globalAvailability"),
                         List.of(
                                 "Disponibilidad APs y switches Aruba",
                                 "Sesiones activas y Delivery Controllers Citrix",
@@ -146,17 +146,17 @@ public class KpiDefinitionService {
                 ),
                 definition(
                         "operational_pressure",
-                        "Presion operativa",
+                        "Presión operativa",
                         "TRANSVERSAL",
                         "GLOBAL",
-                        "Mide la carga de trabajo tecnica y operativa acumulada.",
+                        "Mide la carga de trabajo técnica y operativa acumulada.",
                         platformWeightFormula(
                                 "Aruba",
                                 "Citrix",
                                 "Microsoft 365",
                                 "GLPI",
                                 kpiProperties.getWeights().getOperationalPressure()),
-                        commonAffectionThresholds(),
+                        transversalRiskThresholds("transversal.operationalPressure"),
                         List.of(
                                 "Tickets GLPI",
                                 "Errores y carga Citrix",
@@ -166,7 +166,7 @@ public class KpiDefinitionService {
                 ),
                 definition(
                         "technical_degradation",
-                        "Degradacion tecnica",
+                        "Degradación técnica",
                         "TRANSVERSAL",
                         "GLOBAL",
                         "Mide deterioro tecnico aunque no exista una caida total.",
@@ -176,12 +176,12 @@ public class KpiDefinitionService {
                                 "Microsoft 365",
                                 "GLPI",
                                 kpiProperties.getWeights().getTechnicalDegradation()),
-                        commonAffectionThresholds(),
+                        transversalRiskThresholds("transversal.technicalDegradation"),
                         List.of(
                                 "Firmware e inactividad Aruba",
                                 "Logon, carga y errores Citrix",
                                 "SharePoint, secretos y dispositivos Microsoft 365",
-                                "Tickets criticos GLPI"
+                                "Tickets críticos GLPI"
                         )
                 ),
                 definition(
@@ -196,11 +196,11 @@ public class KpiDefinitionService {
                                 "Microsoft 365",
                                 "GLPI",
                                 kpiProperties.getWeights().getSlaRisk()),
-                        commonAffectionThresholds(),
+                        transversalRiskThresholds("transversal.slaRisk"),
                         List.of(
                                 "Logon, sesiones, Delivery Controllers y errores Citrix",
                                 "Estado de red Aruba",
-                                "Tickets criticos y cierre GLPI",
+                                "Tickets críticos y cierre GLPI",
                                 "SharePoint, secretos y equipos Microsoft 365"
                         )
                 ),
@@ -216,7 +216,7 @@ public class KpiDefinitionService {
                                 "Microsoft 365",
                                 "GLPI",
                                 kpiProperties.getWeights().getOperationalBacklog()),
-                        commonAffectionThresholds(),
+                        transversalRiskThresholds("transversal.operationalBacklog"),
                         List.of(
                                 "Tickets GLPI",
                                 "Equipos Microsoft 365",
@@ -229,19 +229,19 @@ public class KpiDefinitionService {
                         "Impacto en usuarios",
                         "TRANSVERSAL",
                         "GLOBAL",
-                        "Mide la afeccion que pueden percibir los usuarios.",
+                        "Mide la afección que pueden percibir los usuarios.",
                         platformWeightFormula(
                                 "Aruba",
                                 "Citrix",
                                 "Microsoft 365",
                                 "GLPI",
                                 kpiProperties.getWeights().getUserImpact()),
-                        commonAffectionThresholds(),
+                        transversalRiskThresholds("transversal.userImpact"),
                         List.of(
                                 "Clientes WiFi, APs y switches Aruba",
                                 "Sesiones, logon, errores y Delivery Controllers Citrix",
                                 "SharePoint, MFA y dispositivos Microsoft 365",
-                                "Tickets abiertos y criticos GLPI"
+                                "Tickets abiertos y críticos GLPI"
                         )
                 ),
                 definition(
@@ -249,22 +249,22 @@ public class KpiDefinitionService {
                         "Servicios afectados",
                         "TRANSVERSAL",
                         "GLOBAL",
-                        "Mide cuantas plataformas estan afectadas.",
+                        "Mide cuantas plataformas están afectadas.",
                         affectedServicesFormula(),
-                        commonAffectionThresholds(),
+                        transversalRiskThresholds("transversal.affectedServices"),
                         platformHealthSources()
                 ),
                 definition(
                         "glpi_operational_pressure",
-                        "Presion operativa GLPI",
+                        "Presión operativa GLPI",
                         "ANALYSIS",
                         "GLPI",
-                        "Mide la presion operativa de GLPI como consecuencia observable.",
+                        "Mide la presión operativa de GLPI como consecuencia observable.",
                         glpiOperationalPressureFormula(),
-                        commonAffectionThresholds(),
+                        transversalRiskThresholds("transversal.operationalPressure"),
                         List.of(
                                 "Tickets abiertos",
-                                "Tickets criticos abiertos",
+                                "Tickets críticos abiertos",
                                 "Porcentaje de cierre diario",
                                 "Porcentaje de cierre semanal"
                         )
@@ -286,17 +286,17 @@ public class KpiDefinitionService {
                 ),
                 definition(
                         "analysis_technical_degradation",
-                        "Degradacion tecnica",
+                        "Degradación técnica",
                         "ANALYSIS",
                         "GLOBAL",
-                        "Mide la afeccion tecnica conjunta de Aruba, Citrix y Microsoft 365 para el panel de analisis.",
+                        "Mide la afección técnica conjunta de Aruba, Citrix y Microsoft 365 para el panel de análisis.",
                         platformWeightFormula(
                                 "Aruba estado de red",
                                 "Citrix indice de salud",
                                 "Microsoft 365 indice de salud",
                                 "GLPI",
                                 kpiProperties.getWeights().getAnalysisTechnicalDegradation()),
-                        commonAffectionThresholds(),
+                        transversalRiskThresholds("transversal.technicalDegradation"),
                         List.of(
                                 "Aruba estado de red",
                                 "Citrix indice de salud Citrix",
@@ -308,31 +308,31 @@ public class KpiDefinitionService {
                         "Impacto en usuarios",
                         "ANALYSIS",
                         "GLOBAL",
-                        "Mide si la degradacion tecnica se traduce en afeccion visible para usuarios.",
+                        "Mide si la degradación técnica se traduce en afección visible para usuarios.",
                         platformWeightFormula(
                                 "Aruba impacto usuario",
                                 "Citrix impacto usuario",
                                 "Microsoft 365 impacto usuario",
-                                "presion GLPI",
+                                "presión GLPI",
                                 kpiProperties.getWeights().getAnalysisUserImpact()),
-                        commonAffectionThresholds(),
+                        transversalRiskThresholds("transversal.userImpact"),
                         List.of(
                                 "Impacto usuario Aruba",
                                 "Impacto usuario Citrix",
                                 "Impacto usuario Microsoft 365",
-                                "Presion operativa GLPI"
+                                "Presión operativa GLPI"
                         )
                 ),
                 definition(
                         "technical_operational_conversion",
-                        "Conversion tecnica-operativa",
+                        "Conversion técnica-operativa",
                         "ANALYSIS",
                         "GLOBAL",
-                        "Mide la coincidencia entre degradacion tecnica e impacto operativo.",
-                        "min(Degradacion tecnica, Impacto en usuarios)",
+                        "Mide la coincidencia entre degradación técnica e impacto operativo.",
+                        "min(Degradación técnica, Impacto en usuarios)",
                         commonAffectionThresholds(),
                         List.of(
-                                "Degradacion tecnica",
+                                "Degradación técnica",
                                 "Impacto en usuarios"
                         )
                 ),
@@ -347,9 +347,9 @@ public class KpiDefinitionService {
                                 + " dividido entre total de snapshots.",
                         commonAffectionThresholds(),
                         List.of(
-                                "Snapshots de analisis",
-                                "Afeccion de plataforma seleccionada",
-                                "Presion operativa GLPI"
+                                "Snapshots de análisis",
+                                "Afección de plataforma seleccionada",
+                                "Presión operativa GLPI"
                         )
                 )
         );
@@ -366,11 +366,11 @@ public class KpiDefinitionService {
                 name,
                 "ANALYSIS",
                 "GLOBAL",
-                "Mide relacion operativa aparente entre una plataforma tecnica y la presion GLPI.",
-                "min(Presion operativa GLPI, " + platformSource + ")",
+                "Mide relación operativa aparente entre una plataforma técnica y la presión GLPI.",
+                "min(Presión operativa GLPI, " + platformSource + ")",
                 commonAffectionThresholds(),
                 List.of(
-                        "Presion operativa GLPI",
+                        "Presión operativa GLPI",
                         platformSource
                 )
         );
@@ -443,7 +443,7 @@ public class KpiDefinitionService {
 
         return "Tickets abiertos * " + kpiProperties.formatWeight(weights.getOpenTickets())
                 + " + cierre diario * " + kpiProperties.formatWeight(weights.getClosedTodayPercent())
-                + " + tickets criticos * " + kpiProperties.formatWeight(weights.getCriticalTickets())
+                + " + tickets críticos * " + kpiProperties.formatWeight(weights.getCriticalTickets())
                 + " + cierre semanal * " + kpiProperties.formatWeight(weights.getClosedWeekPercent());
     }
 
@@ -459,12 +459,12 @@ public class KpiDefinitionService {
     private String arubaNetworkStatusFormula() {
 
         return "Access Points aportan hasta "
-                + kpiProperties.getAruba().getBlockRedContribution()
+                + kpiProperties.getAruba().getAccessPointBlockWeight()
                 + " puntos y switches hasta "
-                + kpiProperties.getAruba().getBlockRedContribution()
-                + " puntos. El bloque amarillo aporta "
-                + kpiProperties.getAruba().getBlockYellowContribution()
-                + " puntos. AP rojo si caen todos, si caen al menos el "
+                + kpiProperties.getAruba().getSwitchBlockWeight()
+                + " puntos. El bloque amarillo aporta la mitad del peso interno configurado. AP amarillo desde el "
+                + kpiProperties.getAruba().getAccessPointDownYellowPercent()
+                + "% y rojo desde el "
                 + kpiProperties.getAruba().getAccessPointDownRedPercent()
                 + "% o si no hay clientes WiFi/MUTUALIA. Switches amarillo desde "
                 + kpiProperties.getAruba().getSwitchDownYellowMin()
@@ -512,23 +512,55 @@ public class KpiDefinitionService {
                 + kpiProperties.getMicrosoft365().getOutdatedWindowsYellowAbove()
                 + " amarillo. Equipos sin cifrado: > "
                 + kpiProperties.getMicrosoft365().getDevicesWithoutEncryptionRedAbove()
-                + " rojo.";
+                + " rojo, > "
+                + kpiProperties.getMicrosoft365().getDevicesWithoutEncryptionYellowAbove()
+                + " amarillo.";
     }
 
     private String glpiHealthFormula() {
 
-        return "Media uniforme de tickets abiertos, tickets criticos, porcentaje de cierre diario y porcentaje de cierre semanal. "
+        return "Media uniforme de tickets abiertos, tickets críticos, porcentaje de cierre diario y porcentaje de cierre semanal. "
                 + "Tickets abiertos: >= "
                 + kpiProperties.getGlpi().getOpenTicketsRedMin()
                 + " rojo, >= "
                 + kpiProperties.getGlpi().getOpenTicketsYellowMin()
-                + " amarillo. Tickets criticos: > "
+                + " amarillo. Tickets críticos: > "
                 + kpiProperties.getGlpi().getCriticalTicketsRedAbove()
                 + " rojo, > "
                 + kpiProperties.getGlpi().getCriticalTicketsYellowAbove()
                 + " amarillo. Porcentaje de cierre diario/semanal: >= "
                 + kpiProperties.getGlpi().getClosedPercentGreenMin()
                 + "% verde, por debajo amarillo.";
+    }
+
+    private KpiThresholdDto transversalRiskThresholds(String metricKey) {
+
+        KpiProperties.TransversalKpiThreshold threshold =
+                kpiProperties.getTransversal().thresholdFor(metricKey);
+        int yellowMin = threshold.getYellowMin();
+        int redMin = threshold.getRedMin();
+        int max = kpiProperties.getStatus().getMax();
+
+        return new KpiThresholdDto(
+                "0-" + (yellowMin - 1),
+                yellowMin + "-" + (redMin - 1),
+                redMin + "-" + max
+        );
+    }
+
+    private KpiThresholdDto transversalHealthThresholds(String metricKey) {
+
+        KpiProperties.TransversalKpiThreshold threshold =
+                kpiProperties.getTransversal().thresholdFor(metricKey);
+        int yellowMin = threshold.getYellowMin();
+        int greenMin = threshold.getGreenMin();
+        int max = kpiProperties.getStatus().getMax();
+
+        return new KpiThresholdDto(
+                greenMin + "-" + max,
+                yellowMin + "-" + (greenMin - 1),
+                "0-" + (yellowMin - 1)
+        );
     }
 
     private KpiThresholdDto commonAffectionThresholds() {

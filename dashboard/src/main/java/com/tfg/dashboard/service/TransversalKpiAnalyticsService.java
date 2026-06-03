@@ -14,7 +14,7 @@ import com.tfg.dashboard.model.AnalysisSnapshot;
  * Fachada del módulo de análisis transversal.
  *
  * Mantiene estable el contrato usado por los controladores y delega la lógica
- * en servicios especializados de snapshots, relaciones GLPI-plataforma,
+ * en servicios especializados de snapshots, relaciónes GLPI-plataforma,
  * degradación técnica e históricos.
  */
 @Service
@@ -40,14 +40,21 @@ public class TransversalKpiAnalyticsService {
         }
 
         /**
-         * Devuelve el análisis operativo principal entre GLPI y una plataforma
-         * técnica seleccionada.
+         * Devuelve el análisis operativo principal.
+         *
+         * El parametro platform se mantiene por compatibilidad con llamadas
+         * antiguas, aunque el panel actual ya no tiene selector de plataforma.
          */
         public OperationalImpactAnalysisResponse getGlpiPlatformRelation(
                         String platform,
                         String period) {
 
                 return analysisSnapshotOrchestrator.getGlpiPlatformRelation(platform, period);
+        }
+
+        public OperationalImpactAnalysisResponse getGlpiPlatformRelation(String period) {
+
+                return analysisSnapshotOrchestrator.getGlpiPlatformRelation(period);
         }
 
         public List<AnalyticsComparePoint> getTechnicalDegradationImpact(String period) {

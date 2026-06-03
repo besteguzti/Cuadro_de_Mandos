@@ -220,55 +220,113 @@ public class CitrixService {
                 if (availableDeliveryControllers * 100
                                 < totalDeliveryControllers * kpiProperties.getCitrix().getDeliveryControllerYellowBelowPercent()) {
 
-                        return indicator("Delivery Controllers disponibles",YELLOW,"Menos del 50 % de Delivery Controllers disponibles");
+                        return indicator(
+                                        "Delivery Controllers disponibles",
+                                        YELLOW,
+                                        "Menos del " + kpiProperties.getCitrix().getDeliveryControllerYellowBelowPercent()
+                                                        + " % de Delivery Controllers disponibles");
                 }
 
-                return indicator("Delivery Controllers disponibles",GREEN,"50 % o mas de Delivery Controllers disponibles");
+                return indicator(
+                                "Delivery Controllers disponibles",
+                                GREEN,
+                                kpiProperties.getCitrix().getDeliveryControllerYellowBelowPercent()
+                                                + " % o mas de Delivery Controllers disponibles");
         }
 
         private CitrixIndicatorStatusDto evaluateAverageLogonDuration(int averageLogonDurationSeconds) {
 
                 if (averageLogonDurationSeconds > kpiProperties.getCitrix().getLogonDurationRedAboveSeconds()) {
 
-                        return indicator("Average Logon Duration",RED,"Average Logon Duration superior a 60 segundos");
+                        return indicator(
+                                        "Average Logon Duration",
+                                        RED,
+                                        "Average Logon Duration superior a "
+                                                        + kpiProperties.getCitrix().getLogonDurationRedAboveSeconds()
+                                                        + " segundos");
                 }
 
                 if (averageLogonDurationSeconds > kpiProperties.getCitrix().getLogonDurationYellowAboveSeconds()) {
 
-                        return indicator("Average Logon Duration",YELLOW,"Average Logon Duration entre 21 y 60 segundos");
+                        return indicator(
+                                        "Average Logon Duration",
+                                        YELLOW,
+                                        "Average Logon Duration entre "
+                                                        + (kpiProperties.getCitrix().getLogonDurationYellowAboveSeconds() + 1)
+                                                        + " y "
+                                                        + kpiProperties.getCitrix().getLogonDurationRedAboveSeconds()
+                                                        + " segundos");
                 }
 
-                return indicator("Average Logon Duration",GREEN,"Average Logon Duration entre 0 y 20 segundos");
+                return indicator(
+                                "Average Logon Duration",
+                                GREEN,
+                                "Average Logon Duration entre 0 y "
+                                                + kpiProperties.getCitrix().getLogonDurationYellowAboveSeconds()
+                                                + " segundos");
         }
 
         private CitrixIndicatorStatusDto evaluateServerLoad(int serverLoadPercent) {
 
                 if (serverLoadPercent >= kpiProperties.getCitrix().getServerLoadRedMin()) {
 
-                        return indicator("Carga de servidores",RED,"Carga de servidores entre 67 % y 100 %");
+                        return indicator(
+                                        "Carga de servidores",
+                                        RED,
+                                        "Carga de servidores entre "
+                                                        + kpiProperties.getCitrix().getServerLoadRedMin()
+                                                        + " % y 100 %");
                 }
 
                 if (serverLoadPercent >= kpiProperties.getCitrix().getServerLoadYellowMin()) {
 
-                        return indicator("Carga de servidores",YELLOW,"Carga de servidores entre 34 % y 66 %");
+                        return indicator(
+                                        "Carga de servidores",
+                                        YELLOW,
+                                        "Carga de servidores entre "
+                                                        + kpiProperties.getCitrix().getServerLoadYellowMin()
+                                                        + " % y "
+                                                        + (kpiProperties.getCitrix().getServerLoadRedMin() - 1)
+                                                        + " %");
                 }
 
-                return indicator("Carga de servidores",GREEN,"Carga de servidores entre 0 % y 33 %");
+                return indicator(
+                                "Carga de servidores",
+                                GREEN,
+                                "Carga de servidores entre 0 % y "
+                                                + (kpiProperties.getCitrix().getServerLoadYellowMin() - 1)
+                                                + " %");
         }
 
         private CitrixIndicatorStatusDto evaluateFailedLogons(int failedLogons) {
 
                 if (failedLogons > kpiProperties.getCitrix().getFailedLogonsRedAbove()) {
 
-                        return indicator("Errores de inicio",RED,"Mas de 30 errores de inicio");
+                        return indicator(
+                                        "Errores de inicio",
+                                        RED,
+                                        "Mas de " + kpiProperties.getCitrix().getFailedLogonsRedAbove()
+                                                        + " errores de inicio");
                 }
 
                 if (failedLogons > kpiProperties.getCitrix().getFailedLogonsYellowAbove()) {
 
-                        return indicator("Errores de inicio",YELLOW,"Entre 11 y 30 errores de inicio");
+                        return indicator(
+                                        "Errores de inicio",
+                                        YELLOW,
+                                        "Entre "
+                                                        + (kpiProperties.getCitrix().getFailedLogonsYellowAbove() + 1)
+                                                        + " y "
+                                                        + kpiProperties.getCitrix().getFailedLogonsRedAbove()
+                                                        + " errores de inicio");
                 }
 
-                return indicator("Errores de inicio",GREEN,"Entre 0 y 10 errores de inicio");
+                return indicator(
+                                "Errores de inicio",
+                                GREEN,
+                                "Entre 0 y "
+                                                + kpiProperties.getCitrix().getFailedLogonsYellowAbove()
+                                                + " errores de inicio");
         }
 
         private CitrixIndicatorStatusDto indicator(String name,String color,String reason) {
@@ -320,7 +378,7 @@ public class CitrixService {
                                 "Indice de salud Citrix",
                                 details.getPercentage(),
                                 KpiStatus.from(details.getColor()),
-                                "Afeccion normalizada del entorno Citrix.",
+                                "Afección normalizada del entorno Citrix.",
                                 "Media uniforme de sesiones activas, Delivery Controllers, logon duration, carga de servidores y errores de inicio.",
                                 timestamp,
                                 freshness,

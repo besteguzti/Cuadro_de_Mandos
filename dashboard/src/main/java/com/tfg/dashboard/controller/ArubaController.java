@@ -4,11 +4,17 @@ import java.util.List;
 import java.util.Map;
 
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.tfg.dashboard.dto.ArubaApAnnotationDto;
+import com.tfg.dashboard.dto.ArubaApAnnotationRequest;
 import com.tfg.dashboard.dto.ArubaApInfo;
+import com.tfg.dashboard.dto.ArubaInactiveApDto;
 import com.tfg.dashboard.dto.ArubaNetworkStatusDto;
 import com.tfg.dashboard.dto.ArubaSwitchInfo;
 import com.tfg.dashboard.dto.ArubaWifiClientInfo;
@@ -34,18 +40,27 @@ public class ArubaController {
         this.service = service;
     }
 
-    // Devuelve el resumen agregado que consume la vista Aruba.
-
     @GetMapping("/summary")
     public ArubaSummary getSummary() {
         return service.getSummary();
     }
 
-    // Devuelve el porcentaje de afectación de red Aruba, color global y motivos.
-     
     @GetMapping("/network-status")
     public ArubaNetworkStatusDto getNetworkStatus() {
         return service.getNetworkStatus();
+    }
+
+    @GetMapping("/inactive-aps")
+    public List<ArubaInactiveApDto> getInactiveAps() {
+        return service.getInactiveAps();
+    }
+
+    @PutMapping("/inactive-aps/{serial}/annotation")
+    public ArubaApAnnotationDto saveInactiveApAnnotation(
+            @PathVariable String serial,
+            @RequestBody ArubaApAnnotationRequest request) {
+
+        return service.saveInactiveApAnnotation(serial, request);
     }
 
     @GetMapping("/aps")

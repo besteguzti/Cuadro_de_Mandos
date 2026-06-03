@@ -21,15 +21,20 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import com.tfg.dashboard.config.properties.KpiProperties;
 import com.tfg.dashboard.client.ArubaApiClient;
 import com.tfg.dashboard.dto.ArubaApInfo;
+import com.tfg.dashboard.dto.ArubaApAnnotationDto;
+import com.tfg.dashboard.dto.ArubaApAnnotationRequest;
+import com.tfg.dashboard.dto.ArubaInactiveApDto;
 import com.tfg.dashboard.dto.ArubaSwitchInfo;
 import com.tfg.dashboard.dto.ArubaWifiClientInfo;
 import com.tfg.dashboard.model.AccessPoint;
+import com.tfg.dashboard.model.ArubaApAnnotation;
 import com.tfg.dashboard.model.ArubaDashboardMetrics;
 import com.tfg.dashboard.dto.summary.ArubaSummary;
 import com.tfg.dashboard.model.ArubaSwitch;
 import com.tfg.dashboard.model.ArubaSwitchClientUsage;
 import com.tfg.dashboard.model.ArubaSwitchInterfaceUsageHistory;
 import com.tfg.dashboard.repository.AccessPointRepository;
+import com.tfg.dashboard.repository.ArubaApAnnotationRepository;
 import com.tfg.dashboard.repository.ArubaDashboardMetricsRepository;
 import com.tfg.dashboard.repository.ArubaNetworkStatusHistoryRepository;
 import com.tfg.dashboard.repository.ArubaSwitchClientUsageRepository;
@@ -45,6 +50,9 @@ class ArubaServiceTest {
 
     @Mock
     private AccessPointRepository accessPointRepository;
+
+    @Mock
+    private ArubaApAnnotationRepository annotationRepository;
 
     @Mock
     private ArubaSwitchRepository arubaSwitchRepository;
@@ -107,6 +115,7 @@ class ArubaServiceTest {
         ArubaSummaryService summaryService =
                 new ArubaSummaryService(
                         accessPointRepository,
+                        annotationRepository,
                         arubaSwitchRepository,
                         switchClientUsageRepository,
                         switchInterfaceUsageHistoryRepository,
@@ -127,6 +136,8 @@ class ArubaServiceTest {
 
     @Test
     void getSummaryCalculatesArubaKpis() throws Exception {
+
+        kpiProperties.getAruba().setInactiveApDaysThreshold(60);
 
         when(accessPointRepository.findAll()).thenReturn(List.of(
                 storedAp("AP-1", "Up", "SER-1", "Site A", "Swarm A", "1.1.1.1"),
@@ -196,6 +207,109 @@ class ArubaServiceTest {
                 .isEqualTo("YELLOW");
         assertThat(summary.getLastUpdated()).isNotNull();
         assertThat(summary.getDataStatus()).isEqualTo("OK");
+
+        ArgumentCaptor<LocalDateTime> inactiveLimitCaptor =
+                ArgumentCaptor.forClass(LocalDateTime.class);
+        verify(accessPointRepository)
+                .countBySerialIsNotNullAndLastSeenAtBefore(inactiveLimitCaptor.capture());
+        assertThat(inactiveLimitCaptor.getValue())
+                .isAfter(LocalDateTime.now().minusDays(61))
+                .isBefore(LocalDateTime.now().minusDays(59));
+    }
+
+    @Test
+    void getInactiveApsReturnsDetailsUsingConfiguredThreshold() {
+
+        kpiProperties.getAruba().setInactiveApDaysThreshold(2);
+        AccessPoint inactive =
+                storedAp("AP viejo", "Down", "SER-OLD", "Site A", "Swarm A", "1.1.1.1");
+        inactive.setLastSeenAt(LocalDateTime.now().minusDays(5).minusHours(2));
+        ArubaApAnnotation annotation =
+                annotation("SER-OLD", "Pendiente revisar alimentacion");
+
+        when(accessPointRepository
+                .findBySerialIsNotNullAndLastSeenAtBeforeOrderByLastSeenAtAsc(any()))
+                .thenReturn(List.of(inactive));
+        when(annotationRepository.findBySerialIn(List.of("SER-OLD")))
+                .thenReturn(List.of(annotation));
+
+        List<ArubaInactiveApDto> inactiveAps =
+                arubaService.getInactiveAps();
+
+        assertThat(inactiveAps).hasSize(1);
+        assertThat(inactiveAps.get(0).getSerial()).isEqualTo("SER-OLD");
+        assertThat(inactiveAps.get(0).getName()).isEqualTo("AP viejo");
+        assertThat(inactiveAps.get(0).getStatus()).isEqualTo("Down");
+        assertThat(inactiveAps.get(0).getSite()).isEqualTo("Site A");
+        assertThat(inactiveAps.get(0).getSwarmName()).isEqualTo("Swarm A");
+        assertThat(inactiveAps.get(0).getDaysInactive()).isGreaterThanOrEqualTo(5);
+        assertThat(inactiveAps.get(0).getAnnotation()).isEqualTo("Pendiente revisar alimentacion");
+
+        ArgumentCaptor<LocalDateTime> inactiveLimitCaptor =
+                ArgumentCaptor.forClass(LocalDateTime.class);
+        verify(accessPointRepository)
+                .findBySerialIsNotNullAndLastSeenAtBeforeOrderByLastSeenAtAsc(inactiveLimitCaptor.capture());
+        assertThat(inactiveLimitCaptor.getValue())
+                .isAfter(LocalDateTime.now().minusDays(3))
+                .isBefore(LocalDateTime.now().minusDays(1));
+    }
+
+    @Test
+    void saveInactiveApAnnotationCreatesManualAnnotation() {
+
+        ArubaApAnnotationRequest request =
+                new ArubaApAnnotationRequest();
+        request.setAnnotation("Revisar alimentacion");
+
+        when(annotationRepository.findBySerial("SER-1"))
+                .thenReturn(Optional.empty());
+        when(annotationRepository.save(any(ArubaApAnnotation.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        ArubaApAnnotationDto saved =
+                arubaService.saveInactiveApAnnotation("SER-1", request);
+
+        assertThat(saved.getSerial()).isEqualTo("SER-1");
+        assertThat(saved.getAnnotation()).isEqualTo("Revisar alimentacion");
+        assertThat(saved.getUpdatedAt()).isNotNull();
+
+        ArgumentCaptor<ArubaApAnnotation> captor =
+                ArgumentCaptor.forClass(ArubaApAnnotation.class);
+        verify(annotationRepository).save(captor.capture());
+        assertThat(captor.getValue().getSerial()).isEqualTo("SER-1");
+        assertThat(captor.getValue().getAnnotation()).isEqualTo("Revisar alimentacion");
+    }
+
+    @Test
+    void saveInactiveApAnnotationAllowsEmptyTextToClearNote() {
+
+        ArubaApAnnotation existing =
+                annotation("SER-1", "Nota anterior");
+        ArubaApAnnotationRequest request =
+                new ArubaApAnnotationRequest();
+        request.setAnnotation("");
+
+        when(annotationRepository.findBySerial("SER-1"))
+                .thenReturn(Optional.of(existing));
+        when(annotationRepository.save(any(ArubaApAnnotation.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        ArubaApAnnotationDto saved =
+                arubaService.saveInactiveApAnnotation("SER-1", request);
+
+        assertThat(saved.getAnnotation()).isEmpty();
+    }
+
+    @Test
+    void saveInactiveApAnnotationRejectsLongText() {
+
+        ArubaApAnnotationRequest request =
+                new ArubaApAnnotationRequest();
+        request.setAnnotation("x".repeat(1001));
+
+        org.assertj.core.api.Assertions
+                .assertThatThrownBy(() -> arubaService.saveInactiveApAnnotation("SER-1", request))
+                .hasMessageContaining("1000 caracteres");
     }
 
     @Test
@@ -256,6 +370,55 @@ class ArubaServiceTest {
         assertThat(saved.getName()).isEqualTo("AP-1-renamed");
         assertThat(saved.getIpAddress()).isEqualTo("2.2.2.2");
         assertThat(saved.getLastSeenAt()).isAfter(originalFirstSeenAt);
+    }
+
+    @Test
+    void syncAccessPointsUsesRealArubaLastSeenWhenAvailable() {
+
+        LocalDateTime realLastSeenAt =
+                LocalDateTime.now().minusDays(5);
+        ArubaApInfo ap =
+                ap("AP-1", "Down", "SER-1", "Site A", "Swarm A", "1.1.1.1");
+        ap.setLastSeenAt(realLastSeenAt);
+
+        when(client.getApsList()).thenReturn(List.of(ap));
+        when(accessPointRepository.findBySerial("SER-1"))
+                .thenReturn(Optional.empty());
+
+        arubaService.syncAccessPoints();
+
+        ArgumentCaptor<AccessPoint> captor =
+                ArgumentCaptor.forClass(AccessPoint.class);
+        verify(accessPointRepository).save(captor.capture());
+
+        assertThat(captor.getValue().getLastSeenAt()).isEqualTo(realLastSeenAt);
+    }
+
+    @Test
+    void syncAccessPointsDoesNotRefreshDownApWithoutRealLastSeen() {
+
+        LocalDateTime previousLastSeenAt =
+                LocalDateTime.now().minusDays(10);
+
+        AccessPoint existing =
+                new AccessPoint();
+        existing.setSerial("SER-1");
+        existing.setFirstSeenAt(LocalDateTime.now().minusDays(20));
+        existing.setLastSeenAt(previousLastSeenAt);
+
+        when(client.getApsList()).thenReturn(List.of(
+                ap("AP-1", "Down", "SER-1", "Site A", "Swarm A", "1.1.1.1")
+        ));
+        when(accessPointRepository.findBySerial("SER-1"))
+                .thenReturn(Optional.of(existing));
+
+        arubaService.syncAccessPoints();
+
+        ArgumentCaptor<AccessPoint> captor =
+                ArgumentCaptor.forClass(AccessPoint.class);
+        verify(accessPointRepository).save(captor.capture());
+
+        assertThat(captor.getValue().getLastSeenAt()).isEqualTo(previousLastSeenAt);
     }
 
     @Test
@@ -420,6 +583,18 @@ class ArubaServiceTest {
                 upgradeRequired ? "UPGRADE_REQUIRED" : "UP_TO_DATE");
 
         return switchInfo;
+    }
+
+    private ArubaApAnnotation annotation(String serial,String text) {
+
+        ArubaApAnnotation annotation =
+                new ArubaApAnnotation();
+
+        annotation.setSerial(serial);
+        annotation.setAnnotation(text);
+        annotation.setUpdatedAt(LocalDateTime.now());
+
+        return annotation;
     }
 
     private ArubaDashboardMetrics metrics() {

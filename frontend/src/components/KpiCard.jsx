@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState } from 'react'
+﻿import { useEffect, useRef, useState } from 'react'
 
-function KpiCard({ title, value, critical = false, status, info }) {
+function KpiCard({ title, value, critical = false, status, info, onValueClick }) {
     const [isInfoOpen, setIsInfoOpen] = useState(false)
     const cardRef = useRef(null)
     const hasInfo = Boolean(info)
+    const isValueClickable = typeof onValueClick === 'function'
     const tone = critical ? 'danger' : normalizeStatus(status)
     const classNames = ['kpi-card']
 
@@ -55,7 +56,18 @@ function KpiCard({ title, value, critical = false, status, info }) {
 
             <h2>{title}</h2>
 
-            <p>{value}</p>
+            {isValueClickable ? (
+                <button
+                    type="button"
+                    className="clickable-kpi-value"
+                    onClick={onValueClick}
+                    aria-label={`Ver detalle de ${title}`}
+                >
+                    {value}
+                </button>
+            ) : (
+                <p>{value}</p>
+            )}
 
             {hasInfo && (
                 <>

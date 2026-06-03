@@ -40,7 +40,7 @@ class ApiDashboardControllerTest {
         summary.setPriority("MEDIUM");
         summary.setFirstAction("Revisar APs inactivos");
         summary.setTrend("STABLE");
-        summary.setSummaryText("Diagnostico operativo de prueba");
+        summary.setSummaryText("Diagnóstico operativo de prueba");
 
         when(executiveSummaryService.getExecutiveSummary())
                 .thenReturn(summary);

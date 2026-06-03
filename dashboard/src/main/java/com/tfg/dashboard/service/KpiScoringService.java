@@ -55,6 +55,19 @@ public class KpiScoringService {
     }
 
     /**
+     * Devuelve el estado textual usando la configuración propia de un KPI
+     * transversal. Esto evita que el umbral de Estado global actue como umbral
+     * común para Criticidad, Disponibilidad, Presión, Backlog u otros KPIs.
+     */
+    public String statusFromTransversalKpi(
+            String metricKey,
+            double value
+    ) {
+
+        return statusEnumFromTransversalKpi(metricKey, value).name();
+    }
+
+    /**
      * Aplica los umbrales configurados para clasificar la afección.
      */
     public KpiStatus statusEnumFromAffection(
@@ -68,6 +81,42 @@ public class KpiScoringService {
 
         if (value >= kpiProperties.getStatus().getYellowMin()) {
 
+            return KpiStatus.YELLOW;
+        }
+
+        return KpiStatus.GREEN;
+    }
+
+    /**
+     * Clasifica un KPI transversal segun su direccion:
+     * RISK significa que 0 es bueno y 100 es critico; HEALTH significa que 0 es
+     * critico y 100 es bueno.
+     */
+    public KpiStatus statusEnumFromTransversalKpi(
+            String metricKey,
+            double value
+    ) {
+
+        KpiProperties.TransversalKpiThreshold threshold =
+                kpiProperties.getTransversal().thresholdFor(metricKey);
+
+        if ("HEALTH".equalsIgnoreCase(threshold.getDirection())) {
+            if (value >= threshold.getGreenMin()) {
+                return KpiStatus.GREEN;
+            }
+
+            if (value >= threshold.getYellowMin()) {
+                return KpiStatus.YELLOW;
+            }
+
+            return KpiStatus.RED;
+        }
+
+        if (value >= threshold.getRedMin()) {
+            return KpiStatus.RED;
+        }
+
+        if (value >= threshold.getYellowMin()) {
             return KpiStatus.YELLOW;
         }
 
@@ -97,7 +146,7 @@ public class KpiScoringService {
     }
 
     /**
-     * Genera una lectura simple para relaciones aparentes entre plataformas.
+     * Genera una lectura simple para relaciónes aparentes entre plataformas.
      */
     public String relationReading(
             Integer cooccurrencePercentage,

@@ -653,9 +653,17 @@ public class GlobalKpiCalculationService {
 
         private int devicesWithoutEncryptionIndicator(Microsoft365MetricsHistory microsoft365) {
 
-                return microsoft365.getDevicesWithoutEncryption() > kpiProperties.getMicrosoft365().getDevicesWithoutEncryptionRedAbove()
-                                ? redScore()
-                                : greenScore();
+                if (microsoft365.getDevicesWithoutEncryption() > kpiProperties.getMicrosoft365().getDevicesWithoutEncryptionRedAbove()) {
+
+                        return redScore();
+                }
+
+                if (microsoft365.getDevicesWithoutEncryption() > kpiProperties.getMicrosoft365().getDevicesWithoutEncryptionYellowAbove()) {
+
+                        return yellowScore();
+                }
+
+                return greenScore();
         }
 
         private int openTicketsIndicator(GlpiMetricsHistory glpi) {

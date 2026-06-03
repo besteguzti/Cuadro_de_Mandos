@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+﻿import { useMemo, useState } from "react";
 
 import AnalysisEmptyState from "./AnalysisEmptyState";
 import PeriodSelector from "./PeriodSelector";

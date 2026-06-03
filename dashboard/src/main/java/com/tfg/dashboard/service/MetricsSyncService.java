@@ -47,6 +47,8 @@ public class MetricsSyncService {
 
     private final TransversalKpiAnalyticsService analyticsService;
 
+    private final SimulatedMetricsConsistencyService consistencyService;
+
     public MetricsSyncService(
             CitrixService citrixService,
             Microsoft365Service microsoft365Service,
@@ -54,7 +56,8 @@ public class MetricsSyncService {
             CitrixMetricsHistoryRepository citrixRepository,
             Microsoft365MetricsHistoryRepository microsoft365Repository,
             GlpiMetricsHistoryRepository glpiRepository,
-            TransversalKpiAnalyticsService analyticsService
+            TransversalKpiAnalyticsService analyticsService,
+            SimulatedMetricsConsistencyService consistencyService
     ) {
 
         this.citrixService = citrixService;
@@ -64,6 +67,7 @@ public class MetricsSyncService {
         this.microsoft365Repository = microsoft365Repository;
         this.glpiRepository = glpiRepository;
         this.analyticsService = analyticsService;
+        this.consistencyService = consistencyService;
     }
 
     /**
@@ -77,10 +81,17 @@ public class MetricsSyncService {
 
         LocalDateTime collectedAt =
                 LocalDateTime.now();
+        CitrixSummary citrixSummary =
+                null;
+        Microsoft365Summary microsoft365Summary =
+                null;
+        GlpiSummary glpiSummary =
+                null;
 
         try {
 
-            syncCitrixMetrics(collectedAt);
+            citrixSummary =
+                    citrixService.generateSimulatedSummary();
 
         } catch (Exception exception) {
 
@@ -89,7 +100,8 @@ public class MetricsSyncService {
 
         try {
 
-            syncMicrosoft365Metrics(collectedAt);
+            microsoft365Summary =
+                    microsoft365Service.generateSimulatedSummary();
 
         } catch (Exception exception) {
 
@@ -101,11 +113,55 @@ public class MetricsSyncService {
 
         try {
 
-            syncGlpiMetrics(collectedAt);
+            glpiSummary =
+                    glpiService.generateSimulatedSummary();
 
         } catch (Exception exception) {
 
             log.error("Error sincronizando metricas GLPI", exception);
+        }
+
+        if (citrixSummary != null
+                && microsoft365Summary != null
+                && glpiSummary != null) {
+
+            try {
+
+                consistencyService.applyToGeneratedSummaries(
+                        citrixSummary,
+                        microsoft365Summary,
+                        glpiSummary,
+                        collectedAt
+                );
+
+            } catch (Exception exception) {
+
+                log.error("Error aplicando coherencia a metricas simuladas", exception);
+            }
+        }
+
+        if (citrixSummary != null) {
+            try {
+                syncCitrixMetrics(citrixSummary, collectedAt);
+            } catch (Exception exception) {
+                log.error("Error guardando metricas Citrix", exception);
+            }
+        }
+
+        if (microsoft365Summary != null) {
+            try {
+                syncMicrosoft365Metrics(microsoft365Summary, collectedAt);
+            } catch (Exception exception) {
+                log.error("Error guardando metricas Microsoft 365", exception);
+            }
+        }
+
+        if (glpiSummary != null) {
+            try {
+                syncGlpiMetrics(glpiSummary, collectedAt);
+            } catch (Exception exception) {
+                log.error("Error guardando metricas GLPI", exception);
+            }
         }
 
         try {
@@ -113,11 +169,11 @@ public class MetricsSyncService {
             analyticsService.saveCurrentSnapshot(collectedAt);
             log.info("Snapshot transversal guardado");
             analyticsService.saveAnalysisSnapshot(collectedAt);
-            log.info("Snapshot de analisis guardado");
+            log.info("Snapshot de análisis guardado");
 
         } catch (Exception exception) {
 
-            log.error("Error guardando snapshots de analisis", exception);
+            log.error("Error guardando snapshots de análisis", exception);
         }
 
         cleanOldMetrics();
@@ -129,11 +185,10 @@ public class MetricsSyncService {
      * Genera y persiste un snapshot Citrix simulado.
      */
     private void syncCitrixMetrics(
+            CitrixSummary citrixSummary,
             LocalDateTime collectedAt
     ) {
 
-        CitrixSummary citrixSummary =
-                citrixService.generateSimulatedSummary();
         CitrixMetricsHistory citrixHistory =
                 mapCitrix(citrixSummary, collectedAt);
         citrixRepository.save(citrixHistory);
@@ -144,11 +199,10 @@ public class MetricsSyncService {
      * Genera y persiste un snapshot Microsoft 365 simulado.
      */
     private void syncMicrosoft365Metrics(
+            Microsoft365Summary microsoft365Summary,
             LocalDateTime collectedAt
     ) {
 
-        Microsoft365Summary microsoft365Summary =
-                microsoft365Service.generateSimulatedSummary();
         Microsoft365MetricsHistory microsoft365History =
                 mapMicrosoft365(microsoft365Summary, collectedAt);
         microsoft365Repository.save(microsoft365History);
@@ -159,11 +213,10 @@ public class MetricsSyncService {
      * Genera y persiste un snapshot GLPI simulado.
      */
     private void syncGlpiMetrics(
+            GlpiSummary glpiSummary,
             LocalDateTime collectedAt
     ) {
 
-        GlpiSummary glpiSummary =
-                glpiService.generateSimulatedSummary();
         GlpiMetricsHistory glpiHistory =
                 mapGlpi(glpiSummary, collectedAt);
         glpiRepository.save(glpiHistory);
@@ -178,8 +231,8 @@ public class MetricsSyncService {
 
         // Se aplica retencion de 90 dias
         // para evitar crecimiento indefinido
-        // de snapshots y mantener historico
-        // suficiente para analisis temporal.
+        // de snapshots y mantener histórico
+        // suficiente para análisis temporal.
 
         try {
 
@@ -187,7 +240,7 @@ public class MetricsSyncService {
                     LocalDateTime.now().minusDays(RETENTION_DAYS);
 
             log.info(
-                    "Limpieza de historicos iniciada. Fecha limite: {}",
+                    "Limpieza de históricos iniciada. Fecha limite: {}",
                     cutoff
             );
 
@@ -207,7 +260,7 @@ public class MetricsSyncService {
 
         } catch (Exception exception) {
 
-            log.error("Error limpiando historicos antiguos", exception);
+            log.error("Error limpiando históricos antiguos", exception);
         }
     }
 

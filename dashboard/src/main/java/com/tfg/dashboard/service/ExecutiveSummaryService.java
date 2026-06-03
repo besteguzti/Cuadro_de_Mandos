@@ -67,14 +67,46 @@ public class ExecutiveSummaryService {
         public ExecutiveSummaryDto getExecutiveSummary() {
 
                 MainDashboardSummary dashboardSummary = mainDashboardService.getSummary();
+                return buildOperationalSummary(
+                                dashboardSummary,
+                                resolveTrend(dashboardSummary.getGlobalHealthPercentage()),
+                                null,
+                                true);
+        }
+
+        /**
+         * Genera un resumen ejecutivo para el Banco de pruebas.
+         *
+         * Usa los mismos criterios de plataforma afectada, impacto y prioridad
+         * que el dashboard real, pero no consulta históricos ni repositorios:
+         * un escenario manual no tiene tendencia temporal fiable ni usuarios
+         * reales estimables.
+         */
+        public ExecutiveSummaryDto buildScenarioSummary(MainDashboardSummary dashboardSummary) {
+
+                return buildOperationalSummary(
+                                dashboardSummary,
+                                "Tendencia no disponible en escenario manual",
+                                "No estimable en escenario manual",
+                                false);
+        }
+
+        private ExecutiveSummaryDto buildOperationalSummary(
+                        MainDashboardSummary dashboardSummary,
+                        String trend,
+                        String estimatedUsersOverride,
+                        boolean useRealObservedData) {
+
                 Map<String, Integer> platformAffectations = extractPlatformAffectations(dashboardSummary);
                 List<String> affectedServices = resolveAffectedServices(platformAffectations);
+                List<String> criticalPlatforms = resolveCriticalPlatforms(platformAffectations);
                 String mainAffectedPlatform = resolveMainAffectedPlatform(platformAffectations);
                 String probableOrigin = resolveProbableOrigin(mainAffectedPlatform);
-                String impactLevel = levelFromAffectation(dashboardSummary.getUserImpact());
-                String priority = resolvePriority(dashboardSummary, affectedServices.size());
-                String trend = resolveTrend(dashboardSummary.getGlobalHealthPercentage());
-                String estimatedAffectedUsers = estimateAffectedUsers(mainAffectedPlatform);
+                String impactLevel = resolveImpactLevel(dashboardSummary.getUserImpact(), criticalPlatforms.size());
+                String priority = resolvePriority(dashboardSummary, affectedServices.size(), criticalPlatforms.size());
+                String estimatedAffectedUsers = useRealObservedData
+                                ? estimateAffectedUsers(mainAffectedPlatform)
+                                : estimatedUsersOverride;
                 ExecutiveSummaryDto summary = new ExecutiveSummaryDto();
 
                 summary.setGlobalStatus(dashboardSummary.getGlobalHealth());
@@ -86,7 +118,21 @@ public class ExecutiveSummaryService {
                 summary.setPriority(priority);
                 summary.setFirstAction(firstAction(mainAffectedPlatform));
                 summary.setTrend(trend);
-                summary.setSummaryText(buildSummaryText(dashboardSummary,mainAffectedPlatform,affectedServices,priority,trend));
+                summary.setSummaryText(
+                                useRealObservedData
+                                                ? buildSummaryText(
+                                                                dashboardSummary,
+                                                                mainAffectedPlatform,
+                                                                affectedServices,
+                                                                criticalPlatforms,
+                                                                priority,
+                                                                trend)
+                                                : buildScenarioSummaryText(
+                                                                dashboardSummary,
+                                                                mainAffectedPlatform,
+                                                                affectedServices,
+                                                                criticalPlatforms,
+                                                                priority));
 
                 return summary;
         }
@@ -181,6 +227,15 @@ public class ExecutiveSummaryService {
                 return services;
         }
 
+        private List<String> resolveCriticalPlatforms(Map<String, Integer> platformAffectations) {
+
+                return platformAffectations.entrySet().stream()
+                                .filter(entry -> entry.getValue() >= kpiProperties.getStatus().getRedMin())
+                                .map(Map.Entry::getKey)
+                                .sorted()
+                                .toList();
+        }
+
         private String resolveMainAffectedPlatform(Map<String, Integer> platformAffectations) {
 
                 Map<String, Double> weightedContributions = Map.of(
@@ -229,13 +284,36 @@ public class ExecutiveSummaryService {
                 return "LOW";
         }
 
-        private String resolvePriority(MainDashboardSummary summary,int affectedServicesCount) {
+        private String resolveImpactLevel(int userImpact, int criticalPlatformCount) {
+
+                if (criticalPlatformCount >= 2) {
+
+                        return "HIGH";
+                }
+
+                return levelFromAffectation(userImpact);
+        }
+
+        private String resolvePriority(
+                        MainDashboardSummary summary,
+                        int affectedServicesCount,
+                        int criticalPlatformCount) {
+
+                if (criticalPlatformCount >= 2) {
+
+                        return "HIGH";
+                }
 
                 if (summary.getUserImpact() >= kpiProperties.getStatus().getRedMin()
                                 || summary.getSlaRisk() >= kpiProperties.getStatus().getRedMin()
                                 || summary.getGlobalCriticality() >= kpiProperties.getStatus().getRedMin()) {
 
                         return "HIGH";
+                }
+
+                if (criticalPlatformCount >= 1) {
+
+                        return "MEDIUM";
                 }
 
                 if (summary.getGlobalHealthPercentage() >= kpiProperties.getStatus().getYellowMin()
@@ -326,7 +404,7 @@ public class ExecutiveSummaryService {
 
                         if (affectedDevices > 0) {
 
-                                return affectedDevices + " dispositivos con senales de afeccion";
+                                return affectedDevices + " dispositivos con senales de afección";
                         }
                 }
 
@@ -336,7 +414,7 @@ public class ExecutiveSummaryService {
 
                         if (glpi.isPresent() && glpi.get().getCriticalOpenTickets() > 0) {
 
-                                return glpi.get().getCriticalOpenTickets() + " tickets criticos como senal indirecta";
+                                return glpi.get().getCriticalOpenTickets() + " tickets críticos como senal indirecta";
                         }
 
                         if (glpi.isPresent() && glpi.get().getOpenTickets() > 0) {
@@ -361,8 +439,8 @@ public class ExecutiveSummaryService {
                 return switch (mainAffectedPlatform) {
                         case "Aruba" -> "Revisar APs inactivos, switches caidos, clientes WiFi y firmware pendiente";
                         case "Citrix" -> "Revisar Delivery Controllers, sesiones activas, logon duration y errores de inicio";
-                        case "Microsoft 365" -> "Revisar SharePoint, usuarios sin MFA, dispositivos no conformes y secretos proximos a caducar";
-                        case "GLPI" -> "Revisar tickets criticos, tickets abiertos y tasa de cierre";
+                        case "Microsoft 365" -> "Revisar SharePoint, usuarios sin MFA, dispositivos no conformes, secretos proximos a caducar y cifrado";
+                        case "GLPI" -> "Revisar tickets críticos, tickets abiertos y tasa de cierre";
                         default -> "Mantener seguimiento de KPIs y frescura de datos";
                 };
         }
@@ -374,6 +452,7 @@ public class ExecutiveSummaryService {
                         MainDashboardSummary summary,
                         String mainAffectedPlatform,
                         List<String> affectedServices,
+                        List<String> criticalPlatforms,
                         String priority,
                         String trend) {
 
@@ -390,8 +469,11 @@ public class ExecutiveSummaryService {
                                         + " y la tendencia es " + trend + ".";
                 }
 
+                String criticalText = criticalPlatformText(summary, criticalPlatforms);
+
                 return "El estado global se encuentra en "
                                 + statusText(summary.getGlobalHealth())
+                                + criticalText
                                 + ". La principal contribucion procede de "
                                 + mainAffectedPlatform
                                 + ", con " + serviceText
@@ -400,6 +482,60 @@ public class ExecutiveSummaryService {
                                 + ". Se recomienda revisar primero: "
                                 + firstAction(mainAffectedPlatform)
                                 + ".";
+        }
+
+        private String buildScenarioSummaryText(
+                        MainDashboardSummary summary,
+                        String mainAffectedPlatform,
+                        List<String> affectedServices,
+                        List<String> criticalPlatforms,
+                        String priority) {
+
+                String serviceText = affectedServices.isEmpty()
+                                ? "no se detectan servicios afectados"
+                                : "servicios afectados: " + String.join(", ", affectedServices);
+
+                if ("Sin plataforma afectada".equals(mainAffectedPlatform)) {
+
+                        return "Este escenario manual muestra un estado global "
+                                        + statusText(summary.getGlobalHealth())
+                                        + "; " + serviceText
+                                        + ". La prioridad operativa es " + priority
+                                        + ". No se calcula tendencia porque no hay histórico asociado al banco de pruebas.";
+                }
+
+                String criticalText = criticalPlatformText(summary, criticalPlatforms);
+
+                return "Este escenario manual sugiere revisar primero "
+                                + mainAffectedPlatform
+                                + ". El estado global aparece en "
+                                + statusText(summary.getGlobalHealth())
+                                + criticalText
+                                + ", con " + serviceText
+                                + ". La prioridad operativa es " + priority
+                                + ". La lectura orienta la revision, pero no demuestra causalidad ni modifica los datos reales.";
+        }
+
+        private String criticalPlatformText(MainDashboardSummary summary, List<String> criticalPlatforms) {
+
+                if (criticalPlatforms.isEmpty()) {
+
+                        return "";
+                }
+
+                String platforms = String.join(", ", criticalPlatforms);
+
+                if (criticalPlatforms.size() >= 2) {
+
+                        return ", aunque varias plataformas presentan estado critico: " + platforms;
+                }
+
+                if ("GREEN".equalsIgnoreCase(summary.getGlobalHealth())) {
+
+                        return ", aunque " + platforms + " presenta estado critico";
+                }
+
+                return ", con estado critico en " + platforms;
         }
 
         private String statusText(String status) {

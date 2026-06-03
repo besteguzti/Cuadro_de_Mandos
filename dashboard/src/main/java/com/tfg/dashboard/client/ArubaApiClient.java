@@ -6,6 +6,11 @@ import java.util.List;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -104,6 +109,7 @@ public class ArubaApiClient {
                                         info.setFirmwareVersion(ap.path("firmware_version").asText());
                                         info.setMacaddr(ap.path("macaddr").asText());
                                         info.setSwarmName(ap.path("swarm_name").asText());
+                                        info.setLastSeenAt(parseLastSeenAt(ap));
                                         result.add(info);
                                 }
                                 offset += limit;
@@ -447,6 +453,105 @@ public class ArubaApiClient {
                         }
                 }
                 return "";
+        }
+
+        private LocalDateTime parseLastSeenAt(JsonNode node) {
+
+                JsonNode value = firstPresent(
+                                node,
+                                "last_seen_at",
+                                "last_seen",
+                                "lastSeenAt",
+                                "lastSeen",
+                                "last_contact_at",
+                                "last_contact",
+                                "lastContactAt",
+                                "lastContact",
+                                "last_contacted_at",
+                                "last_contacted",
+                                "lastContactedAt",
+                                "lastContacted",
+                                "last_checkin",
+                                "last_check_in",
+                                "lastHeartbeat",
+                                "last_heartbeat",
+                                "last_modified",
+                                "lastModified");
+
+                return parseArubaDate(value);
+        }
+
+        private JsonNode firstPresent(JsonNode node,String... names) {
+
+                if (node == null) {
+                        return null;
+                }
+
+                for (String name : names) {
+
+                        JsonNode value = node.get(name);
+
+                        if (value == null || value.isNull() || value.isMissingNode()) {
+                                continue;
+                        }
+
+                        if (value.isTextual() && value.asText().isBlank()) {
+                                continue;
+                        }
+
+                        return value;
+                }
+
+                return null;
+        }
+
+        private LocalDateTime parseArubaDate(JsonNode value) {
+
+                if (value == null || value.isNull() || value.isMissingNode()) {
+                        return null;
+                }
+
+                if (value.isNumber()) {
+
+                        long raw = value.asLong();
+
+                        if (raw <= 0) {
+                                return null;
+                        }
+
+                        long epochMillis = raw > 9_999_999_999L ? raw : raw * 1000L;
+                        return LocalDateTime.ofInstant(Instant.ofEpochMilli(epochMillis), ZoneId.systemDefault());
+                }
+
+                if (!value.isTextual()) {
+                        return null;
+                }
+
+                String text = value.asText();
+
+                if (text == null || text.isBlank()) {
+                        return null;
+                }
+
+                try {
+                        return LocalDateTime.ofInstant(Instant.parse(text), ZoneId.systemDefault());
+                } catch (DateTimeParseException ignored) {
+                        // Algunas respuestas pueden venir sin zona horaria; se prueban formatos locales.
+                }
+
+                for (DateTimeFormatter formatter : List.of(
+                                DateTimeFormatter.ISO_LOCAL_DATE_TIME,
+                                DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))) {
+
+                        try {
+                                return LocalDateTime.parse(text, formatter);
+                        } catch (DateTimeParseException ignored) {
+                                // Se intenta el siguiente formato sin detener la sincronizacion.
+                        }
+                }
+
+                log.warn("No se pudo interpretar la fecha last seen de Aruba: {}", text);
+                return null;
         }
 
         private List<String> fieldNames(JsonNode node) {

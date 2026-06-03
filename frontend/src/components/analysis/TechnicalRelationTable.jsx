@@ -1,4 +1,4 @@
-import {
+﻿import {
   cssTone,
   formatOptionalPercent,
   formatOptionalSigned
@@ -8,13 +8,13 @@ import {
 function TechnicalRelationTable({ relations }) {
   return (
     <section className="dashboard-section">
-      <h2>Relacion tecnica aparente entre plataformas</h2>
+      <h2>Relacion técnica aparente entre plataformas</h2>
       <div className="analysis-table-wrapper">
         <table className="analysis-points-table analysis-relations-table">
           <thead>
             <tr>
               <th>Relacion</th>
-              <th>Co-ocurrencia tecnica</th>
+              <th>Co-ocurrencia técnica</th>
               <th>Incremento medio</th>
               <th>Lectura</th>
             </tr>

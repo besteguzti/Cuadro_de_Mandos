@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 
 import "../App.css";
 
 import KpiCard from "../components/KpiCard";
 import { API_BASE_URL } from "../config/api";
+import { formatDataStatus, formatStatus } from "../utils/statusFormatters";
 
 const glpiKpiInfo = {
   openTickets: {
@@ -142,12 +143,12 @@ function GlpiPage() {
         </div>
         <div className="freshness">
           <p className="updated">
-            Ultima actualizacion: {formatSnapshotDate(summary.lastUpdated)}
+            Última actualización: {formatSnapshotDate(summary.lastUpdated)}
           </p>
           <p className="updated">
             Estado de datos:{" "}
             <span className={`freshness-status freshness-status-${(summary.dataStatus ?? "NO_DATA").toLowerCase()}`}>
-              {summary.dataStatus ?? "NO_DATA"}
+              {formatDataStatus(summary.dataStatus)}
             </span>
           </p>
         </div>
@@ -155,9 +156,9 @@ function GlpiPage() {
 
       <section className={`status status-${glpiHealth.toLowerCase()}`}>
         <div className="status-main">
-          <span>Indice de salud GLPI</span>
-          <strong>Afeccion: {glpiHealthDetails?.percentage ?? 0} %</strong>
-          <p>Estado: {formatGlpiStatus(glpiHealth)}</p>
+          <span>Índice de salud GLPI</span>
+          <strong>Afección: {glpiHealthDetails?.percentage ?? 0} %</strong>
+          <p>Estado: {formatStatus(glpiHealth)}</p>
         </div>
 
         <div className="status-reasons">
@@ -193,7 +194,7 @@ function GlpiPage() {
         <KpiCard
           title="Tickets críticos abiertos"
           value={summary.criticalOpenTickets}
-          status={indicatorStatus("Tickets abiertos criticos")}
+          status={indicatorStatus("Tickets abiertos críticos")}
           info={glpiKpiInfo.criticalOpenTickets}
         />
 
@@ -278,22 +279,6 @@ function formatSnapshotDate(value) {
   }
 
   return new Date(value).toLocaleString();
-}
-
-function formatGlpiStatus(status) {
-  if (status === "GREEN") {
-    return "Verde";
-  }
-
-  if (status === "YELLOW") {
-    return "Amarillo";
-  }
-
-  if (status === "RED") {
-    return "Rojo";
-  }
-
-  return status;
 }
 
 function findIndicatorStatus(indicators, name) {

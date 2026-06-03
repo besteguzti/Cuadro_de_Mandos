@@ -96,8 +96,8 @@ public class TransversalKpiHistoryService {
                                 microsoft365Repository.findTopByOrderByCollectedAtDesc();
 
                 // Si no hay snapshot de una plataforma, no se inventa un 0:
-                // 0 es un valor real valido de afeccion, mientras que null
-                // indica que no hay datos suficientes para guardar historico.
+                // 0 es un valor real valido de afección, mientras que null
+                // indica que no hay datos suficientes para guardar histórico.
                 Double glpiOperationalPressure =
                                 glpiSnapshot.map(this::calculateGlpiOperationalPressure)
                                                 .map(Integer::doubleValue)
@@ -115,7 +115,7 @@ public class TransversalKpiHistoryService {
 
                 double globalHealthScore = clamp(100 - summary.getGlobalHealthPercentage());
                 double criticality = summary.getGlobalCriticality();
-                double availability = clamp(100 - summary.getGlobalAvailability());
+                double availability = clamp(summary.getGlobalAvailability());
                 double userImpact = summary.getUserImpact();
                 double affectedServices = summary.getAffectedServicesPercent();
                 double technicalDegradation = summary.getTechnicalDegradation();
@@ -187,7 +187,7 @@ public class TransversalKpiHistoryService {
         }
 
         /**
-         * Devuelve definiciones internas de KPIs transversales y relaciones
+         * Devuelve definiciones internas de KPIs transversales y relaciónes
          * recomendadas para el módulo de análisis.
          */
         public Map<String, KpiDefinition> definitions() {
@@ -257,7 +257,7 @@ public class TransversalKpiHistoryService {
 
                 definitions.put(TECHNICAL_DEGRADATION, new KpiDefinition(
                                 TECHNICAL_DEGRADATION,
-                                "Degradacion tecnica",
+                                "Degradación técnica",
                                 "Peso de elementos tecnicos que requieren actuacion.",
                                 "indice 0-100",
                                 List.of(
@@ -269,8 +269,8 @@ public class TransversalKpiHistoryService {
 
                 definitions.put(OPERATIONAL_PRESSURE, new KpiDefinition(
                                 OPERATIONAL_PRESSURE,
-                                "Presion operativa",
-                                "Presion agregada sobre recursos y operacion.",
+                                "Presión operativa",
+                                "Presión agregada sobre recursos y operación.",
                                 "indice 0-100",
                                 List.of(
                                                 TECHNICAL_DEGRADATION,
@@ -336,8 +336,8 @@ public class TransversalKpiHistoryService {
 
                 definitions.put(ARUBA_NETWORK_DEGRADATION, new KpiDefinition(
                                 ARUBA_NETWORK_DEGRADATION,
-                                "Degradacion de red Aruba",
-                                "Indice de degradacion tecnica especifico de Aruba.",
+                                "Degradación de red Aruba",
+                                "Indice de degradación técnica especifico de Aruba.",
                                 "indice 0-100",
                                 List.of(
                                                 TECHNICAL_DEGRADATION,
@@ -358,8 +358,8 @@ public class TransversalKpiHistoryService {
 
                 definitions.put(GLPI_OPERATIONAL_PRESSURE, new KpiDefinition(
                                 GLPI_OPERATIONAL_PRESSURE,
-                                "Presion operativa GLPI",
-                                "Afeccion operativa derivada de tickets abiertos, criticos y capacidad de cierre.",
+                                "Presión operativa GLPI",
+                                "Afección operativa derivada de tickets abiertos, críticos y capacidad de cierre.",
                                 "%",
                                 List.of(
                                                 ARUBA_NETWORK_AFFECTATION,
@@ -368,15 +368,15 @@ public class TransversalKpiHistoryService {
 
                 definitions.put(CITRIX_TECHNICAL_AFFECTION, new KpiDefinition(
                                 CITRIX_TECHNICAL_AFFECTION,
-                                "Afeccion tecnica Citrix",
-                                "Indice de salud Citrix expresado como porcentaje de afeccion.",
+                                "Afección técnica Citrix",
+                                "Indice de salud Citrix expresado como porcentaje de afección.",
                                 "%",
                                 List.of(GLPI_OPERATIONAL_PRESSURE)));
 
                 definitions.put(MICROSOFT365_TECHNICAL_AFFECTION, new KpiDefinition(
                                 MICROSOFT365_TECHNICAL_AFFECTION,
-                                "Afeccion tecnica Microsoft 365",
-                                "Indice de salud Microsoft 365 expresado como porcentaje de afeccion.",
+                                "Afección técnica Microsoft 365",
+                                "Indice de salud Microsoft 365 expresado como porcentaje de afección.",
                                 "%",
                                 List.of(GLPI_OPERATIONAL_PRESSURE)));
 

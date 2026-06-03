@@ -1,80 +1,82 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 
 import "../App.css";
 
 import KpiCard from "../components/KpiCard";
+import OperationalSummaryPanel from "../components/OperationalSummaryPanel";
 import { API_BASE_URL } from "../config/api";
+import { formatDataStatus } from "../utils/statusFormatters";
 
 const mainKpiInfo = {
     globalHealth: {
         description:
-            "Resume la afeccion general de la plataforma combinando Aruba, Citrix, Microsoft 365 y GLPI.",
+            "Resume la afección general de la plataforma combinando Aruba, Citrix, Microsoft 365 y GLPI.",
         algorithm:
-            "Se calcula ponderando los indices principales de Aruba, Citrix, Microsoft 365 y GLPI segun la configuracion definida en backend.",
+            "Se calcula ponderando los índices principales de Aruba, Citrix, Microsoft 365 y GLPI según la configuración definida en backend.",
         interpretation:
-            "0-33 es verde, 34-66 amarillo y 67-100 rojo. Cuanto mas alto, mayor afeccion global."
+            "0-33 es verde, 34-66 amarillo y 67-100 rojo. Cuanto más alto, mayor afección global."
     },
     globalCriticality: {
         description:
-            "Mide la presencia de condiciones criticas en rojo dentro de las plataformas.",
+            "Mide la presencia de condiciones críticas en rojo dentro de las plataformas.",
         algorithm:
-            "Promedia indicadores normalizados: correcto 0, advertencia 50 y critico 100.",
+            "Promedia indicadores normalizados: correcto 0, advertencia 50 y crítico 100.",
         interpretation:
-            "Un valor alto indica que existen senales criticas repartidas por varias plataformas."
+            "Un valor alto indica que existen señales críticas repartidas por varias plataformas."
     },
     globalAvailability: {
         description:
-            "Mide la afeccion sobre la disponibilidad de los servicios principales.",
+            "Mide la disponibilidad estimada de los servicios principales.",
         algorithm:
-            "Combina senales de disponibilidad de Aruba, Citrix, Microsoft 365 y GLPI usando los pesos configurados en backend.",
+            "Combina señales de disponibilidad de Aruba, Citrix, Microsoft 365 y GLPI usando los pesos configurados en backend.",
         interpretation:
-            "Cuanto mas alto, mayor riesgo de que los servicios no esten disponibles."
+            "Cuanto más alto, mayor disponibilidad estimada. Valores bajos indican mayor afección sobre la disponibilidad."
     },
     operationalPressure: {
         description:
-            "Mide la carga de trabajo tecnica y operativa acumulada.",
+            "Mide la carga de trabajo técnica y operativa acumulada.",
         algorithm:
-            "Combina senales de GLPI, Citrix, Microsoft 365 y Aruba usando los pesos configurados en backend.",
+            "Combina señales de GLPI, Citrix, Microsoft 365 y Aruba usando los pesos configurados en backend.",
         interpretation:
-            "Un valor alto indica mas presion sobre el area tecnica."
+            "Un valor alto indica más presión sobre el área técnica."
     },
     technicalDegradation: {
         description:
-            "Mide deterioro tecnico aunque no exista una caida total.",
+            "Mide deterioro tecnico aunque no exista una caída total.",
         algorithm:
-            "Combina indicadores tecnicos de Aruba, Citrix, Microsoft 365 y GLPI segun la configuracion del backend.",
+            "Combina indicadores tecnicos de Aruba, Citrix, Microsoft 365 y GLPI según la configuración del backend.",
         interpretation:
-            "Valores altos indican degradacion tecnica que conviene revisar."
+            "Valores altos indican degradación técnica que conviene revisar."
     },
     slaRisk: {
         description:
             "Mide el riesgo de incumplir niveles de servicio.",
         algorithm:
-            "Combina senales de Citrix, Aruba, GLPI y Microsoft 365 con los pesos definidos en backend.",
+            "Combina señales de Citrix, Aruba, GLPI y Microsoft 365 con los pesos definidos en backend.",
         interpretation:
-            "Un valor alto indica mayor probabilidad de incumplimiento o degradacion percibida."
+            "Un valor alto indica mayor probabilidad de incumplimiento o degradación percibida."
     },
     operationalBacklog: {
         description:
             "Mide el trabajo pendiente acumulado.",
         algorithm:
-            "Combina trabajo pendiente de GLPI con senales de Microsoft 365, Aruba y Citrix segun pesos configurados en backend.",
+            "Combina trabajo pendiente de GLPI con señales de Microsoft 365, Aruba y Citrix según pesos configurados en backend.",
         interpretation:
-            "Un valor alto indica acumulacion de trabajo pendiente o acciones tecnicas."
+            "Un valor alto indica acumulación de trabajo pendiente o acciónes técnicas."
     },
     userImpact: {
         description:
-            "Mide la afeccion que pueden percibir los usuarios.",
+            "Mide la afección que pueden percibir los usuarios.",
         algorithm:
-            "Combina senales de impacto de Citrix, Aruba, Microsoft 365 y GLPI usando la configuracion del backend.",
+            "Combina señales de impacto de Citrix, Aruba, Microsoft 365 y GLPI usando la configuración del backend.",
         interpretation:
             "Un valor alto indica mayor probabilidad de impacto visible para usuarios."
     },
     affectedServices: {
         description:
-            "Mide cuantas plataformas estan afectadas.",
+            "Mide cuántas plataformas están afectadas.",
         algorithm:
-            "Calcula la proporcion de plataformas que estan en amarillo o rojo entre Aruba, Citrix, Microsoft 365 y GLPI.",
+            "Calcula la proporción de plataformas que están en amarillo o rojo entre Aruba, Citrix, Microsoft 365 y GLPI.",
         interpretation:
             "0% significa ninguna plataforma afectada. 100% significa las cuatro plataformas afectadas."
     }
@@ -185,13 +187,13 @@ function MainPage() {
                 info: mainKpiInfo.globalAvailability
             },
             {
-                title: "Presion operativa",
+                title: "Presión operativa",
                 value: `${summary.operationalPressure}%`,
                 status: summary.operationalPressureStatus,
                 info: mainKpiInfo.operationalPressure
             },
             {
-                title: "Degradacion tecnica",
+                title: "Degradación técnica",
                 value: `${summary.technicalDegradation}%`,
                 status: summary.technicalDegradationStatus,
                 info: mainKpiInfo.technicalDegradation
@@ -234,12 +236,12 @@ function MainPage() {
                 {summary && (
                     <div className="freshness">
                         <p className="updated">
-                            Ultima actualizacion: {formatSnapshotDate(summary.lastUpdated)}
+                            Última actualización: {formatSnapshotDate(summary.lastUpdated)}
                         </p>
                         <p className="updated">
                             Estado de datos:{" "}
                             <span className={`freshness-status freshness-status-${(summary.dataStatus ?? "NO_DATA").toLowerCase()}`}>
-                                {summary.dataStatus ?? "NO_DATA"}
+                                {formatDataStatus(summary.dataStatus)}
                             </span>
                         </p>
                     </div>
@@ -253,52 +255,7 @@ function MainPage() {
             )}
 
             {executiveSummary && (
-                <section className={`executive-summary executive-summary-${(executiveSummary.priority ?? "LOW").toLowerCase()}`}>
-                    <div className="executive-summary-main">
-                        <p className="eyebrow">Diagnostico operativo</p>
-                        <h2>Resumen operativo</h2>
-                        <p>{executiveSummary.summaryText}</p>
-                    </div>
-
-                    <div className="executive-summary-grid">
-                        <ExecutiveField
-                            label="Servicios afectados"
-                            value={
-                                executiveSummary.affectedServices?.length > 0
-                                    ? executiveSummary.affectedServices.join(", ")
-                                    : "Sin servicios afectados"
-                            }
-                        />
-                        <ExecutiveField
-                            label="Plataforma principal"
-                            value={executiveSummary.mainAffectedPlatform}
-                        />
-                        <ExecutiveField
-                            label="Origen probable"
-                            value={executiveSummary.probableOrigin}
-                        />
-                        <ExecutiveField
-                            label="Impacto"
-                            value={executiveSummary.impactLevel}
-                        />
-                        <ExecutiveField
-                            label="Usuarios potencialmente afectados"
-                            value={executiveSummary.estimatedAffectedUsers}
-                        />
-                        <ExecutiveField
-                            label="Prioridad"
-                            value={executiveSummary.priority}
-                        />
-                        <ExecutiveField
-                            label="Tendencia"
-                            value={executiveSummary.trend}
-                        />
-                        <ExecutiveField
-                            label="Primera accion"
-                            value={executiveSummary.firstAction}
-                        />
-                    </div>
-                </section>
+                <OperationalSummaryPanel summary={executiveSummary} />
             )}
 
             {summary && (
@@ -317,15 +274,6 @@ function MainPage() {
                 </section>
             )}
         </main>
-    );
-}
-
-function ExecutiveField({ label, value }) {
-    return (
-        <div className="executive-summary-field">
-            <span>{label}</span>
-            <strong>{value}</strong>
-        </div>
     );
 }
 

@@ -80,12 +80,12 @@ class KpiDefinitionServiceTest {
     }
 
     @Test
-    void definitionsUseConfiguredCommonThresholds() {
+    void globalStatusDefinitionUsesConfiguredTransversalThresholds() {
 
         KpiProperties properties =
                 new KpiProperties();
-        properties.getStatus().setYellowMin(40);
-        properties.getStatus().setRedMin(70);
+        properties.getTransversal().getGlobalStatus().setYellowMin(40);
+        properties.getTransversal().getGlobalStatus().setRedMin(70);
         properties.getStatus().setMax(120);
 
         KpiDefinitionDto globalStatus =

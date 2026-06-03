@@ -157,6 +157,107 @@ class ExecutiveSummaryServiceTest {
                 .isEqualTo("STABLE");
     }
 
+    @Test
+    void scenarioWithCitrixRedKeepsOperationalPriorityAtLeastMedium() {
+
+        ExecutiveSummaryDto summary =
+                service.buildScenarioSummary(
+                        summaryWithPlatformScores("GREEN", 30, 50, 0, 100, 0, 0));
+
+        assertThat(List.of(summary.getMainAffectedPlatform(), summary.getProbableOrigin()))
+                .contains("Citrix");
+        assertThat(summary.getAffectedServices())
+                .contains("Acceso a aplicaciones corporativas");
+        assertThat(summary.getPriority())
+                .isEqualTo("MEDIUM");
+        assertThat(summary.getFirstAction())
+                .contains("Delivery Controllers")
+                .contains("logon duration")
+                .contains("errores de inicio");
+        assertThat(summary.getSummaryText())
+                .contains("Citrix")
+                .contains("critico");
+    }
+
+    @Test
+    void scenarioWithMicrosoft365RedKeepsOperationalPriorityAtLeastMedium() {
+
+        ExecutiveSummaryDto summary =
+                service.buildScenarioSummary(
+                        summaryWithPlatformScores("GREEN", 20, 50, 0, 0, 100, 0));
+
+        assertThat(List.of(summary.getMainAffectedPlatform(), summary.getProbableOrigin()))
+                .contains("Microsoft 365");
+        assertThat(summary.getAffectedServices())
+                .contains("Servicios cloud / identidad / colaboracion");
+        assertThat(summary.getPriority())
+                .isEqualTo("MEDIUM");
+        assertThat(summary.getFirstAction())
+                .contains("usuarios sin MFA")
+                .contains("SharePoint")
+                .contains("cifrado");
+        assertThat(summary.getSummaryText())
+                .contains("Microsoft 365")
+                .contains("critico");
+    }
+
+    @Test
+    void scenarioWithCitrixAndMicrosoft365RedIsHighPriority() {
+
+        ExecutiveSummaryDto summary =
+                service.buildScenarioSummary(
+                        summaryWithPlatformScores("YELLOW", 50, 50, 0, 100, 100, 0));
+
+        assertThat(summary.getPriority())
+                .isEqualTo("HIGH");
+        assertThat(summary.getImpactLevel())
+                .isEqualTo("HIGH");
+        assertThat(summary.getAffectedServices())
+                .contains(
+                        "Acceso a aplicaciones corporativas",
+                        "Servicios cloud / identidad / colaboracion");
+        assertThat(summary.getSummaryText())
+                .contains("varias plataformas")
+                .contains("Citrix")
+                .contains("Microsoft 365");
+    }
+
+    @Test
+    void scenarioWithGreenWeightedGlobalButRedPlatformDoesNotHideCriticalPlatform() {
+
+        ExecutiveSummaryDto summary =
+                service.buildScenarioSummary(
+                        summaryWithPlatformScores("GREEN", 30, 50, 0, 100, 0, 0));
+
+        assertThat(summary.getGlobalStatus())
+                .isEqualTo("GREEN");
+        assertThat(summary.getPriority())
+                .isNotEqualTo("LOW");
+        assertThat(summary.getSummaryText())
+                .contains("aunque")
+                .contains("Citrix")
+                .contains("critico");
+    }
+
+    @Test
+    void scenarioWithArubaRedKeepsNetworkActionAndAffectedService() {
+
+        ExecutiveSummaryDto summary =
+                service.buildScenarioSummary(
+                        summaryWithPlatformScores("RED", 40, 50, 100, 0, 0, 0));
+
+        assertThat(summary.getMainAffectedPlatform())
+                .isEqualTo("Aruba");
+        assertThat(summary.getAffectedServices())
+                .contains("Red corporativa / conectividad");
+        assertThat(summary.getPriority())
+                .isEqualTo("MEDIUM");
+        assertThat(summary.getFirstAction())
+                .contains("APs")
+                .contains("switches")
+                .contains("clientes WiFi");
+    }
+
     private MainDashboardSummary summaryWithPlatformComponents() {
 
         MainDashboardSummary summary =
@@ -213,6 +314,45 @@ class ExecutiveSummaryServiceTest {
                         component("citrix_health", 0),
                         component("microsoft365_health", 0),
                         component("glpi_health", 0)
+                )
+        )));
+
+        return summary;
+    }
+
+    private MainDashboardSummary summaryWithPlatformScores(
+            String globalStatus,
+            int globalPercentage,
+            int userImpact,
+            int arubaScore,
+            int citrixScore,
+            int microsoft365Score,
+            int glpiScore
+    ) {
+
+        MainDashboardSummary summary =
+                new MainDashboardSummary();
+
+        summary.setGlobalHealth(globalStatus);
+        summary.setGlobalHealthPercentage(globalPercentage);
+        summary.setUserImpact(userImpact);
+        summary.setSlaRisk(20);
+        summary.setGlobalCriticality(20);
+        summary.setKpis(List.of(new KpiResultDto(
+                "global_status",
+                "Estado global",
+                globalPercentage,
+                KpiStatus.YELLOW,
+                null,
+                null,
+                LocalDateTime.now(),
+                "OK",
+                null,
+                List.of(
+                        component("aruba_network_affectation", arubaScore),
+                        component("citrix_health", citrixScore),
+                        component("microsoft365_health", microsoft365Score),
+                        component("glpi_health", glpiScore)
                 )
         )));
 

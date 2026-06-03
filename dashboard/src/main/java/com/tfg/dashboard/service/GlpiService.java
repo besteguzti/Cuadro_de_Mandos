@@ -297,7 +297,9 @@ public class GlpiService {
                         return indicator(
                                         "Tickets abiertos",
                                         RED,
-                                        "Hay 201 tickets abiertos o mas");
+                                        "Hay "
+                                                        + kpiProperties.getGlpi().getOpenTicketsRedMin()
+                                                        + " tickets abiertos o mas");
                 }
 
                 if (openTickets >= kpiProperties.getGlpi().getOpenTicketsYellowMin()) {
@@ -305,13 +307,19 @@ public class GlpiService {
                         return indicator(
                                         "Tickets abiertos",
                                         YELLOW,
-                                        "Hay entre 101 y 200 tickets abiertos");
+                                        "Hay entre "
+                                                        + kpiProperties.getGlpi().getOpenTicketsYellowMin()
+                                                        + " y "
+                                                        + (kpiProperties.getGlpi().getOpenTicketsRedMin() - 1)
+                                                        + " tickets abiertos");
                 }
 
                 return indicator(
                                 "Tickets abiertos",
                                 GREEN,
-                                "Hay entre 0 y 100 tickets abiertos");
+                                "Hay entre 0 y "
+                                                + (kpiProperties.getGlpi().getOpenTicketsYellowMin() - 1)
+                                                + " tickets abiertos");
         }
 
         private GlpiIndicatorStatusDto evaluateCriticalOpenTickets(
@@ -320,23 +328,29 @@ public class GlpiService {
                 if (criticalOpenTickets > kpiProperties.getGlpi().getCriticalTicketsRedAbove()) {
 
                         return indicator(
-                                        "Tickets abiertos criticos",
+                                        "Tickets abiertos críticos",
                                         RED,
-                                        "Hay mas de 10 tickets criticos abiertos");
+                                        "Hay mas de "
+                                                        + kpiProperties.getGlpi().getCriticalTicketsRedAbove()
+                                                        + " tickets críticos abiertos");
                 }
 
                 if (criticalOpenTickets > kpiProperties.getGlpi().getCriticalTicketsYellowAbove()) {
 
                         return indicator(
-                                        "Tickets abiertos criticos",
+                                        "Tickets abiertos críticos",
                                         YELLOW,
-                                        "Hay entre 1 y 10 tickets criticos abiertos");
+                                        "Hay entre "
+                                                        + (kpiProperties.getGlpi().getCriticalTicketsYellowAbove() + 1)
+                                                        + " y "
+                                                        + kpiProperties.getGlpi().getCriticalTicketsRedAbove()
+                                                        + " tickets críticos abiertos");
                 }
 
                 return indicator(
-                                "Tickets abiertos criticos",
+                                "Tickets abiertos críticos",
                                 GREEN,
-                                "No hay tickets criticos abiertos");
+                                "No hay tickets críticos abiertos");
         }
 
         private GlpiIndicatorStatusDto evaluateClosedPercentage(
@@ -355,14 +369,18 @@ public class GlpiService {
                                         name,
                                         YELLOW,
                                         "El porcentaje de cierre " + periodLabel
-                                                        + " es menor del 50 %");
+                                                        + " es menor del "
+                                                        + kpiProperties.getGlpi().getClosedPercentGreenMin()
+                                                        + " %");
                 }
 
                 return indicator(
                                 name,
                                 GREEN,
                                 "El porcentaje de cierre " + periodLabel
-                                                + " es igual o superior al 50 %");
+                                                + " es igual o superior al "
+                                                + kpiProperties.getGlpi().getClosedPercentGreenMin()
+                                                + " %");
         }
 
         private GlpiIndicatorStatusDto indicator(
@@ -443,8 +461,8 @@ public class GlpiService {
                                 "Indice de salud GLPI",
                                 details.getPercentage(),
                                 KpiStatus.from(details.getColor()),
-                                "Afeccion normalizada de GLPI como consecuencia operativa.",
-                                "Media uniforme de tickets abiertos, tickets criticos, porcentaje de cierre diario y porcentaje de cierre semanal.",
+                                "Afección normalizada de GLPI como consecuencia operativa.",
+                                "Media uniforme de tickets abiertos, tickets críticos, porcentaje de cierre diario y porcentaje de cierre semanal.",
                                 timestamp,
                                 freshness,
                                 details.getPercentage(),

@@ -16,6 +16,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import com.tfg.dashboard.dto.AnalyticsComparePoint;
 import com.tfg.dashboard.dto.OperationalImpactAnalysisResponse;
+import com.tfg.dashboard.dto.TechnicalPlatformRelationDto;
 import com.tfg.dashboard.dto.TechnicalTimelinePointDto;
 import com.tfg.dashboard.service.TransversalKpiAnalyticsService;
 
@@ -33,21 +34,23 @@ class AnalysisControllerTest {
 
         OperationalImpactAnalysisResponse response =
                 new OperationalImpactAnalysisResponse();
-        response.setSelectedPlatform("Aruba");
-        response.setGlpiOperationalPressure(45);
-        response.setArubaGlpiRelation(40);
-        response.setPoints(List.of(point(45, 40)));
+        TechnicalPlatformRelationDto relation = new TechnicalPlatformRelationDto();
+        relation.setRelation("Aruba-Citrix");
+        relation.setOrigin("Aruba");
+        relation.setTarget("Citrix");
+        response.setTechnicalRelations(List.of(relation));
+        response.setTechnicalTimeline(List.of(timelinePoint()));
+        response.setSpecificKpiRelations(List.of());
 
-        when(analyticsService.getGlpiPlatformRelation("aruba", "30d"))
+        when(analyticsService.getGlpiPlatformRelation("30d"))
                 .thenReturn(response);
 
         mockMvc.perform(get("/api/analysis/glpi-platform-relation")
-                        .param("platform", "aruba")
                         .param("period", "30d"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.selectedPlatform").value("Aruba"))
-                .andExpect(jsonPath("$.glpiOperationalPressure").value(45))
-                .andExpect(jsonPath("$.points[0].x").value(45.0));
+                .andExpect(jsonPath("$.technicalRelations[0].origin").value("Aruba"))
+                .andExpect(jsonPath("$.technicalTimeline[0].aruba").value(20.0))
+                .andExpect(jsonPath("$.specificKpiRelations").isArray());
     }
 
     @Test
@@ -89,9 +92,11 @@ class AnalysisControllerTest {
 
         OperationalImpactAnalysisResponse emptyRelation =
                 new OperationalImpactAnalysisResponse();
-        emptyRelation.setPoints(List.of());
+        emptyRelation.setTechnicalRelations(List.of());
+        emptyRelation.setTechnicalTimeline(List.of());
+        emptyRelation.setSpecificKpiRelations(List.of());
 
-        when(analyticsService.getGlpiPlatformRelation("citrix", "7d"))
+        when(analyticsService.getGlpiPlatformRelation("7d"))
                 .thenReturn(emptyRelation);
         when(analyticsService.getTechnicalDegradationImpact("7d"))
                 .thenReturn(List.of());
@@ -99,10 +104,11 @@ class AnalysisControllerTest {
                 .thenReturn(List.of());
 
         mockMvc.perform(get("/api/analysis/glpi-platform-relation")
-                        .param("platform", "citrix")
                         .param("period", "7d"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.points").isArray());
+                .andExpect(jsonPath("$.technicalRelations").isArray())
+                .andExpect(jsonPath("$.technicalTimeline").isArray())
+                .andExpect(jsonPath("$.specificKpiRelations").isArray());
 
         mockMvc.perform(get("/api/analysis/technical-degradation-impact")
                         .param("period", "7d"))
@@ -122,5 +128,16 @@ class AnalysisControllerTest {
                 x,
                 y
         );
+    }
+
+    private TechnicalTimelinePointDto timelinePoint() {
+
+        TechnicalTimelinePointDto point =
+                new TechnicalTimelinePointDto();
+        point.setTimestamp(LocalDateTime.now());
+        point.setAruba(20.0);
+        point.setCitrix(30.0);
+        point.setMicrosoft365(40.0);
+        return point;
     }
 }

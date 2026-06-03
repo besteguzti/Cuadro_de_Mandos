@@ -32,7 +32,6 @@ public class MainDashboardSummary {
     private String operationalBacklogStatus;
     private int slaRisk;
     private String slaRiskStatus;
-    private int criticalOpenTickets;
     private List<KpiResultDto> kpis;
     private LocalDateTime lastUpdated;
     private String dataStatus;
@@ -120,9 +119,6 @@ public class MainDashboardSummary {
         return slaRiskStatus;
     }
 
-    public int getCriticalOpenTickets() {
-        return criticalOpenTickets;
-    }
 
     public List<KpiResultDto> getKpis() {
         return kpis;
@@ -226,10 +222,6 @@ public class MainDashboardSummary {
 
     public void setSlaRiskStatus(String slaRiskStatus) {
         this.slaRiskStatus = slaRiskStatus;
-    }
-
-    public void setCriticalOpenTickets(int criticalOpenTickets) {
-        this.criticalOpenTickets = criticalOpenTickets;
     }
 
     public void setKpis(List<KpiResultDto> kpis) {

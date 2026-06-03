@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 
 import MainPage from "./Pages/MainPage";
 import ArubaPage from "./Pages/ArubaPage";
@@ -6,6 +6,8 @@ import CitrixPage from "./Pages/CitrixPage";
 import Microsoft365Page from "./Pages/Microsoft365Page";
 import GlpiPage from "./Pages/GlpiPage";
 import AnalysisPage from "./Pages/AnalysisPage";
+import TestScenarioPage from "./Pages/TestScenarioPage";
+import ThresholdConfigurationPage from "./Pages/ThresholdConfigurationPage";
 
 const pageRoutes = {
     main: "/",
@@ -13,7 +15,9 @@ const pageRoutes = {
     citrix: "/citrix",
     m365: "/microsoft365",
     glpi: "/glpi",
-    analysis: "/analisis"
+    analysis: "/análisis",
+    test: "/test",
+    config: "/configuración"
 };
 
 function App() {
@@ -58,6 +62,12 @@ function App() {
 
             case "analysis":
                 return <AnalysisPage />;
+
+            case "test":
+                return <TestScenarioPage />;
+
+            case "config":
+                return <ThresholdConfigurationPage />;
 
             default:
                 return <MainPage />;
@@ -108,6 +118,20 @@ function App() {
                 >
                     Análisis
                 </button>
+
+                <button
+                    className={activePage === "test" ? "active" : ""}
+                    onClick={() => navigate("test")}
+                >
+                    Banco de pruebas
+                </button>
+
+                <button
+                    className={activePage === "config" ? "active" : ""}
+                    onClick={() => navigate("config")}
+                >
+                    Configuración
+                </button>
             </nav>
 
             {renderPage()}
@@ -134,8 +158,16 @@ function resolveInitialPage() {
         return "glpi";
     }
 
-    if (pathname === "/analisis" || pathname === "/analysis") {
+    if (pathname === "/análisis" || pathname === "/analysis") {
         return "analysis";
+    }
+
+    if (pathname === "/test") {
+        return "test";
+    }
+
+    if (pathname === "/configuración" || pathname === "/configuration") {
+        return "config";
     }
 
     return "main";

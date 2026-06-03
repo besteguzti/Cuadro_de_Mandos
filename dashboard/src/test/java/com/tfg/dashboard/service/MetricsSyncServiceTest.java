@@ -47,6 +47,9 @@ class MetricsSyncServiceTest {
     @Mock
     private TransversalKpiAnalyticsService analyticsService;
 
+    @Mock
+    private SimulatedMetricsConsistencyService consistencyService;
+
     private MetricsSyncService service;
 
     @BeforeEach
@@ -59,7 +62,8 @@ class MetricsSyncServiceTest {
                 citrixRepository,
                 microsoft365Repository,
                 glpiRepository,
-                analyticsService
+                analyticsService,
+                consistencyService
         );
     }
 

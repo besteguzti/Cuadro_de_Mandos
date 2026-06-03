@@ -170,14 +170,21 @@ public class AnalysisDemoScenarioService {
                         snapshot.setTechnicalDegradation(technicalDegradation);
                         snapshot.setUserImpact(userImpact);
                         snapshot.setGlobalStatus(global);
-                        snapshot.setArubaWifiClients(Math.max(
+                        int arubaWifiClients = Math.max(
                                         0,
-                                        DEMO_BASE_WIFI_CLIENTS - aruba * DEMO_ARUBA_CLIENT_LOSS_FACTOR));
+                                        DEMO_BASE_WIFI_CLIENTS - aruba * DEMO_ARUBA_CLIENT_LOSS_FACTOR);
+                        int citrixActiveSessions = Math.min(
+                                        arubaWifiClients,
+                                        Math.max(
+                                                        0,
+                                                        DEMO_BASE_CITRIX_SESSIONS
+                                                                        - aruba
+                                                                                        * DEMO_CITRIX_SESSION_LOSS_FACTOR));
+
+                        snapshot.setArubaWifiClients(arubaWifiClients);
                         snapshot.setCitrixAverageLogonDurationSeconds(
                                         DEMO_LOGON_BASE_SECONDS + citrix / DEMO_LOGON_AFFECTION_DIVISOR);
-                        snapshot.setCitrixActiveSessions(Math.max(
-                                        0,
-                                        DEMO_BASE_CITRIX_SESSIONS - aruba * DEMO_CITRIX_SESSION_LOSS_FACTOR));
+                        snapshot.setCitrixActiveSessions(citrixActiveSessions);
                         snapshot.setCitrixFailedLogons(Math.max(
                                         0,
                                         citrix / DEMO_FAILED_LOGON_CITRIX_DIVISOR
@@ -205,7 +212,7 @@ public class AnalysisDemoScenarioService {
 
                 // Los escenarios demo necesitan una base numerica para poder
                 // dibujarse. Si falta el dato real, se parte del minimo de
-                // afeccion y el snapshot queda marcado como generatedScenario.
+                // afección y el snapshot queda marcado como generatedScenario.
                 return value != null
                                 ? value
                                 : kpiProperties.getAffection().getGreen();

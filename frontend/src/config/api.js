@@ -1,4 +1,4 @@
-// Centraliza la URL del backend para
+﻿// Centraliza la URL del backend para
 // que las páginas React no dependan
 // de valores hardcodeados.
 export const API_BASE_URL =

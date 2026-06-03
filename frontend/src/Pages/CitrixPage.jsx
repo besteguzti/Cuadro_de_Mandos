@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 
 import "../App.css";
 
 import KpiCard from "../components/KpiCard";
 import { API_BASE_URL } from "../config/api";
+import { formatDataStatus, formatStatus } from "../utils/statusFormatters";
 
 const citrixKpiInfo = {
   activeSessions: {
@@ -72,11 +73,11 @@ const citrixKpiInfo = {
   },
   citrixHealth: {
     description:
-      "Resume el estado general del entorno Citrix mediante un semáforo GREEN, YELLOW o RED.",
+      "Resume el estado general del entorno Citrix mediante un semáforo: correcto, advertencia o crítico.",
     algorithm:
       "El índice usa ponderación uniforme entre sesiones activas, Delivery Controllers, Average Logon Duration, carga de servidores y errores de inicio. Cada indicador aporta 0, 50 o 100 puntos de afección según sus umbrales.",
     interpretation:
-      "GREEN indica funcionamiento correcto, YELLOW indica degradación moderada y RED indica situación crítica que requiere revisión."
+      "Correcto indica funcionamiento normal, advertencia indica degradación moderada y crítico indica una situación que requiere revisión."
   }
 };
 
@@ -145,12 +146,12 @@ function CitrixPage() {
         {summary && (
           <div className="freshness">
           <p className="updated">
-            Ultima actualizacion: {formatSnapshotDate(summary.lastUpdated)}
+            Última actualización: {formatSnapshotDate(summary.lastUpdated)}
           </p>
           <p className="updated">
             Estado de datos:{" "}
             <span className={`freshness-status freshness-status-${(summary.dataStatus ?? "NO_DATA").toLowerCase()}`}>
-              {summary.dataStatus ?? "NO_DATA"}
+              {formatDataStatus(summary.dataStatus)}
             </span>
           </p>
           </div>
@@ -167,9 +168,9 @@ function CitrixPage() {
         <>
         <section className={`status status-${citrixHealth.toLowerCase()}`}>
           <div className="status-main">
-            <span>Indice de salud Citrix</span>
-            <strong>Afeccion: {citrixHealthDetails?.percentage ?? 0} %</strong>
-            <p>Estado: {formatCitrixStatus(citrixHealth)}</p>
+            <span>Índice de salud Citrix</span>
+            <strong>Afección: {citrixHealthDetails?.percentage ?? 0} %</strong>
+          <p>Estado: {formatStatus(citrixHealth)}</p>
           </div>
 
           <div className="status-reasons">
@@ -260,22 +261,6 @@ function formatSnapshotDate(value) {
   }
 
   return new Date(value).toLocaleString();
-}
-
-function formatCitrixStatus(status) {
-  if (status === "GREEN") {
-    return "Verde";
-  }
-
-  if (status === "YELLOW") {
-    return "Amarillo";
-  }
-
-  if (status === "RED") {
-    return "Rojo";
-  }
-
-  return status;
 }
 
 function findIndicatorStatus(indicators, name) {
