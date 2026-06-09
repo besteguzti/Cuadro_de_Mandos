@@ -12,6 +12,8 @@ import com.tfg.dashboard.dto.TestScenarioEvaluationResponse;
 import com.tfg.dashboard.dto.TestScenarioRequest;
 import com.tfg.dashboard.service.TestScenarioEvaluationService;
 
+import jakarta.validation.Valid;
+
 @RestController
 @RequestMapping("/api/test-scenarios")
 public class TestScenarioController {
@@ -25,7 +27,7 @@ public class TestScenarioController {
     @PostMapping("/evaluate")
     @ResponseStatus(HttpStatus.OK)
     public TestScenarioEvaluationResponse evaluate(
-            @RequestBody TestScenarioRequest request
+            @Valid @RequestBody TestScenarioRequest request
     ) {
         try {
             return evaluationService.evaluate(request);

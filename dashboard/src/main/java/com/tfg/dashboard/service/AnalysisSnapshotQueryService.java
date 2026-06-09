@@ -30,3 +30,4 @@ public class AnalysisSnapshotQueryService {
         return analysisSnapshotService.isGeneratedScenario(timestamp);
     }
 }
+

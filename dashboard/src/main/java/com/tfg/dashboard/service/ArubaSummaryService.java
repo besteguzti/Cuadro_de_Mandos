@@ -18,6 +18,7 @@ import com.tfg.dashboard.dto.ArubaApAnnotationDto;
 import com.tfg.dashboard.dto.ArubaApAnnotationRequest;
 import com.tfg.dashboard.dto.ArubaInactiveApDto;
 import com.tfg.dashboard.dto.ArubaNetworkStatusDto;
+import com.tfg.dashboard.dto.ArubaSwitchClientUsageDto;
 import com.tfg.dashboard.model.AccessPoint;
 import com.tfg.dashboard.model.ArubaApAnnotation;
 import com.tfg.dashboard.model.ArubaDashboardMetrics;
@@ -36,7 +37,7 @@ import com.tfg.dashboard.repository.ArubaSwitchRepository;
  * Construye el resumen Aruba que consume el frontend.
  *
  * Lee entidades persistidas en MySQL, calcula contadores de APs, switches,
- * clientes WiFi y frescura, y delega el índice de estado de red en
+ * clientes WiFi y frescura, y delega el índice de salud Aruba en
  * ArubaNetworkStatusService.
  */
 @Service
@@ -107,6 +108,8 @@ public class ArubaSummaryService {
                                 || !switchInfo.getDeviceStatus().equalsIgnoreCase("Up")).count();
                 int switchesFirmwareUpgradeRequired = (int) switches.stream().filter(ArubaSwitch::isUpgradeRequired)
                                 .count();
+                List<ArubaSwitchClientUsage> underusedSwitches = switchUsageService.getUnderusedSwitches();
+                int arubaOpenTickets = glpiPlatformTicketService.getArubaOpenTickets();
 
                 // El umbral de APs inactivos define cuantos dias puede estar un AP
                 // sin aparecer antes de considerarse no visto recientemente.
@@ -128,18 +131,12 @@ public class ArubaSummaryService {
                                 metrics.getMutualiaWifiClients(),
                                 totalSwitches,
                                 downSwitches,
-                                switchesFirmwareUpgradeRequired);
+                                switchesFirmwareUpgradeRequired,
+                                underusedSwitches.size(),
+                                arubaOpenTickets);
 
-                String networkStatus = networkStatusDetails.getColor();
                 LocalDateTime lastUpdated = resolveArubaLastUpdated();
                 String dataStatus = calculateDataStatus(lastUpdated);
-
-                if ("NO_DATA".equalsIgnoreCase(dataStatus)) {
-
-                        // Si no existe ninguna fecha Aruba persistida, el resumen no debe quedar como GREEN.
-                        // UNKNOWN evita ocultar que no hay datos suficientes sin modificar los calculos de KPIs.
-                        networkStatus = "UNKNOWN";
-                }
 
                 ArubaSummary summary = new ArubaSummary();
 
@@ -151,15 +148,17 @@ public class ArubaSummaryService {
                 summary.setFirmwareOutdated(metrics.getFirmwareOutdated());
                 summary.setApsWithoutPublicIp(apsWithoutPublicIp);
                 summary.setInactiveAps((int) inactiveAps);
-                summary.setNetworkStatus(networkStatus);
                 summary.setNetworkStatusDetails(networkStatusDetails);
                 summary.setNetworkStatusKpi(networkStatusService.buildNetworkStatusKpi(networkStatusDetails, lastUpdated, dataStatus));
+                summary.setKpiStatuses(networkStatusDetails.getIndicatorStatuses());
                 summary.setTotalSwitches(totalSwitches);
                 summary.setDownSwitches(downSwitches);
                 summary.setSwitchesFirmwareUpgradeRequired(switchesFirmwareUpgradeRequired);
-                summary.setUnderusedSwitches(switchUsageService.getUnderusedSwitches());
+                summary.setUnderusedSwitches(underusedSwitches.stream()
+                                .map(ArubaSwitchClientUsageDto::new)
+                                .toList());
                 summary.setTotalWifiClients(metrics.getTotalWifiClients());
-                summary.setArubaOpenTickets(glpiPlatformTicketService.getArubaOpenTickets());
+                summary.setArubaOpenTickets(arubaOpenTickets);
                 summary.setMutualiaApsClients(metrics.getMutualiaApsClients());
                 summary.setMutualiaWifiClients(metrics.getMutualiaWifiClients());
                 summary.setMutualiaLangileakClients(metrics.getMutualiaLangileakClients());
@@ -190,7 +189,7 @@ public class ArubaSummaryService {
                                 .orElse(null);
                 Long apsWithoutLastSeenAt = accessPointRepository.countBySerialIsNotNullAndLastSeenAtIsNull();
 
-                log.info(
+                log.debug(
                                 "APs inactivos Aruba: umbral={} dias, fechaLimite={}, inactivos={}, oldestLastSeenAt={}, newestLastSeenAt={}, apsSinLastSeenAt={}",
                                 inactiveApDaysThreshold,
                                 limitDate,
@@ -201,7 +200,7 @@ public class ArubaSummaryService {
         }
 
         /**
-         * Devuelve solo el bloque normalizado de estado de red Aruba.
+         * Devuelve solo el bloque normalizado del índice de salud Aruba.
          */
         public ArubaNetworkStatusDto getNetworkStatus() {
 
@@ -360,8 +359,8 @@ public class ArubaSummaryService {
          */
         private String calculateDataStatus(LocalDateTime lastUpdated) {
 
-                // Aruba usa APIs reales y su sincronizacion puede ser menos frecuente que el scheduler de
-                // datos simulados. Por eso se considera fresco durante 10 minutos.
+                // Aruba se sincroniza normalmente cada hora. La ventana de frescura
+                // usa 70 minutos para cubrir la cadencia horaria con un pequeño margen.
 
                 if (lastUpdated == null) {
 
@@ -391,3 +390,4 @@ public class ArubaSummaryService {
                 return current;
         }
 }
+

@@ -32,7 +32,7 @@ public class AnalysisSnapshotService {
     }
 
     /**
-     * Indica si un timestamp pertenece a un escenario demo persistido.
+     * Indica si un timestamp pertenece a un escenario de prueba persistido.
      */
     public boolean isGeneratedScenario(LocalDateTime timestamp) {
 
@@ -62,3 +62,4 @@ public class AnalysisSnapshotService {
         return 30;
     }
 }
+

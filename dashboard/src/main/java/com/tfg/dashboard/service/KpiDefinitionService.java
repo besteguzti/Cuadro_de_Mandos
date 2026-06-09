@@ -34,10 +34,10 @@ public class KpiDefinitionService {
         return List.of(
                 definition(
                         "aruba_network_status",
-                        "Aruba estado de red",
+                        "Índice de salud Aruba",
                         "PLATFORM",
                         "ARUBA",
-                        "Mide la afección de red Aruba combinando Access Points, switches y clientes WiFi.",
+                        "Resume el índice de salud Aruba usando Access Points, switches, clientes WiFi y tickets asociados.",
                         arubaNetworkStatusFormula(),
                         commonAffectionThresholds(),
                         List.of(
@@ -51,7 +51,7 @@ public class KpiDefinitionService {
                         "Citrix indice de salud Citrix",
                         "PLATFORM",
                         "CITRIX",
-                        "Mide la afección del entorno Citrix a partir de indicadores internos normalizados.",
+                        "Reúne las señales principales de Citrix: sesiones, Delivery Controllers, logon, carga y errores.",
                         citrixHealthFormula(),
                         commonAffectionThresholds(),
                         List.of(
@@ -67,16 +67,23 @@ public class KpiDefinitionService {
                         "Microsoft 365 indice de salud Microsoft 365",
                         "PLATFORM",
                         "MICROSOFT365",
-                        "Mide la afección de Microsoft 365 a partir de capacidad, identidad, seguridad y dispositivos.",
+                        "Agrupa señales de capacidad, identidad, seguridad, dispositivos y tickets de Microsoft 365.",
                         microsoft365HealthFormula(),
                         commonAffectionThresholds(),
                         List.of(
+                                "Licencias no asignadas",
+                                "Estado de Outlook, Teams y SharePoint",
+                                "Buzones casi llenos",
+                                "Emails en cuarentena",
                                 "Almacenamiento SharePoint",
+                                "Usuarios en riesgo e inicios fallidos",
                                 "Usuarios sin MFA",
                                 "Secretos proximos a caducar",
+                                "Aplicaciones sin uso y con permisos elevados",
                                 "Equipos no conformes",
+                                "Tickets abiertos Microsoft 365",
                                 "Windows desactualizados",
-                                "Equipos sin cifrado"
+                                "Equipos sin cifrado y sin check-in"
                         )
                 ),
                 definition(
@@ -84,12 +91,13 @@ public class KpiDefinitionService {
                         "GLPI indice de salud GLPI",
                         "PLATFORM",
                         "GLPI",
-                        "Mide la afección operativa de GLPI a partir de volumen y capacidad de cierre de tickets.",
+                        "Resume la situación de soporte en GLPI usando volumen de tickets, SLA y capacidad de cierre.",
                         glpiHealthFormula(),
                         commonAffectionThresholds(),
                         List.of(
                                 "Tickets abiertos",
                                 "Tickets críticos abiertos",
+                                "Tickets vencidos SLA",
                                 "Porcentaje de tickets cerrados",
                                 "Porcentaje de tickets cerrados semana"
                         )
@@ -99,9 +107,9 @@ public class KpiDefinitionService {
                         "Estado global",
                         "TRANSVERSAL",
                         "GLOBAL",
-                        "Mide la afección global ponderada de la infraestructura monitorizada.",
+                        "Resume el estado conjunto de Aruba, Citrix, Microsoft 365 y GLPI con los pesos configurados.",
                         platformWeightFormula(
-                                "Aruba estado de red",
+                                "Índice de salud Aruba",
                                 "Citrix indice de salud",
                                 "Microsoft 365 indice de salud",
                                 "GLPI indice de salud",
@@ -114,7 +122,7 @@ public class KpiDefinitionService {
                         "Criticidad global",
                         "TRANSVERSAL",
                         "GLOBAL",
-                        "Mide la presencia de condiciones críticas en rojo dentro de las plataformas.",
+                        "Recoge cuántas señales críticas aparecen dentro de las plataformas.",
                         "Media de indicadores críticos normalizados: correcto 0, advertencia 50 y critico 100.",
                         transversalRiskThresholds("transversal.globalCriticality"),
                         List.of(
@@ -129,7 +137,7 @@ public class KpiDefinitionService {
                         "Disponibilidad global",
                         "TRANSVERSAL",
                         "GLOBAL",
-                        "Mide la disponibilidad estimada de los servicios principales.",
+                        "Resume la disponibilidad estimada de los servicios principales.",
                         platformWeightFormula(
                                 "Aruba disponibilidad",
                                 "Citrix disponibilidad",
@@ -149,7 +157,7 @@ public class KpiDefinitionService {
                         "Presión operativa",
                         "TRANSVERSAL",
                         "GLOBAL",
-                        "Mide la carga de trabajo técnica y operativa acumulada.",
+                        "Resume la carga técnica y operativa acumulada.",
                         platformWeightFormula(
                                 "Aruba",
                                 "Citrix",
@@ -169,7 +177,7 @@ public class KpiDefinitionService {
                         "Degradación técnica",
                         "TRANSVERSAL",
                         "GLOBAL",
-                        "Mide deterioro tecnico aunque no exista una caida total.",
+                        "Detecta deterioro técnico aunque no exista una caída total.",
                         platformWeightFormula(
                                 "Aruba",
                                 "Citrix",
@@ -189,7 +197,7 @@ public class KpiDefinitionService {
                         "Riesgo SLA",
                         "TRANSVERSAL",
                         "GLOBAL",
-                        "Mide el riesgo de incumplir niveles de servicio.",
+                        "Estima si hay señales que puedan comprometer niveles de servicio.",
                         platformWeightFormula(
                                 "Aruba",
                                 "Citrix",
@@ -199,8 +207,8 @@ public class KpiDefinitionService {
                         transversalRiskThresholds("transversal.slaRisk"),
                         List.of(
                                 "Logon, sesiones, Delivery Controllers y errores Citrix",
-                                "Estado de red Aruba",
-                                "Tickets críticos y cierre GLPI",
+                                "Índice de salud Aruba",
+                                "Tickets SLA vencidos, tickets críticos y cierre GLPI",
                                 "SharePoint, secretos y equipos Microsoft 365"
                         )
                 ),
@@ -209,7 +217,7 @@ public class KpiDefinitionService {
                         "Backlog operativo",
                         "TRANSVERSAL",
                         "GLOBAL",
-                        "Mide el trabajo pendiente acumulado.",
+                        "Resume el trabajo pendiente acumulado.",
                         platformWeightFormula(
                                 "Aruba",
                                 "Citrix",
@@ -229,7 +237,7 @@ public class KpiDefinitionService {
                         "Impacto en usuarios",
                         "TRANSVERSAL",
                         "GLOBAL",
-                        "Mide la afección que pueden percibir los usuarios.",
+                        "Aproxima la afección que pueden percibir los usuarios.",
                         platformWeightFormula(
                                 "Aruba",
                                 "Citrix",
@@ -249,7 +257,7 @@ public class KpiDefinitionService {
                         "Servicios afectados",
                         "TRANSVERSAL",
                         "GLOBAL",
-                        "Mide cuantas plataformas están afectadas.",
+                        "Indica cuántas plataformas están afectadas a la vez.",
                         affectedServicesFormula(),
                         transversalRiskThresholds("transversal.affectedServices"),
                         platformHealthSources()
@@ -259,7 +267,7 @@ public class KpiDefinitionService {
                         "Presión operativa GLPI",
                         "ANALYSIS",
                         "GLPI",
-                        "Mide la presión operativa de GLPI como consecuencia observable.",
+                        "Describe la presión de GLPI como reflejo del trabajo que llega a soporte.",
                         glpiOperationalPressureFormula(),
                         transversalRiskThresholds("transversal.operationalPressure"),
                         List.of(
@@ -269,36 +277,36 @@ public class KpiDefinitionService {
                                 "Porcentaje de cierre semanal"
                         )
                 ),
-                relationDefinition(
-                        "aruba_glpi_relation",
-                        "Relacion Aruba-GLPI",
-                        "Aruba estado de red"
-                ),
-                relationDefinition(
-                        "citrix_glpi_relation",
-                        "Relacion Citrix-GLPI",
-                        "Citrix indice de salud Citrix"
-                ),
-                relationDefinition(
-                        "microsoft365_glpi_relation",
-                        "Relacion Microsoft365-GLPI",
-                        "Microsoft 365 indice de salud Microsoft 365"
+                definition(
+                        "technical_platform_relations",
+                        "Relacion tecnica aparente entre plataformas",
+                        "ANALYSIS",
+                        "GLOBAL",
+                        "Documenta la tabla actual que compara afeccion entre plataformas tecnicas.",
+                        "Para cada par origen/destino calcula co-ocurrencia tecnica e incremento medio del destino cuando el origen esta afectado.",
+                        relationReadingThresholds(),
+                        List.of(
+                                "Índice de salud Aruba",
+                                "Citrix indice de salud Citrix",
+                                "Microsoft 365 indice de salud Microsoft 365",
+                                "Snapshots diarios del panel de analisis"
+                        )
                 ),
                 definition(
                         "analysis_technical_degradation",
                         "Degradación técnica",
                         "ANALYSIS",
                         "GLOBAL",
-                        "Mide la afección técnica conjunta de Aruba, Citrix y Microsoft 365 para el panel de análisis.",
+                        "Agrupa la afección técnica de Aruba, Citrix y Microsoft 365 para el panel de análisis.",
                         platformWeightFormula(
-                                "Aruba estado de red",
+                                "Índice de salud Aruba",
                                 "Citrix indice de salud",
                                 "Microsoft 365 indice de salud",
                                 "GLPI",
                                 kpiProperties.getWeights().getAnalysisTechnicalDegradation()),
                         transversalRiskThresholds("transversal.technicalDegradation"),
                         List.of(
-                                "Aruba estado de red",
+                                "Índice de salud Aruba",
                                 "Citrix indice de salud Citrix",
                                 "Microsoft 365 indice de salud Microsoft 365"
                         )
@@ -308,7 +316,7 @@ public class KpiDefinitionService {
                         "Impacto en usuarios",
                         "ANALYSIS",
                         "GLOBAL",
-                        "Mide si la degradación técnica se traduce en afección visible para usuarios.",
+                        "Compara degradación técnica con señales que podrían notar los usuarios.",
                         platformWeightFormula(
                                 "Aruba impacto usuario",
                                 "Citrix impacto usuario",
@@ -323,56 +331,187 @@ public class KpiDefinitionService {
                                 "Presión operativa GLPI"
                         )
                 ),
-                definition(
-                        "technical_operational_conversion",
-                        "Conversion técnica-operativa",
-                        "ANALYSIS",
-                        "GLOBAL",
-                        "Mide la coincidencia entre degradación técnica e impacto operativo.",
-                        "min(Degradación técnica, Impacto en usuarios)",
-                        commonAffectionThresholds(),
+                specificRelationDefinition(
+                        "aruba_affectation_vs_wifi_clients",
+                        "Afectacion Aruba vs clientes WiFi",
+                        "Compara la afeccion Aruba con el volumen de clientes WiFi conectados.",
+                        "Eje X: afeccion Aruba (%). Eje Y: clientes WiFi Aruba. Lectura inversa: se revisan los dias donde sube la afeccion y baja el uso WiFi.",
                         List.of(
-                                "Degradación técnica",
-                                "Impacto en usuarios"
+                                "Afeccion Aruba",
+                                "Clientes WiFi Aruba",
+                                "Snapshots diarios del panel de analisis"
+                        )
+                ),
+                specificRelationDefinition(
+                        "aruba_affectation_vs_aruba_tickets",
+                        "Afectacion Aruba vs tickets Aruba",
+                        "Relaciona la afeccion de red Aruba con tickets GLPI clasificados como Aruba.",
+                        "Eje X: afeccion Aruba (%). Eje Y: tickets abiertos Aruba. Ayuda a ver coincidencias entre degradacion de red y trabajo de soporte asociado.",
+                        List.of(
+                                "Afeccion Aruba",
+                                "Tickets abiertos Aruba",
+                                "Snapshots diarios del panel de analisis"
+                        )
+                ),
+                specificRelationDefinition(
+                        "citrix_affectation_vs_citrix_tickets",
+                        "Afectacion Citrix vs tickets Citrix",
+                        "Relaciona la afeccion Citrix con tickets GLPI clasificados como Citrix.",
+                        "Eje X: afeccion Citrix (%). Eje Y: tickets abiertos Citrix. Sirve para revisar si los problemas de acceso coinciden con mayor carga de soporte.",
+                        List.of(
+                                "Afeccion Citrix",
+                                "Tickets abiertos Citrix",
+                                "Snapshots diarios del panel de analisis"
+                        )
+                ),
+                specificRelationDefinition(
+                        "microsoft365_affectation_vs_microsoft365_tickets",
+                        "Afectacion Microsoft 365 vs tickets Microsoft 365",
+                        "Relaciona la afeccion Microsoft 365 con tickets GLPI clasificados como Microsoft 365.",
+                        "Eje X: afeccion Microsoft 365 (%). Eje Y: tickets abiertos Microsoft 365. Orienta la revision de identidad, cloud y puesto de usuario.",
+                        List.of(
+                                "Afeccion Microsoft 365",
+                                "Tickets abiertos Microsoft 365",
+                                "Snapshots diarios del panel de analisis"
+                        )
+                ),
+                specificRelationDefinition(
+                        "aruba_wifi_clients_vs_citrix_sessions",
+                        "Clientes WiFi Aruba vs sesiones Citrix",
+                        "Compara el volumen de clientes WiFi con las sesiones activas de Citrix para ver si una caida de conectividad coincide con menor acceso a aplicaciones.",
+                        "Eje X: clientes WiFi Aruba. Eje Y: sesiones Citrix. Si bajan los clientes WiFi y tambien bajan las sesiones Citrix, puede existir una relacion operativa entre conectividad y acceso a Citrix.",
+                        List.of(
+                                "Clientes WiFi Aruba",
+                                "Sesiones activas Citrix",
+                                "Snapshots diarios del panel de analisis"
+                        )
+                ),
+                specificRelationDefinition(
+                        "aruba_wifi_clients_vs_microsoft365_active_users",
+                        "Clientes WiFi Aruba vs usuarios activos Microsoft 365",
+                        "Relaciona clientes WiFi con usuarios activos en Microsoft 365 para comprobar si una incidencia de red reduce la actividad cloud observada.",
+                        "Eje X: clientes WiFi Aruba. Eje Y: usuarios activos Microsoft 365. Una bajada simultanea puede orientar la revision de conectividad y uso de servicios cloud.",
+                        List.of(
+                                "Clientes WiFi Aruba",
+                                "Usuarios activos Microsoft 365",
+                                "Snapshots diarios del panel de analisis"
+                        )
+                ),
+                specificRelationDefinition(
+                        "citrix_delivery_controllers_vs_failed_logons",
+                        "Delivery Controllers disponibles vs errores de inicio Citrix",
+                        "Compara la disponibilidad de Delivery Controllers con los errores de inicio de sesion en Citrix.",
+                        "Eje X: Delivery Controllers disponibles. Eje Y: errores de inicio Citrix. Si disminuyen los Delivery Controllers disponibles y aumentan los errores de inicio, conviene revisar la capa de acceso Citrix.",
+                        List.of(
+                                "Delivery Controllers disponibles",
+                                "Errores de inicio Citrix",
+                                "Snapshots diarios del panel de analisis"
+                        )
+                ),
+                specificRelationDefinition(
+                        "citrix_delivery_controllers_vs_sessions",
+                        "Delivery Controllers disponibles vs sesiones Citrix",
+                        "Compara la disponibilidad de Delivery Controllers con las sesiones activas Citrix.",
+                        "Eje X: Delivery Controllers disponibles. Eje Y: sesiones Citrix. Ayuda a interpretar capacidad y uso sin afirmar causalidad.",
+                        List.of(
+                                "Delivery Controllers disponibles",
+                                "Sesiones activas Citrix",
+                                "Snapshots diarios del panel de analisis"
+                        )
+                ),
+                specificRelationDefinition(
+                        "glpi_pressure_vs_operational_backlog",
+                        "Presion operativa GLPI vs backlog operativo",
+                        "Compara la presion operativa GLPI con el trabajo pendiente acumulado.",
+                        "Eje X: presion operativa GLPI (%). Eje Y: backlog operativo. Ayuda a separar carga puntual de acumulacion real de trabajo.",
+                        List.of(
+                                "Presion operativa GLPI",
+                                "Backlog operativo",
+                                "Snapshots diarios del panel de analisis"
+                        )
+                ),
+                specificRelationDefinition(
+                        "glpi_pressure_vs_open_tickets",
+                        "Presion operativa GLPI vs tickets abiertos GLPI",
+                        "Relaciona la presion operativa GLPI con el volumen total de tickets abiertos.",
+                        "Eje X: presion operativa GLPI (%). Eje Y: tickets abiertos GLPI. Permite comprobar si la presion sube junto al volumen de entrada pendiente.",
+                        List.of(
+                                "Presion operativa GLPI",
+                                "Tickets abiertos GLPI",
+                                "Snapshots diarios del panel de analisis"
+                        )
+                ),
+                specificRelationDefinition(
+                        "aruba_down_switches_vs_down_aps",
+                        "Switches apagados vs APs caidos",
+                        "Relaciona switches apagados con APs caidos para comprobar si una incidencia de switching coincide con perdida de puntos de acceso.",
+                        "Eje X: switches apagados. Eje Y: APs caidos. Una subida conjunta puede indicar que el problema afecta a conectividad de acceso o alimentacion de APs.",
+                        List.of(
+                                "Switches apagados",
+                                "APs caidos",
+                                "Snapshots diarios del panel de analisis"
+                        )
+                ),
+                specificRelationDefinition(
+                        "glpi_created_vs_closed_tickets",
+                        "Tickets creados GLPI vs tickets cerrados GLPI",
+                        "Compara tickets creados con tickets cerrados para ver si soporte absorbe la entrada de trabajo.",
+                        "Eje X: tickets creados GLPI. Eje Y: tickets cerrados GLPI. Si los creados superan a los cerrados de forma persistente, puede crecer el backlog.",
+                        List.of(
+                                "Tickets creados GLPI",
+                                "Tickets cerrados GLPI",
+                                "Snapshots diarios del panel de analisis"
+                        )
+                ),
+                specificRelationDefinition(
+                        "microsoft365_active_users_vs_citrix_sessions",
+                        "Usuarios activos Microsoft 365 vs sesiones Citrix",
+                        "Compara la actividad de Microsoft 365 con las sesiones Citrix para diferenciar una caida especifica de Citrix de una caida general de actividad.",
+                        "Eje X: usuarios activos Microsoft 365. Eje Y: sesiones Citrix. Si Microsoft 365 mantiene usuarios activos pero Citrix no tiene sesiones, el problema apunta mas a Citrix que a una caida general de conectividad o servicios cloud.",
+                        List.of(
+                                "Usuarios activos Microsoft 365",
+                                "Sesiones activas Citrix",
+                                "Snapshots diarios del panel de analisis"
                         )
                 ),
                 definition(
-                        "high_high_cooccurrence",
-                        "Co-ocurrencia alta-alta",
+                        "period_temporal_evolution",
+                        "Evolucion temporal del periodo",
                         "ANALYSIS",
                         "GLOBAL",
-                        "Mide el porcentaje de snapshots donde coinciden plataforma afectada y GLPI alto.",
-                        "Snapshots con plataforma >= " + kpiProperties.getStatus().getYellowMin()
-                                + " y GLPI >= " + kpiProperties.getStatus().getYellowMin()
-                                + " dividido entre total de snapshots.",
+                        "Muestra como evolucionan los indicadores principales durante el periodo seleccionado.",
+                        "Serie temporal basada en snapshots diarios para 30 o 90 dias: degradacion tecnica, presion GLPI, impacto en usuarios, afeccion Aruba, afeccion Citrix y estado global.",
                         commonAffectionThresholds(),
                         List.of(
-                                "Snapshots de análisis",
-                                "Afección de plataforma seleccionada",
-                                "Presión operativa GLPI"
+                                "Snapshots diarios del panel de analisis",
+                                "Degradacion tecnica",
+                                "Presion operativa GLPI",
+                                "Impacto en usuarios",
+                                "Afeccion Aruba",
+                                "Afeccion Citrix",
+                                "Estado global"
                         )
                 )
         );
     }
 
-    private KpiDefinitionDto relationDefinition(
+    private KpiDefinitionDto specificRelationDefinition(
             String id,
             String name,
-            String platformSource
+            String description,
+            String formula,
+            List<String> sources
     ) {
 
         return definition(
                 id,
                 name,
-                "ANALYSIS",
+                "ANALYSIS_RELATION",
                 "GLOBAL",
-                "Mide relación operativa aparente entre una plataforma técnica y la presión GLPI.",
-                "min(Presión operativa GLPI, " + platformSource + ")",
-                commonAffectionThresholds(),
-                List.of(
-                        "Presión operativa GLPI",
-                        platformSource
-                )
+                description + " La grafica es exploratoria y no demuestra causalidad.",
+                formula,
+                relationReadingThresholds(),
+                sources
         );
     }
 
@@ -399,10 +538,19 @@ public class KpiDefinitionService {
         );
     }
 
+    private KpiThresholdDto relationReadingThresholds() {
+
+        return new KpiThresholdDto(
+                "Relacion baja o sin datos suficientes",
+                "Coincidencia moderada con variacion suficiente",
+                "Coincidencia alta con variacion suficiente"
+        );
+    }
+
     private List<String> platformHealthSources() {
 
         return List.of(
-                "Aruba estado de red",
+                "Índice de salud Aruba",
                 "Citrix indice de salud Citrix",
                 "Microsoft 365 indice de salud Microsoft 365",
                 "GLPI indice de salud GLPI"
@@ -458,25 +606,39 @@ public class KpiDefinitionService {
 
     private String arubaNetworkStatusFormula() {
 
-        return "Access Points aportan hasta "
-                + kpiProperties.getAruba().getAccessPointBlockWeight()
-                + " puntos y switches hasta "
-                + kpiProperties.getAruba().getSwitchBlockWeight()
-                + " puntos. El bloque amarillo aporta la mitad del peso interno configurado. AP amarillo desde el "
+        return "Suma de afecciones parciales con limite 100: tickets Aruba desde "
+                + kpiProperties.getAruba().getArubaOpenTicketsYellowMin()
+                + " amarillo y desde "
+                + kpiProperties.getAruba().getArubaOpenTicketsRedMin()
+                + " rojo; APs caidos amarillo desde el "
                 + kpiProperties.getAruba().getAccessPointDownYellowPercent()
                 + "% y rojo desde el "
                 + kpiProperties.getAruba().getAccessPointDownRedPercent()
-                + "% o si no hay clientes WiFi/MUTUALIA. Switches amarillo desde "
-                + kpiProperties.getAruba().getSwitchDownYellowMin()
-                + " switches caidos o con upgrade pendiente. Una condicion roja prevalece sobre el porcentaje.";
+                + "%; firmware AP amarillo desde "
+                + kpiProperties.getAruba().getPendingFirmwareApsYellowMin()
+                + "; APs inactivos amarillo desde "
+                + kpiProperties.getAruba().getInactiveApsYellowMin()
+                + "; clientes WiFi, Mutualia-APS y Mutualia-WIFI rojo si no hay clientes; switches apagados amarillo si son mas de "
+                + kpiProperties.getAruba().getSwitchDownYellowAbove()
+                + " y rojo si todos los switches estan caidos"
+                + "; switches con upgrade pendiente amarillo desde "
+                + kpiProperties.getAruba().getSwitchUpgradeYellowMin()
+                + "; switches infrautilizados amarillo si son mas de "
+                + kpiProperties.getAruba().getUnderusedSwitchesYellowAbove()
+                + " y rojo si son mas de "
+                + kpiProperties.getAruba().getUnderusedSwitchesRedAbove()
+                + ".";
     }
 
     private String citrixHealthFormula() {
 
-        return "Media uniforme de sesiones activas, Delivery Controllers, Average Logon Duration, carga de servidores y errores de inicio. "
-                + "Sin sesiones activas es rojo. Delivery Controllers: 0 disponibles rojo, menos del "
+        return "Suma de afecciones parciales limitada a 100. El porcentaje mide intensidad y el estado superior se calcula con los rangos generales de afeccion. "
+                + "Sesiones activas a 0 y Delivery Controllers a 0 representan afeccion maxima. "
+                + "Delivery Controllers: 0-33% disponibles rojo, 34-"
+                + (kpiProperties.getCitrix().getDeliveryControllerYellowBelowPercent() - 1)
+                + "% amarillo, "
                 + kpiProperties.getCitrix().getDeliveryControllerYellowBelowPercent()
-                + "% amarillo. Logon: > "
+                + "-100% verde. Logon: > "
                 + kpiProperties.getCitrix().getLogonDurationRedAboveSeconds()
                 + "s rojo, > "
                 + kpiProperties.getCitrix().getLogonDurationYellowAboveSeconds()
@@ -484,7 +646,7 @@ public class KpiDefinitionService {
                 + kpiProperties.getCitrix().getServerLoadRedMin()
                 + "% rojo, >= "
                 + kpiProperties.getCitrix().getServerLoadYellowMin()
-                + "% amarillo. Errores: > "
+                + "% amarillo; la carga roja aporta afeccion alta proporcional, no 100% automatico. Errores: > "
                 + kpiProperties.getCitrix().getFailedLogonsRedAbove()
                 + " rojo, > "
                 + kpiProperties.getCitrix().getFailedLogonsYellowAbove()
@@ -493,33 +655,50 @@ public class KpiDefinitionService {
 
     private String microsoft365HealthFormula() {
 
-        return "Media uniforme de SharePoint, usuarios sin MFA, secretos proximos a caducar, equipos no conformes, Windows desactualizados y equipos sin cifrado. "
-                + "SharePoint: > "
+        return "Suma de afecciones parciales limitada a 100. "
+                + "Licencias no asignadas: menos de "
+                + kpiProperties.getMicrosoft365().getUnassignedLicensesYellowBelow()
+                + " amarillo, igual o menor que "
+                + kpiProperties.getMicrosoft365().getUnassignedLicensesRedBelowOrEqual()
+                + " rojo. Servicios Outlook/Teams/SharePoint: degradado amarillo e incidencia rojo. "
+                + "Buzones casi llenos y emails en cuarentena aportan amarillo si existen. SharePoint: >= "
                 + kpiProperties.getMicrosoft365().getSharePointRedAbove()
                 + "% rojo, >= "
                 + kpiProperties.getMicrosoft365().getSharePointYellowMin()
-                + "% amarillo. Usuarios sin MFA: > "
+                + "% amarillo. Usuarios en riesgo: > "
+                + kpiProperties.getMicrosoft365().getRiskyUsersRedAbove()
+                + " rojo, > "
+                + kpiProperties.getMicrosoft365().getRiskyUsersYellowAbove()
+                + " amarillo. Inicios fallidos: >= "
+                + kpiProperties.getMicrosoft365().getFailedSignInsRedMin()
+                + " rojo, >= "
+                + kpiProperties.getMicrosoft365().getFailedSignInsYellowMin()
+                + " amarillo. Usuarios sin MFA: > "
                 + kpiProperties.getMicrosoft365().getUsersWithoutMfaRedAbove()
                 + " rojo, > "
                 + kpiProperties.getMicrosoft365().getUsersWithoutMfaYellowAbove()
                 + " amarillo. Secretos proximos a caducar: > "
                 + kpiProperties.getMicrosoft365().getSecretsYellowAbove()
-                + " amarillo. Equipos no conformes: > "
+                + " amarillo. Aplicaciones sin uso y permisos elevados: si existen, amarillo. Equipos no conformes: > "
                 + kpiProperties.getMicrosoft365().getNonCompliantDevicesRedAbove()
                 + " rojo, > "
                 + kpiProperties.getMicrosoft365().getNonCompliantDevicesYellowAbove()
+                + " amarillo. Tickets Microsoft 365: >= "
+                + kpiProperties.getMicrosoft365().getMicrosoft365OpenTicketsRedMin()
+                + " rojo, >= "
+                + kpiProperties.getMicrosoft365().getMicrosoft365OpenTicketsYellowMin()
                 + " amarillo. Windows desactualizados: > "
                 + kpiProperties.getMicrosoft365().getOutdatedWindowsYellowAbove()
                 + " amarillo. Equipos sin cifrado: > "
                 + kpiProperties.getMicrosoft365().getDevicesWithoutEncryptionRedAbove()
-                + " rojo, > "
-                + kpiProperties.getMicrosoft365().getDevicesWithoutEncryptionYellowAbove()
-                + " amarillo.";
+                + " rojo. Sin check-in >90 dias: > "
+                + kpiProperties.getMicrosoft365().getStaleDevicesRedAbove()
+                + " rojo.";
     }
 
     private String glpiHealthFormula() {
 
-        return "Media uniforme de tickets abiertos, tickets críticos, porcentaje de cierre diario y porcentaje de cierre semanal. "
+        return "Media uniforme de tickets abiertos, tickets críticos, tickets vencidos SLA, porcentaje de cierre diario y porcentaje de cierre semanal. "
                 + "Tickets abiertos: >= "
                 + kpiProperties.getGlpi().getOpenTicketsRedMin()
                 + " rojo, >= "
@@ -528,6 +707,10 @@ public class KpiDefinitionService {
                 + kpiProperties.getGlpi().getCriticalTicketsRedAbove()
                 + " rojo, > "
                 + kpiProperties.getGlpi().getCriticalTicketsYellowAbove()
+                + " amarillo. Tickets vencidos SLA: > "
+                + kpiProperties.getGlpi().getSlaBreachedTicketsRedAbove()
+                + " rojo, > "
+                + kpiProperties.getGlpi().getSlaBreachedTicketsYellowAbove()
                 + " amarillo. Porcentaje de cierre diario/semanal: >= "
                 + kpiProperties.getGlpi().getClosedPercentGreenMin()
                 + "% verde, por debajo amarillo.";
@@ -576,3 +759,6 @@ public class KpiDefinitionService {
         );
     }
 }
+
+
+

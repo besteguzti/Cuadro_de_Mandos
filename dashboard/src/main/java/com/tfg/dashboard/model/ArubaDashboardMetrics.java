@@ -7,10 +7,9 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
 /**
- * Métricas agregadas de Aruba usadas por la vista de resumen.
+ * Métricas agregadas de Aruba para la vista de resumen.
  *
- * Resume firmware y clientes WiFi calculados durante la sincronización para no
- * depender de llamadas a Aruba Central en cada petición del dashboard.
+ * Se actualizan durante la sincronización para no consultar Aruba Central en cada petición del dashboard.
  */
 @Entity
 @Table(name = "aruba_dashboard_metrics")
@@ -136,3 +135,4 @@ public class ArubaDashboardMetrics {
         this.updatedAt = updatedAt;
     }
 }
+

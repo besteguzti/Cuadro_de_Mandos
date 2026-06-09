@@ -52,3 +52,4 @@ class ApiDashboardControllerTest {
                 .andExpect(jsonPath("$.trend").value("STABLE"));
     }
 }
+

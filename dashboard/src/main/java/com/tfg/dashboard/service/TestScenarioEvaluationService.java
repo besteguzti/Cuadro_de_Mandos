@@ -54,12 +54,13 @@ public class TestScenarioEvaluationService {
                         globalKpiCalculationService.calculateArubaNetworkAffection(aruba)
                 );
         String citrixStatus =
-                kpiScoringService.statusFromAffection(
-                        globalKpiCalculationService.calculateCitrixHealthAffection(citrix)
-                );
+                globalKpiCalculationService.calculateCitrixHealthStatus(citrix);
         String microsoftStatus =
                 kpiScoringService.statusFromAffection(
-                        globalKpiCalculationService.calculateMicrosoft365HealthAffection(microsoft365)
+                        globalKpiCalculationService.calculateMicrosoft365HealthAffection(
+                                microsoft365,
+                                glpi.getMicrosoft365OpenTickets()
+                        )
                 );
         String glpiStatus =
                 kpiScoringService.statusFromAffection(
@@ -78,7 +79,12 @@ public class TestScenarioEvaluationService {
         response.setSummary(summary);
         response.setPlatformStatus(platformStatus);
         response.setOperationalSummary(
-                executiveSummaryService.buildScenarioSummary(summary)
+                executiveSummaryService.buildScenarioSummary(
+                        summary,
+                        aruba,
+                        citrix,
+                        microsoft365,
+                        glpi)
         );
 
         return response;
@@ -192,12 +198,6 @@ public class TestScenarioEvaluationService {
             );
         }
 
-        if (microsoft365.getActiveUsers() != null && activeUsers > activeSessions) {
-            throw new IllegalArgumentException(
-                    "Usuarios activos Microsoft 365 no puede ser mayor que sesiones activas Citrix."
-            );
-        }
-
         if (microsoft365.getActiveUsers() != null && usersWithoutMfa > activeUsers) {
             throw new IllegalArgumentException(
                     "Usuarios sin MFA no puede ser mayor que usuarios activos Microsoft 365."
@@ -239,6 +239,9 @@ public class TestScenarioEvaluationService {
     private CitrixMetricsHistory buildCitrixMetrics(TestScenarioRequest.CitrixData citrixData) {
         CitrixMetricsHistory citrix = new CitrixMetricsHistory();
         citrix.setActiveSessions(citrixData.getActiveSessions());
+        // Valor por defecto razonable para licencias en escenarios de prueba
+        // Si el request incluye licencias, usar ese valor; si no, usar 500.
+        citrix.setActiveLicenses(citrixData.getActiveLicenses() == null ? 500 : citrixData.getActiveLicenses());
         citrix.setDisconnectedSessions(
                 citrixData.getDisconnectedSessions() == null ? 0 : citrixData.getDisconnectedSessions());
         citrix.setTotalDeliveryControllers(citrixData.getTotalDeliveryControllers());
@@ -254,12 +257,23 @@ public class TestScenarioEvaluationService {
     private Microsoft365MetricsHistory buildMicrosoft365Metrics(TestScenarioRequest.Microsoft365Data microsoftData) {
         Microsoft365MetricsHistory microsoft365 = new Microsoft365MetricsHistory();
         microsoft365.setActiveUsers(microsoftData.getActiveUsers());
+        microsoft365.setUnassignedLicenses(50);
+        microsoft365.setOutlookStatus("HEALTHY");
+        microsoft365.setTeamsStatus("HEALTHY");
+        microsoft365.setSharePointStatus("HEALTHY");
+        microsoft365.setNearlyFullMailboxes(0);
+        microsoft365.setEmailsQuarantined(0);
         microsoft365.setSharePointStoragePercent(microsoftData.getSharePointStoragePercent());
+        microsoft365.setRiskyUsers(0);
+        microsoft365.setFailedSignIns(0);
         microsoft365.setUsersWithoutMfa(microsoftData.getUsersWithoutMfa());
         microsoft365.setAppsSecretsExpiringSoon(microsoftData.getAppsSecretsExpiringSoon());
+        microsoft365.setUnusedApplications(0);
+        microsoft365.setHighPrivilegeApplications(0);
         microsoft365.setNonCompliantDevices(microsoftData.getNonCompliantDevices());
         microsoft365.setOutdatedWindowsDevices(microsoftData.getOutdatedWindowsDevices());
         microsoft365.setDevicesWithoutEncryption(microsoftData.getDevicesWithoutEncryption());
+        microsoft365.setStaleDevices(0);
         microsoft365.setMicrosoft365Health(null);
         microsoft365.setCollectedAt(LocalDateTime.now());
         return microsoft365;
@@ -320,3 +334,4 @@ public class TestScenarioEvaluationService {
     }
 
 }
+

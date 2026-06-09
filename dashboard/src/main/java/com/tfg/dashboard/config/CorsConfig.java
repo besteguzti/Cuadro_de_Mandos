@@ -6,10 +6,7 @@ import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 /**
- * Configura CORS de forma global para todos los controladores REST.
- *
- * Evita repetir @CrossOrigin en cada controller y permite que el frontend Vite
- * local consuma el backend durante el desarrollo.
+ * Configurar CORS de forma global para todos los controladores REST.
  */
 @Configuration
 public class CorsConfig {

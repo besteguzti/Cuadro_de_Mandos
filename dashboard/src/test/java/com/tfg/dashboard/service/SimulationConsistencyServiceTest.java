@@ -20,11 +20,11 @@ import com.tfg.dashboard.dto.summary.Microsoft365Summary;
 import com.tfg.dashboard.model.GlpiMetricsHistory;
 import com.tfg.dashboard.repository.GlpiMetricsHistoryRepository;
 
-class SimulatedMetricsConsistencyServiceTest {
+class SimulationConsistencyServiceTest {
 
     @Test
     void citrixSessionsNeverExceedArubaWifiClients() {
-        SimulatedMetricsConsistencyService service = serviceWithEmptyGlpiHistory();
+        SimulationConsistencyService service = serviceWithEmptyGlpiHistory();
         ArubaSummary aruba = new ArubaSummary();
         CitrixSummary citrix = new CitrixSummary();
         Microsoft365Summary microsoft365 = new Microsoft365Summary();
@@ -42,7 +42,7 @@ class SimulatedMetricsConsistencyServiceTest {
 
     @Test
     void zeroWifiClientsForcesCitrixSessionsToZero() {
-        SimulatedMetricsConsistencyService service = serviceWithEmptyGlpiHistory();
+        SimulationConsistencyService service = serviceWithEmptyGlpiHistory();
         ArubaSummary aruba = new ArubaSummary();
         CitrixSummary citrix = new CitrixSummary();
         Microsoft365Summary microsoft365 = new Microsoft365Summary();
@@ -56,12 +56,12 @@ class SimulatedMetricsConsistencyServiceTest {
 
         assertThat(citrix.getActiveSessions()).isZero();
         assertThat(citrix.getDisconnectedSessions()).isZero();
-        assertThat(microsoft365.getActiveUsers()).isZero();
+        assertThat(microsoft365.getActiveUsers()).isEqualTo(25);
     }
 
     @Test
-    void microsoft365ActiveUsersAndSecurityCountsAreCappedByCoherentLimits() {
-        SimulatedMetricsConsistencyService service = serviceWithEmptyGlpiHistory();
+    void microsoft365ActiveUsersCanRemainAboveCitrixSessionsAndSecurityCountsAreCappedByCoherentLimits() {
+        SimulationConsistencyService service = serviceWithEmptyGlpiHistory();
         ArubaSummary aruba = new ArubaSummary();
         CitrixSummary citrix = new CitrixSummary();
         Microsoft365Summary microsoft365 = new Microsoft365Summary();
@@ -70,6 +70,7 @@ class SimulatedMetricsConsistencyServiceTest {
         citrix.setActiveSessions(60);
         citrix.setDisconnectedSessions(10);
         microsoft365.setActiveUsers(120);
+        microsoft365.setRiskyUsers(180);
         microsoft365.setUsersWithoutMfa(90);
         microsoft365.setNonCompliantDevices(12);
         microsoft365.setDevicesWithoutEncryption(40);
@@ -77,7 +78,8 @@ class SimulatedMetricsConsistencyServiceTest {
 
         service.applyBasicRangeConsistency(aruba, citrix, microsoft365);
 
-        assertThat(microsoft365.getActiveUsers()).isEqualTo(60);
+        assertThat(microsoft365.getActiveUsers()).isEqualTo(120);
+        assertThat(microsoft365.getRiskyUsers()).isLessThanOrEqualTo(microsoft365.getActiveUsers());
         assertThat(microsoft365.getUsersWithoutMfa()).isLessThanOrEqualTo(microsoft365.getActiveUsers());
         assertThat(microsoft365.getDevicesWithoutEncryption())
                 .isLessThanOrEqualTo(microsoft365.getNonCompliantDevices());
@@ -85,8 +87,28 @@ class SimulatedMetricsConsistencyServiceTest {
     }
 
     @Test
+    void microsoft365ActiveUsersCanBePositiveWhenCitrixHasNoActiveSessions() {
+        SimulationConsistencyService service = serviceWithEmptyGlpiHistory();
+        ArubaSummary aruba = new ArubaSummary();
+        CitrixSummary citrix = new CitrixSummary();
+        Microsoft365Summary microsoft365 = new Microsoft365Summary();
+
+        aruba.setTotalWifiClients(200);
+        citrix.setActiveSessions(0);
+        citrix.setDisconnectedSessions(0);
+        microsoft365.setActiveUsers(150);
+        microsoft365.setUsersWithoutMfa(20);
+
+        service.applyBasicRangeConsistency(aruba, citrix, microsoft365);
+
+        assertThat(citrix.getActiveSessions()).isZero();
+        assertThat(microsoft365.getActiveUsers()).isEqualTo(150);
+        assertThat(microsoft365.getUsersWithoutMfa()).isEqualTo(20);
+    }
+
+    @Test
     void glpiPlatformTicketsIncreaseWithPlatformSeverityAndKeepTotalCoherent() {
-        SimulatedMetricsConsistencyService service = serviceWithEmptyGlpiHistory();
+        SimulationConsistencyService service = serviceWithEmptyGlpiHistory();
         GlpiSummary glpi = new GlpiSummary();
 
         glpi.setCreatedToday(30);
@@ -181,7 +203,7 @@ class SimulatedMetricsConsistencyServiceTest {
         when(repository.findByCollectedAtAfterOrderByCollectedAtAsc(any()))
                 .thenReturn(previousDays);
 
-        SimulatedMetricsConsistencyService service = new SimulatedMetricsConsistencyService(
+        SimulationConsistencyService service = new SimulationConsistencyService(
                 mock(ArubaSummaryService.class),
                 mock(GlobalKpiCalculationService.class),
                 new KpiScoringService(new KpiProperties()),
@@ -190,7 +212,7 @@ class SimulatedMetricsConsistencyServiceTest {
         current.setCreatedToday(20);
         current.setClosedToday(10);
 
-        SimulatedMetricsConsistencyService.WeeklyTicketActivity activity =
+        SimulationConsistencyService.WeeklyTicketActivity activity =
                 service.buildWeeklyActivity(current, collectedAt);
 
         assertThat(activity.createdThisWeek()).isEqualTo(previousCreated + activity.createdToday());
@@ -198,13 +220,13 @@ class SimulatedMetricsConsistencyServiceTest {
         assertThat(activity.openTickets()).isEqualTo(activity.createdThisWeek() - activity.closedThisWeek());
     }
 
-    private SimulatedMetricsConsistencyService serviceWithEmptyGlpiHistory() {
+    private SimulationConsistencyService serviceWithEmptyGlpiHistory() {
         GlpiMetricsHistoryRepository repository = mock(GlpiMetricsHistoryRepository.class);
 
         when(repository.findByCollectedAtAfterOrderByCollectedAtAsc(any()))
                 .thenReturn(List.of());
 
-        return new SimulatedMetricsConsistencyService(
+        return new SimulationConsistencyService(
                 mock(ArubaSummaryService.class),
                 mock(GlobalKpiCalculationService.class),
                 new KpiScoringService(new KpiProperties()),

@@ -18,18 +18,16 @@ import com.tfg.dashboard.repository.ArubaNetworkStatusHistoryRepository;
 import com.tfg.dashboard.repository.TransversalKpiHistoryRepository;
 
 /**
- * Calcula el estado normalizado de red Aruba.
+ * Calcula el índice normalizado de salud Aruba.
  *
- * Aplica las reglas de afección para Access Points y switches, genera motivos
- * explicativos, guarda históricos y prepara valores para el análisis
+ * Aplica la tabla de afecciones parciales definida para Aruba, genera motivos
+ * explicativos, guarda historicos y prepara valores para el analisis
  * transversal.
  */
 @Service
 public class ArubaNetworkStatusService {
 
         private static final String GREEN = "GREEN";
-        private static final String YELLOW = "YELLOW";
-        private static final String RED = "RED";
 
         private final ArubaNetworkStatusHistoryRepository networkStatusHistoryRepository;
         private final TransversalKpiHistoryRepository transversalKpiHistoryRepository;
@@ -46,7 +44,7 @@ public class ArubaNetworkStatusService {
         }
 
         /**
-         * Calcula porcentaje, color global y motivos del estado de red Aruba.
+         * Calcula porcentaje, color global y motivos del índice de salud Aruba.
          */
         public ArubaNetworkStatusDto buildNetworkStatusDetails(
                         int totalAps,
@@ -58,7 +56,25 @@ public class ArubaNetworkStatusService {
                         int mutualiaWifiClients,
                         int totalSwitches,
                         int downSwitches,
-                        int pendingFirmwareSwitches) {
+                        int pendingFirmwareSwitches,
+                        int underusedSwitches,
+                        int arubaOpenTickets) {
+
+                ArubaAffectationCalculator.Result affectation = ArubaAffectationCalculator.calculate(
+                                new ArubaAffectationCalculator.Input(
+                                                totalAps,
+                                                downAps,
+                                                inactiveAps,
+                                                pendingFirmwareAps,
+                                                totalWifiClients,
+                                                mutualiaApsClients,
+                                                mutualiaWifiClients,
+                                                totalSwitches,
+                                                downSwitches,
+                                                pendingFirmwareSwitches,
+                                                underusedSwitches,
+                                                arubaOpenTickets),
+                                kpiProperties);
 
                 AccessPointStatusDto accessPointStatus = buildAccessPointStatus(
                                 totalAps,
@@ -67,49 +83,44 @@ public class ArubaNetworkStatusService {
                                 pendingFirmwareAps,
                                 totalWifiClients,
                                 mutualiaApsClients,
-                                mutualiaWifiClients);
+                                mutualiaWifiClients,
+                                affectation);
 
                 SwitchStatusDto switchStatus = buildSwitchStatus(
                                 totalSwitches,
                                 downSwitches,
-                                pendingFirmwareSwitches);
-
-                int percentage = accessPointStatus.getPercentageContribution() + switchStatus.getPercentageContribution();
-                String percentageColor = colorByPercentage(percentage);
-                String color = applyCriticalPrecedence(percentageColor, accessPointStatus.getColor(), switchStatus.getColor());
-                List<String> reasons = List.of(accessPointStatus.getReasons(), switchStatus.getReasons())
-                                .stream()
-                                .flatMap(List::stream)
-                                .toList();
+                                pendingFirmwareSwitches,
+                                affectation);
 
                 ArubaNetworkStatusDto status = new ArubaNetworkStatusDto();
 
-                status.setPercentage(percentage);
-                status.setColor(color);
+                status.setPercentage(affectation.totalAffection());
+                status.setColor(affectation.color());
                 status.setAccessPointStatus(accessPointStatus);
                 status.setSwitchStatus(switchStatus);
-                status.setReasons(reasons);
-                status.setAffectedService(!GREEN.equals(color));
-                status.setCriticalCondition(RED.equals(accessPointStatus.getColor()) || RED.equals(switchStatus.getColor()));
-                status.setTechnicalDegradationValue(percentage);
+                status.setReasons(affectation.reasons());
+                status.setIndicatorStatuses(affectation.indicatorStatuses());
+                status.setAffectedService(!GREEN.equals(affectation.color()));
+                status.setCriticalCondition("RED".equals(affectation.color()));
+                status.setTechnicalDegradationValue(affectation.totalAffection());
                 status.setTransversalReady(true);
 
                 return status;
         }
 
         /**
-         * Convierte el estado de red Aruba en un KPI homogéneo con componentes
+         * Convierte el índice de salud Aruba en un KPI homogeneo con componentes
          * de APs y switches.
          */
         public KpiResultDto buildNetworkStatusKpi(ArubaNetworkStatusDto details,LocalDateTime timestamp,String freshness) {
 
                 return new KpiResultDto(
                                 "aruba_network_affectation",
-                                "Estado de red Aruba",
+                                "Índice de salud Aruba",
                                 details.getPercentage(),
                                 KpiStatus.from(details.getColor()),
-                                "Afección normalizada de la red Aruba.",
-                                "Access Points aportan hasta 50 puntos y switches hasta 50 puntos, con prevalencia de condiciones rojas.",
+                                "Afeccion normalizada de la red Aruba.",
+                                "Suma de afecciones parciales: tickets Aruba, APs caidos, firmware AP, APs inactivos, clientes WiFi, switches apagados, con upgrade pendiente e infrautilizados.",
                                 timestamp,
                                 freshness,
                                 details.getPercentage(),
@@ -120,7 +131,7 @@ public class ArubaNetworkStatusService {
                                                                 details.getAccessPointStatus().getPercentageContribution(),
                                                                 KpiStatus.from(details.getAccessPointStatus().getColor()),
                                                                 String.join("; ", details.getAccessPointStatus().getReasons()),
-                                                                "Condiciones rojas=50, amarillas=25, verdes=0.",
+                                                                "Suma de APs caidos, firmware AP, APs inactivos y clientes WiFi.",
                                                                 timestamp,
                                                                 freshness,
                                                                 details.getAccessPointStatus().getPercentageContribution(),
@@ -131,7 +142,7 @@ public class ArubaNetworkStatusService {
                                                                 details.getSwitchStatus().getPercentageContribution(),
                                                                 KpiStatus.from(details.getSwitchStatus().getColor()),
                                                                 String.join("; ", details.getSwitchStatus().getReasons()),
-                                                                "Condiciones rojas=50, amarillas=25, verdes=0.",
+                                                                "Suma de switches apagados, con upgrade pendiente e infrautilizados.",
                                                                 timestamp,
                                                                 freshness,
                                                                 details.getSwitchStatus().getPercentageContribution(),
@@ -162,7 +173,10 @@ public class ArubaNetworkStatusService {
         }
 
         /**
-         * Evalúa el bloque de Access Points, incluyendo clientes WiFi críticos.
+         * Ensambla el detalle parcial de Access Points a partir del calculo
+         * centralizado. Los clientes Mutualia se mantienen en el DTO para no
+         * romper el contrato del resumen, aunque la afeccion global de clientes
+         * WiFi se evalua sobre el total.
          */
         private AccessPointStatusDto buildAccessPointStatus(
                         int totalAps,
@@ -171,66 +185,13 @@ public class ArubaNetworkStatusService {
                         int pendingFirmwareAps,
                         int totalWifiClients,
                         int mutualiaApsClients,
-                        int mutualiaWifiClients) {
-
-                List<String> redReasons = new java.util.ArrayList<>();
-                List<String> yellowReasons = new java.util.ArrayList<>();
-
-                if (totalAps <= 0) {
-                        redReasons.add("No hay Access Points registrados");
-                } else {
-
-                        if (downAps >= totalAps) {
-                                redReasons.add("Todos los APs están caidos");
-                        } else if (downAps * 100 >= totalAps * kpiProperties.getAruba().getAccessPointDownRedPercent()) {
-
-                                redReasons.add("El porcentaje de APs caidos alcanza el umbral rojo configurado");
-                        } else if (downAps * 100 >= totalAps * kpiProperties.getAruba().getAccessPointDownYellowPercent()) {
-
-                                yellowReasons.add("El porcentaje de APs caidos alcanza el umbral amarillo configurado");
-                        } else if (downAps > 0) {
-
-                                yellowReasons.add("Hay APs caidos");
-                        }
-                }
-
-                if (totalWifiClients <= kpiProperties.getAruba().getCriticalClientsGreenAbove()) {
-
-                        // La condicion global de ausencia de clientes WiFi se evalua una sola vez para no duplicar motivos por cada grupo.
-                        redReasons.add("No hay clientes WiFi");
-                } else {
-
-                        if (mutualiaApsClients <= kpiProperties.getAruba().getCriticalClientsGreenAbove()) {
-
-                                redReasons.add("No hay clientes MUTUALIA-APs");
-                        }
-
-                        if (mutualiaWifiClients <= kpiProperties.getAruba().getCriticalClientsGreenAbove()) {
-
-                                redReasons.add("No hay clientes MUTUALIA-WIFI");
-                        }
-                }
-
-                if (pendingFirmwareAps > kpiProperties.getAruba().getPendingFirmwareApsYellowAbove()) {
-
-                        yellowReasons.add("Firmware pendiente en Access Points");
-                }
-
-                if (inactiveAps > kpiProperties.getAruba().getInactiveApsYellowAbove()) {
-
-                        yellowReasons.add("Hay APs inactivos");
-                }
-
-                String color = redReasons.isEmpty()
-                                ? yellowReasons.isEmpty() ? GREEN : YELLOW
-                                : RED;
-
-                int contribution = contributionByColor(color,kpiProperties.getAruba().getAccessPointBlockWeight());
+                        int mutualiaWifiClients,
+                        ArubaAffectationCalculator.Result affectation) {
 
                 AccessPointStatusDto status = new AccessPointStatusDto();
 
-                status.setPercentageContribution(contribution);
-                status.setColor(color);
+                status.setPercentageContribution(affectation.accessPointAffection());
+                status.setColor(affectation.accessPointColor());
                 status.setTotalAps(totalAps);
                 status.setDownAps(downAps);
                 status.setInactiveAps(inactiveAps);
@@ -238,109 +199,39 @@ public class ArubaNetworkStatusService {
                 status.setTotalWifiClients(totalWifiClients);
                 status.setMutualiaApsClients(mutualiaApsClients);
                 status.setMutualiaWifiClients(mutualiaWifiClients);
-                status.setReasons(RED.equals(color) ? redReasons : yellowReasons);
+                status.setReasons(affectation.accessPointReasons());
 
                 return status;
         }
 
         /**
-         * Evalúa el bloque de switches y sus condiciones de caída o firmware.
+         * Ensambla el detalle parcial de switches. El firmware con upgrade
+         * pendiente participa en la afeccion junto con switches apagados e
+         * infrautilizados.
          */
-        private SwitchStatusDto buildSwitchStatus(int totalSwitches,int downSwitches,int pendingFirmwareSwitches) {
-
-                List<String> redReasons = new java.util.ArrayList<>();
-                List<String> yellowReasons = new java.util.ArrayList<>();
-
-                if (totalSwitches <= 0) {
-
-                        redReasons.add("No hay switches registrados");
-                } else if (downSwitches >= totalSwitches) {
-
-                        redReasons.add("Todos los switches están caidos");
-                } else if (downSwitches >= kpiProperties.getAruba().getSwitchDownYellowMin()) {
-
-                        yellowReasons.add("Hay 2 o mas switches caidos");
-                }
-
-                if (pendingFirmwareSwitches > kpiProperties.getAruba().getPendingFirmwareSwitchesYellowAbove()) {
-
-                        yellowReasons.add("Firmware pendiente en switches");
-                }
-
-                String color = redReasons.isEmpty()
-                                ? yellowReasons.isEmpty() ? GREEN : YELLOW
-                                : RED;
-
-                int contribution = contributionByColor(color,kpiProperties.getAruba().getSwitchBlockWeight());
+        private SwitchStatusDto buildSwitchStatus(
+                        int totalSwitches,
+                        int downSwitches,
+                        int pendingFirmwareSwitches,
+                        ArubaAffectationCalculator.Result affectation) {
 
                 SwitchStatusDto status = new SwitchStatusDto();
 
-                status.setPercentageContribution(contribution);
-                status.setColor(color);
+                status.setPercentageContribution(affectation.switchAffection());
+                status.setColor(affectation.switchColor());
                 status.setTotalSwitches(totalSwitches);
                 status.setDownSwitches(downSwitches);
                 status.setPendingFirmwareSwitches(pendingFirmwareSwitches);
-                status.setReasons(RED.equals(color) ? redReasons : yellowReasons);
+                status.setReasons(affectation.switchReasons());
 
                 return status;
         }
 
-        private String colorByPercentage(int percentage) {
-
-                if (percentage >= kpiProperties.getStatus().getRedMin()) {
-
-                        return RED;
-                }
-
-                if (percentage >= kpiProperties.getStatus().getYellowMin()) {
-
-                        return YELLOW;
-                }
-
-                return GREEN;
-        }
-
-        private int contributionByColor(String color,int blockWeight) {
-
-                if (RED.equals(color)) {
-
-                        return blockWeight;
-                }
-
-                if (YELLOW.equals(color)) {
-
-                        return blockWeight / 2;
-                }
-
-                return 0;
-        }
-
-        private String applyCriticalPrecedence(String percentageColor,String accessPointColor,String switchColor) {
-
-                // El rojo prevalece sobre el amarillo y el amarillo sobre el verde. Asi una condicion
-                // critica no queda suavizada por un porcentaje global de 50.
-
-                if (RED.equals(accessPointColor) || RED.equals(switchColor)) {
-
-                        return RED;
-                }
-
-                if (YELLOW.equals(accessPointColor) || YELLOW.equals(switchColor)) {
-
-                        return YELLOW;
-                }
-
-                return percentageColor;
-        }
-
         /**
-         * Guarda KPIs específicos de Aruba en la tabla transversal para que el
-         * módulo de análisis pueda compararlos con otras fuentes.
+         * Guarda KPIs especificos de Aruba en la tabla transversal para que el
+         * modulo de analisis pueda compararlos con otras fuentes.
          */
         private void saveArubaTransversalSnapshot(ArubaNetworkStatusDto status,LocalDateTime collectedAt) {
-
-                // Estos tres codigos dejan Aruba preparado para el módulo de análisis exploratorio.
-                // La afectacion y la degradación son valores donde 100 es malo; la salud se calcula como inversa.
 
                 List<TransversalKpiHistory> histories = List.of(
                                 transversalHistory(
@@ -351,7 +242,7 @@ public class ArubaNetworkStatusService {
                                                 collectedAt),
                                 transversalHistory(
                                                 "aruba_network_degradation",
-                                                "Degradación de red Aruba",
+                                                "Degradacion de red Aruba",
                                                 "indice 0-100",
                                                 (double) status.getTechnicalDegradationValue(),
                                                 collectedAt),

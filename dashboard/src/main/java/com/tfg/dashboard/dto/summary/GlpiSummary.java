@@ -5,12 +5,8 @@ import java.time.LocalDateTime;
 import com.tfg.dashboard.dto.GlpiHealthStatusDto;
 import com.tfg.dashboard.dto.KpiResultDto;
 
-/**
- * Respuesta de la vista GLPI.
- *
- * Resume tickets, SLA, actividad de cierre y el índice de salud GLPI como
- * consecuencia operativa.
- */
+//Respuesta de la vista GLPI.
+
 public class GlpiSummary {
 
     private int openTickets;

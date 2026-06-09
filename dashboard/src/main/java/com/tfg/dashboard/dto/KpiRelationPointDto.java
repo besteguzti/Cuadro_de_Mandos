@@ -2,12 +2,8 @@ package com.tfg.dashboard.dto;
 
 import java.time.LocalDateTime;
 
-/**
- * Punto de una relación específica entre indicadores.
- *
- * Mantiene timestamp, valores X/Y y si la muestra procede de un escenario demo.
- */
-public class SpecificKpiRelationPointDto {
+// Punto histórico de una relación específica.
+public class KpiRelationPointDto {
 
     private LocalDateTime timestamp;
     private Double x;
@@ -15,10 +11,10 @@ public class SpecificKpiRelationPointDto {
     private int samplesUsed;
     private boolean generatedScenario;
 
-    public SpecificKpiRelationPointDto() {
+    public KpiRelationPointDto() {
     }
 
-    public SpecificKpiRelationPointDto(
+    public KpiRelationPointDto(
             LocalDateTime timestamp,
             Double x,
             Double y,
@@ -72,3 +68,4 @@ public class SpecificKpiRelationPointDto {
         this.generatedScenario = generatedScenario;
     }
 }
+

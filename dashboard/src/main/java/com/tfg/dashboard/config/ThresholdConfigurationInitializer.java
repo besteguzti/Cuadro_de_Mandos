@@ -7,11 +7,8 @@ import org.springframework.stereotype.Component;
 import com.tfg.dashboard.service.KpiConfigurationService;
 
 /**
- * Inicializa la configuración editable de KPIs al arrancar Spring Boot.
- *
- * La inicializacion es idempotente: crea los umbrales y pesos que falten, pero
- * no sobrescribe valores personalizados por el usuario en el panel de
- * configuración.
+ * Carga los umbrales por defecto al arrancar la aplicación y solo los crea si todavía no hay configuración guardada en base de datos.
+ * Así el dashboard puede calcular los KPIs desde el primer inicio.
  */
 @Component
 public class ThresholdConfigurationInitializer implements ApplicationRunner {
@@ -27,3 +24,4 @@ public class ThresholdConfigurationInitializer implements ApplicationRunner {
         kpiConfigurationService.ensureDefaultConfigurationExists();
     }
 }
+

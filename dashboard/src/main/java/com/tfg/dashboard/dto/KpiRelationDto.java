@@ -5,12 +5,10 @@ import java.util.List;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
- * Relación exploratoria concreta entre dos indicadores de distintas fuentes.
- *
- * No expresa causalidad; contiene la definición, los puntos históricos y una
- * lectura automática sencilla basada en co-ocurrencia.
+ * Relación exploratoria entre dos indicadores.
+ * Incluye la definición, los puntos históricos y una lectura automática.
  */
-public class SpecificKpiRelationDto {
+public class KpiRelationDto {
 
     private String code;
     private String title;
@@ -22,7 +20,7 @@ public class SpecificKpiRelationDto {
     private String reading;
     private String readingStatus;
     private boolean hasEnoughData;
-    private List<SpecificKpiRelationPointDto> points;
+    private List<KpiRelationPointDto> points;
 
     public String getCode() {
         return code;
@@ -69,7 +67,7 @@ public class SpecificKpiRelationDto {
         return hasEnoughData;
     }
 
-    public List<SpecificKpiRelationPointDto> getPoints() {
+    public List<KpiRelationPointDto> getPoints() {
         return points;
     }
 
@@ -113,7 +111,8 @@ public class SpecificKpiRelationDto {
         this.hasEnoughData = hasEnoughData;
     }
 
-    public void setPoints(List<SpecificKpiRelationPointDto> points) {
+    public void setPoints(List<KpiRelationPointDto> points) {
         this.points = points;
     }
 }
+

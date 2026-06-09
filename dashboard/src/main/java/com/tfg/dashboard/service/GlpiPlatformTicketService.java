@@ -42,3 +42,4 @@ public class GlpiPlatformTicketService {
         return glpiRepository.findTopByOrderByCollectedAtDesc();
     }
 }
+

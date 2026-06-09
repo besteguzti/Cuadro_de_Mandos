@@ -5,12 +5,8 @@ import java.util.List;
 
 import com.tfg.dashboard.dto.KpiResultDto;
 
-/**
- * Respuesta agregada del dashboard principal.
- *
- * Contiene KPIs transversales, estados de frescura y campos de compatibilidad
- * consumidos por la vista principal de React.
- */
+// Respuesta agregada del dashboard principal.
+ 
 public class MainDashboardSummary {
 
     private String globalHealth;

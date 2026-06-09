@@ -15,11 +15,11 @@ import com.tfg.dashboard.model.AnalysisSnapshot;
  * operativa, siempre en escala de afección 0-100.
  */
 @Service
-public class TechnicalImpactAnalysisService {
+public class ImpactAnalysisService {
 
     private final KpiProperties kpiProperties;
 
-    public TechnicalImpactAnalysisService(KpiProperties kpiProperties) {
+    public ImpactAnalysisService(KpiProperties kpiProperties) {
 
         this.kpiProperties = kpiProperties;
     }
@@ -154,3 +154,4 @@ public class TechnicalImpactAnalysisService {
                 : 0;
     }
 }
+

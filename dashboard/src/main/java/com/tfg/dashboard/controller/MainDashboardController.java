@@ -25,8 +25,7 @@ public class MainDashboardController {
     }
 
     /**
-     * Devuelve estado global, criticidad, disponibilidad, presión operativa y
-     * resto de KPIs transversales calculados desde las plataformas monitorizadas.
+     * Devuelve los KPIs transversales calculados desde las plataformas monitorizadas.
      */
     @GetMapping("/summary")
     public MainDashboardSummary getSummary() {
@@ -34,3 +33,4 @@ public class MainDashboardController {
         return mainDashboardService.getSummary();
     }
 }
+

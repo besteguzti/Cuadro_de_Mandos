@@ -60,4 +60,36 @@ class GlpiServiceTest {
         assertThat(summary.getCitrixOpenTickets()).isEqualTo(100);
         assertThat(summary.getMicrosoft365OpenTickets()).isEqualTo(25);
     }
+
+    @Test
+    void slaBreachedTicketsArePartOfGlpiHealthReasonsAndVisualStatus() {
+        GlpiMetricsHistory history =
+                new GlpiMetricsHistory();
+        history.setCollectedAt(LocalDateTime.now());
+        history.setOpenTickets(20);
+        history.setCriticalOpenTickets(0);
+        history.setSlaBreachedTickets(22);
+        history.setCreatedToday(10);
+        history.setClosedToday(10);
+        history.setCreatedThisWeek(20);
+        history.setClosedThisWeek(20);
+
+        when(glpiRepository.findTopByOrderByCollectedAtDesc())
+                .thenReturn(Optional.of(history));
+
+        GlpiService service =
+                new GlpiService(glpiRepository, new KpiProperties());
+
+        GlpiSummary summary =
+                service.getSummary();
+
+        assertThat(summary.getGlpiHealthDetails().getColor()).isEqualTo("RED");
+        assertThat(summary.getGlpiHealthDetails().getReasons())
+                .anyMatch(reason -> reason.contains("tickets vencidos SLA"));
+        assertThat(summary.getGlpiHealthDetails().getIndicators())
+                .anySatisfy(indicator -> {
+                    assertThat(indicator.getName()).isEqualTo("Tickets vencidos SLA");
+                    assertThat(indicator.getColor()).isEqualTo("RED");
+                });
+    }
 }

@@ -1,9 +1,16 @@
 package com.tfg.dashboard.dto;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.PositiveOrZero;
+
 public class ThresholdValueDto {
 
+    @NotBlank
     private String key;
     private String label;
+    @NotNull
+    @PositiveOrZero
     private Integer value;
     private Integer defaultValue;
     private String unit;

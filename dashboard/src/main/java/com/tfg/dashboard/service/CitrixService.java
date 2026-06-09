@@ -69,15 +69,7 @@ public class CitrixService {
                 int averageLogonDurationSeconds = 10 + random.nextInt(45);
                 int serverLoadPercent = 40 + random.nextInt(55);
                 int failedLogons = random.nextInt(15);
-                CitrixHealthStatusDto citrixHealthDetails = calculateCitrixHealthDetails(
-                                activeSessions,
-                                availableDeliveryControllers,
-                                totalDeliveryControllers,
-                                averageLogonDurationSeconds,
-                                serverLoadPercent,
-                                failedLogons);
 
-        
                 summary.setActiveSessions(activeSessions);
                 summary.setActiveLicenses(activeLicenses);
                 summary.setAvailableDeliveryControllers(availableDeliveryControllers);
@@ -87,7 +79,17 @@ public class CitrixService {
                 summary.setServerLoadPercent(serverLoadPercent);
                 summary.setFailedLogons(failedLogons);
                 summary.setCitrixOpenTickets(glpiPlatformTicketService.getCitrixOpenTickets());
-                summary.setCitrixHealth(citrixHealthDetails.getColor());
+                CitrixHealthStatusDto citrixHealthDetails = calculateCitrixHealthDetails(
+                                activeSessions,
+                                activeLicenses,
+                                availableDeliveryControllers,
+                                totalDeliveryControllers,
+                                disconnectedSessions,
+                                averageLogonDurationSeconds,
+                                serverLoadPercent,
+                                failedLogons,
+                                summary.getCitrixOpenTickets());
+
                 summary.setCitrixHealthDetails(citrixHealthDetails);
                 summary.setCitrixHealthKpi(buildCitrixHealthKpi(citrixHealthDetails,LocalDateTime.now(),"SIMULATED"));
 
@@ -109,13 +111,15 @@ public class CitrixService {
                 summary.setCitrixOpenTickets(glpiPlatformTicketService.getCitrixOpenTickets());
                 CitrixHealthStatusDto citrixHealthDetails = calculateCitrixHealthDetails(
                                 history.getActiveSessions(),
+                                history.getActiveLicenses(),
                                 history.getAvailableDeliveryControllers(),
                                 history.getTotalDeliveryControllers(),
+                                history.getDisconnectedSessions(),
                                 history.getAverageLogonDurationSeconds(),
                                 history.getServerLoadPercent(),
-                                history.getFailedLogons());
+                                history.getFailedLogons(),
+                                summary.getCitrixOpenTickets());
 
-                summary.setCitrixHealth(citrixHealthDetails.getColor());
                 summary.setCitrixHealthDetails(citrixHealthDetails);
                 summary.setLastUpdated(history.getCollectedAt());
                 summary.setDataStatus(calculateDataStatus(history.getCollectedAt()));
@@ -124,262 +128,76 @@ public class CitrixService {
                 return summary;
         }
 
-        private CitrixSummary noDataSummary() {
+        private CitrixHealthStatusDto calculateCitrixHealthDetails(
+                        int activeSessions,
+                        int activeLicenses,
+                        int availableDeliveryControllers,
+                        int totalDeliveryControllers,
+                        int disconnectedSessions,
+                        int averageLogonDurationSeconds,
+                        int serverLoadPercent,
+                        int failedLogons,
+                        int citrixOpenTickets) {
 
-                CitrixSummary summary = new CitrixSummary();
+                CitrixAffectationCalculator.Result result = CitrixAffectationCalculator.calculate(
+                                new CitrixAffectationCalculator.Input(
+                                                activeSessions,
+                                                activeLicenses,
+                                                availableDeliveryControllers,
+                                                totalDeliveryControllers,
+                                                disconnectedSessions,
+                                                averageLogonDurationSeconds,
+                                                serverLoadPercent,
+                                                failedLogons,
+                                                citrixOpenTickets),
+                                kpiProperties);
 
-                summary.setCitrixHealth("NO_DATA");
-                summary.setDataStatus("NO_DATA");
-                summary.setCitrixHealthDetails(noDataCitrixHealthDetails());
-                summary.setCitrixHealthKpi(buildCitrixHealthKpi(summary.getCitrixHealthDetails(),null,summary.getDataStatus()));
+                CitrixHealthStatusDto details = new CitrixHealthStatusDto();
 
-                return summary;
+                details.setPercentage(result.percentage());
+                details.setColor(result.color());
+                details.setIndicators(result.indicators());
+                details.setReasons(result.reasons());
+                details.setAffectedService(result.affectedService());
+                details.setCriticalCondition(result.criticalCondition());
+                details.setTechnicalDegradationValue(result.percentage());
+                details.setTransversalReady(true);
+
+                return details;
         }
 
         private String calculateDataStatus(
                         LocalDateTime collectedAt) {
 
-                
                 if (collectedAt == null) {
-
                         return "NO_DATA";
                 }
 
-                if (collectedAt.isAfter(LocalDateTime.now().minusMinutes(2))) {
-
+                if (collectedAt.isAfter(LocalDateTime.now().minusMinutes(
+                                kpiProperties.getFreshness().getCitrixMinutes()))) {
                         return "OK";
                 }
 
                 return "STALE";
         }
 
-        
-        /**
-         * Convierte cinco indicadores Citrix a estados GREEN/YELLOW/RED y
-         * calcula su afección media.
-         */
-        private CitrixHealthStatusDto calculateCitrixHealthDetails(
-                        int activeSessions,
-                        int availableDeliveryControllers,
-                        int totalDeliveryControllers,
-                        int averageLogonDurationSeconds,
-                        int serverLoadPercent,
-                        int failedLogons) {
-
-                List<CitrixIndicatorStatusDto> indicators = List.of(
-                                evaluateActiveSessions(activeSessions),
-                                evaluateDeliveryControllers(availableDeliveryControllers,totalDeliveryControllers),
-                                evaluateAverageLogonDuration(averageLogonDurationSeconds),
-                                evaluateServerLoad(serverLoadPercent),
-                                evaluateFailedLogons(failedLogons));
-
-                int percentage = (int) Math.round(
-                                indicators.stream()
-                                                .mapToInt(CitrixIndicatorStatusDto::getAffectionPercent)
-                                                .average()
-                                                .orElse(100));
-
-                String color = colorByPercentage(percentage);
-
-                List<String> reasons = indicators.stream()
-                                .filter(indicator -> !GREEN.equals(indicator.getColor()))
-                                .map(CitrixIndicatorStatusDto::getReason)
-                                .toList();
-
-                CitrixHealthStatusDto details = new CitrixHealthStatusDto();
-
-                details.setPercentage(percentage);
-                details.setColor(color);
-                details.setIndicators(indicators);
-                details.setReasons(reasons);
-                details.setAffectedService(!GREEN.equals(color));
-                details.setCriticalCondition(indicators.stream().anyMatch(indicator -> RED.equals(indicator.getColor())));
-                details.setTechnicalDegradationValue(percentage);
-                details.setTransversalReady(true);
-
-                return details;
-        }
-
-        private CitrixIndicatorStatusDto evaluateActiveSessions(int activeSessions) {
-
-                if (activeSessions <= 0) {
-
-                        return indicator("Sesiones activas",RED,"No hay sesiones activas en Citrix");
-                }
-
-                return indicator("Sesiones activas",GREEN,"Hay sesiones activas en Citrix");
-        }
-
-        private CitrixIndicatorStatusDto evaluateDeliveryControllers(int availableDeliveryControllers,int totalDeliveryControllers) {
-
-                if (totalDeliveryControllers <= 0 || availableDeliveryControllers <= 0) {
-
-                        return indicator("Delivery Controllers disponibles",RED,"No hay Delivery Controllers disponibles");
-                }
-
-                if (availableDeliveryControllers * 100
-                                < totalDeliveryControllers * kpiProperties.getCitrix().getDeliveryControllerYellowBelowPercent()) {
-
-                        return indicator(
-                                        "Delivery Controllers disponibles",
-                                        YELLOW,
-                                        "Menos del " + kpiProperties.getCitrix().getDeliveryControllerYellowBelowPercent()
-                                                        + " % de Delivery Controllers disponibles");
-                }
-
-                return indicator(
-                                "Delivery Controllers disponibles",
-                                GREEN,
-                                kpiProperties.getCitrix().getDeliveryControllerYellowBelowPercent()
-                                                + " % o mas de Delivery Controllers disponibles");
-        }
-
-        private CitrixIndicatorStatusDto evaluateAverageLogonDuration(int averageLogonDurationSeconds) {
-
-                if (averageLogonDurationSeconds > kpiProperties.getCitrix().getLogonDurationRedAboveSeconds()) {
-
-                        return indicator(
-                                        "Average Logon Duration",
-                                        RED,
-                                        "Average Logon Duration superior a "
-                                                        + kpiProperties.getCitrix().getLogonDurationRedAboveSeconds()
-                                                        + " segundos");
-                }
-
-                if (averageLogonDurationSeconds > kpiProperties.getCitrix().getLogonDurationYellowAboveSeconds()) {
-
-                        return indicator(
-                                        "Average Logon Duration",
-                                        YELLOW,
-                                        "Average Logon Duration entre "
-                                                        + (kpiProperties.getCitrix().getLogonDurationYellowAboveSeconds() + 1)
-                                                        + " y "
-                                                        + kpiProperties.getCitrix().getLogonDurationRedAboveSeconds()
-                                                        + " segundos");
-                }
-
-                return indicator(
-                                "Average Logon Duration",
-                                GREEN,
-                                "Average Logon Duration entre 0 y "
-                                                + kpiProperties.getCitrix().getLogonDurationYellowAboveSeconds()
-                                                + " segundos");
-        }
-
-        private CitrixIndicatorStatusDto evaluateServerLoad(int serverLoadPercent) {
-
-                if (serverLoadPercent >= kpiProperties.getCitrix().getServerLoadRedMin()) {
-
-                        return indicator(
-                                        "Carga de servidores",
-                                        RED,
-                                        "Carga de servidores entre "
-                                                        + kpiProperties.getCitrix().getServerLoadRedMin()
-                                                        + " % y 100 %");
-                }
-
-                if (serverLoadPercent >= kpiProperties.getCitrix().getServerLoadYellowMin()) {
-
-                        return indicator(
-                                        "Carga de servidores",
-                                        YELLOW,
-                                        "Carga de servidores entre "
-                                                        + kpiProperties.getCitrix().getServerLoadYellowMin()
-                                                        + " % y "
-                                                        + (kpiProperties.getCitrix().getServerLoadRedMin() - 1)
-                                                        + " %");
-                }
-
-                return indicator(
-                                "Carga de servidores",
-                                GREEN,
-                                "Carga de servidores entre 0 % y "
-                                                + (kpiProperties.getCitrix().getServerLoadYellowMin() - 1)
-                                                + " %");
-        }
-
-        private CitrixIndicatorStatusDto evaluateFailedLogons(int failedLogons) {
-
-                if (failedLogons > kpiProperties.getCitrix().getFailedLogonsRedAbove()) {
-
-                        return indicator(
-                                        "Errores de inicio",
-                                        RED,
-                                        "Mas de " + kpiProperties.getCitrix().getFailedLogonsRedAbove()
-                                                        + " errores de inicio");
-                }
-
-                if (failedLogons > kpiProperties.getCitrix().getFailedLogonsYellowAbove()) {
-
-                        return indicator(
-                                        "Errores de inicio",
-                                        YELLOW,
-                                        "Entre "
-                                                        + (kpiProperties.getCitrix().getFailedLogonsYellowAbove() + 1)
-                                                        + " y "
-                                                        + kpiProperties.getCitrix().getFailedLogonsRedAbove()
-                                                        + " errores de inicio");
-                }
-
-                return indicator(
-                                "Errores de inicio",
-                                GREEN,
-                                "Entre 0 y "
-                                                + kpiProperties.getCitrix().getFailedLogonsYellowAbove()
-                                                + " errores de inicio");
-        }
-
-        private CitrixIndicatorStatusDto indicator(String name,String color,String reason) {
-
-                CitrixIndicatorStatusDto indicator = new CitrixIndicatorStatusDto();
-
-                indicator.setName(name);
-                indicator.setColor(color);
-                indicator.setAffectionPercent(affectionPercent(color));
-                indicator.setReason(reason);
-
-                return indicator;
-        }
-
-        private int affectionPercent(String color) {
-
-                if (RED.equals(color)) {
-
-                        return kpiProperties.getAffection().getRed();
-                }
-
-                if (YELLOW.equals(color)) {
-
-                        return kpiProperties.getAffection().getYellow();
-                }
-
-                return kpiProperties.getAffection().getGreen();
-        }
-
-        private String colorByPercentage(int percentage) {
-
-                if (percentage >= kpiProperties.getStatus().getRedMin()) {
-
-                        return RED;
-                }
-
-                if (percentage >= kpiProperties.getStatus().getYellowMin()) {
-
-                        return YELLOW;
-                }
-
-                return GREEN;
+        private CitrixSummary noDataSummary() {
+                CitrixSummary summary = new CitrixSummary();
+                summary.setCitrixHealthDetails(noDataCitrixHealthDetails());
+                summary.setDataStatus("NO_DATA");
+                summary.setLastUpdated(null);
+                return summary;
         }
 
         private KpiResultDto buildCitrixHealthKpi(CitrixHealthStatusDto details,LocalDateTime timestamp,String freshness) {
 
                 return new KpiResultDto(
                                 "citrix_health",
-                                "Indice de salud Citrix",
+                                "Índice de salud Citrix",
                                 details.getPercentage(),
                                 KpiStatus.from(details.getColor()),
                                 "Afección normalizada del entorno Citrix.",
-                                "Media uniforme de sesiones activas, Delivery Controllers, logon duration, carga de servidores y errores de inicio.",
+                                "Suma de afecciones parciales de los indicadores Citrix.",
                                 timestamp,
                                 freshness,
                                 details.getPercentage(),
@@ -405,7 +223,11 @@ public class CitrixService {
 
         private CitrixHealthStatusDto noDataCitrixHealthDetails() {
 
-                CitrixIndicatorStatusDto noData = indicator("Datos Citrix",RED,"No hay snapshot Citrix disponible");
+                CitrixIndicatorStatusDto noData = new CitrixIndicatorStatusDto();
+                noData.setName("Datos Citrix");
+                noData.setColor(RED);
+                noData.setAffectionPercent(kpiProperties.getAffection().getRed());
+                noData.setReason("No hay snapshot Citrix disponible");
 
                 CitrixHealthStatusDto details = new CitrixHealthStatusDto();
 
@@ -422,3 +244,4 @@ public class CitrixService {
         }
 
 }
+

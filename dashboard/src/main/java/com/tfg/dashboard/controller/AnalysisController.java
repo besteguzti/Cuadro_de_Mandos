@@ -6,22 +6,22 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.validation.annotation.Validated;
 
 import com.tfg.dashboard.dto.AnalyticsComparePoint;
+import com.tfg.dashboard.dto.AnalysisSnapshotDto;
 import com.tfg.dashboard.dto.OperationalImpactAnalysisResponse;
-import com.tfg.dashboard.dto.TechnicalTimelinePointDto;
-import com.tfg.dashboard.model.AnalysisSnapshot;
+import com.tfg.dashboard.dto.TimelinePointDto;
 import com.tfg.dashboard.service.TransversalKpiAnalyticsService;
 
+import jakarta.validation.constraints.NotBlank;
+
 /**
- * Endpoints del panel "Análisis exploratorio de KPIs transversales".
- *
- * El panel compara relaciónes aparentes entre plataformas, evolución temporal
- * y relaciónes específicas entre indicadores. Las respuestas proceden de
- * snapshots persistidos y no demuestran causalidad directa.
+ * Endpoints del panel analisis. Este panel busca identificar patrones y relaciones entre indicadores.
  */
 @RestController
 @RequestMapping("/api/analysis")
+@Validated
 public class AnalysisController {
 
     private final TransversalKpiAnalyticsService analyticsService;
@@ -31,38 +31,39 @@ public class AnalysisController {
     }
 
     @GetMapping("/snapshots")
-    public List<AnalysisSnapshot> snapshots(@RequestParam(defaultValue = "30d") String period) {
-        return analyticsService.getAnalysisSnapshots(period);
+    public List<AnalysisSnapshotDto> snapshots(@RequestParam(defaultValue = "30d") @NotBlank String period) {
+        return analyticsService.getAnalysisSnapshots(period).stream()
+                .map(AnalysisSnapshotDto::new)
+                .toList();
     }
 
     /**
-     * Respuesta principal del panel actual. El parametro platform queda como
-     * opcional por compatibilidad con versiones anteriores, pero ya no modifica
-     * el contenido devuelto.
+     * Respuesta principal del panel de analisis. Devuelve los bloques agregados
+     * que consume React: relaciones, evolucion temporal y relaciones especificas.
      */
     @GetMapping("/glpi-platform-relation")
     public OperationalImpactAnalysisResponse glpiPlatformRelation(
-            @RequestParam(required = false) String platform,
-            @RequestParam(defaultValue = "30d") String period) {
+            @RequestParam(defaultValue = "30d") @NotBlank String period) {
 
         return analyticsService.getGlpiPlatformRelation(period);
     }
 
     /**
-     * Devuelve puntos de degradación técnica frente a impacto en usuarios para
-     * consultas auxiliares del módulo de análisis.
+     * Devuelve puntos de degradacion tecnica frente a impacto en usuarios para
+     * consultas auxiliares del modulo de analisis.
      */
     @GetMapping("/technical-degradation-impact")
     public List<AnalyticsComparePoint> technicalDegradationImpact(
-            @RequestParam(defaultValue = "30d") String period) {
+            @RequestParam(defaultValue = "30d") @NotBlank String period) {
 
         return analyticsService.getTechnicalDegradationImpact(period);
     }
 
     @GetMapping("/platform-evolution")
-    public List<TechnicalTimelinePointDto> platformEvolution(
-            @RequestParam(defaultValue = "30d") String period) {
+    public List<TimelinePointDto> platformEvolution(
+            @RequestParam(defaultValue = "30d") @NotBlank String period) {
 
         return analyticsService.getPlatformEvolution(period);
     }
 }
+

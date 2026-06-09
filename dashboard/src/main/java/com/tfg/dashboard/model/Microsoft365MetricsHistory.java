@@ -12,8 +12,7 @@ import jakarta.persistence.Table;
 /**
  * Snapshot histórico de métricas Microsoft 365 simuladas.
  *
- * Guarda señales de servicios, identidad, seguridad y dispositivos para
- * reconstruir el índice de salud y los KPIs transversales.
+ * Guarda señales de servicios, identidad, seguridad y dispositivos para reconstruir el índice de salud y los KPIs transversales.
  */
 @Entity
 @Table(name = "microsoft365_metrics_history")
@@ -226,3 +225,4 @@ public class Microsoft365MetricsHistory {
         this.collectedAt = collectedAt;
     }
 }
+

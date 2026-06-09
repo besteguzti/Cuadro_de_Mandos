@@ -407,12 +407,20 @@ public class TransversalKpiHistoryService {
          */
         public int calculateCitrixAffection(CitrixMetricsHistory citrix) {
 
-                return average(
-                                citrix.getActiveSessions() <= 0 ? redScore() : greenScore(),
-                                deliveryControllersScore(citrix),
-                                logonDurationScore(citrix),
-                                serverLoadScore(citrix),
-                                failedLogonsScore(citrix));
+                CitrixAffectationCalculator.Result result = CitrixAffectationCalculator.calculate(
+                                new CitrixAffectationCalculator.Input(
+                                                citrix.getActiveSessions(),
+                                                citrix.getActiveLicenses(),
+                                                citrix.getAvailableDeliveryControllers(),
+                                                citrix.getTotalDeliveryControllers(),
+                                                citrix.getDisconnectedSessions(),
+                                                citrix.getAverageLogonDurationSeconds(),
+                                                citrix.getServerLoadPercent(),
+                                                citrix.getFailedLogons(),
+                                                0),
+                                kpiProperties);
+
+                return result.percentage();
         }
 
         /**
@@ -421,19 +429,31 @@ public class TransversalKpiHistoryService {
          */
         public int calculateMicrosoft365Affection(Microsoft365MetricsHistory microsoft365) {
 
-                return average(
-                                sharePointStorageScore(microsoft365),
-                                usersWithoutMfaScore(microsoft365),
-                                microsoft365.getAppsSecretsExpiringSoon() > kpiProperties.getMicrosoft365().getSecretsYellowAbove()
-                                                ? yellowScore()
-                                                : greenScore(),
-                                nonCompliantDevicesScore(microsoft365),
-                                microsoft365.getOutdatedWindowsDevices() > kpiProperties.getMicrosoft365().getOutdatedWindowsYellowAbove()
-                                                ? yellowScore()
-                                                : greenScore(),
-                                microsoft365.getDevicesWithoutEncryption() > kpiProperties.getMicrosoft365().getDevicesWithoutEncryptionRedAbove()
-                                                ? redScore()
-                                                : greenScore());
+                Microsoft365AffectationCalculator.Result result =
+                                Microsoft365AffectationCalculator.calculate(
+                                                new Microsoft365AffectationCalculator.Input(
+                                                                microsoft365.getActiveUsers(),
+                                                                microsoft365.getUnassignedLicenses(),
+                                                                microsoft365.getOutlookStatus(),
+                                                                microsoft365.getTeamsStatus(),
+                                                                microsoft365.getSharePointStatus(),
+                                                                microsoft365.getNearlyFullMailboxes(),
+                                                                microsoft365.getEmailsQuarantined(),
+                                                                microsoft365.getSharePointStoragePercent(),
+                                                                microsoft365.getRiskyUsers(),
+                                                                microsoft365.getFailedSignIns(),
+                                                                microsoft365.getUsersWithoutMfa(),
+                                                                microsoft365.getAppsSecretsExpiringSoon(),
+                                                                microsoft365.getUnusedApplications(),
+                                                                microsoft365.getHighPrivilegeApplications(),
+                                                                microsoft365.getNonCompliantDevices(),
+                                                                0,
+                                                                microsoft365.getOutdatedWindowsDevices(),
+                                                                microsoft365.getDevicesWithoutEncryption(),
+                                                                microsoft365.getStaleDevices()),
+                                                kpiProperties);
+
+                return result.percentage();
         }
 
         private int openTicketsScore(GlpiMetricsHistory glpi) {
@@ -471,111 +491,6 @@ public class TransversalKpiHistoryService {
                 return closed * 100 / created >= kpiProperties.getGlpi().getClosedPercentGreenMin()
                                 ? greenScore()
                                 : yellowScore();
-        }
-
-        private int deliveryControllersScore(CitrixMetricsHistory citrix) {
-
-                if (citrix.getTotalDeliveryControllers() <= 0
-                                || citrix.getAvailableDeliveryControllers() <= 0) {
-                        return redScore();
-                }
-
-                int availablePercent =
-                                citrix.getAvailableDeliveryControllers() * 100
-                                                / citrix.getTotalDeliveryControllers();
-
-                return availablePercent < kpiProperties.getCitrix().getDeliveryControllerYellowBelowPercent()
-                                ? yellowScore()
-                                : greenScore();
-        }
-
-        private int logonDurationScore(CitrixMetricsHistory citrix) {
-
-                if (citrix.getAverageLogonDurationSeconds() > kpiProperties.getCitrix().getLogonDurationRedAboveSeconds()) {
-                        return redScore();
-                }
-
-                if (citrix.getAverageLogonDurationSeconds() > kpiProperties.getCitrix().getLogonDurationYellowAboveSeconds()) {
-                        return yellowScore();
-                }
-
-                return greenScore();
-        }
-
-        private int serverLoadScore(CitrixMetricsHistory citrix) {
-
-                if (citrix.getServerLoadPercent() >= kpiProperties.getCitrix().getServerLoadRedMin()) {
-                        return redScore();
-                }
-
-                if (citrix.getServerLoadPercent() >= kpiProperties.getCitrix().getServerLoadYellowMin()) {
-                        return yellowScore();
-                }
-
-                return greenScore();
-        }
-
-        private int failedLogonsScore(CitrixMetricsHistory citrix) {
-
-                if (citrix.getFailedLogons() > kpiProperties.getCitrix().getFailedLogonsRedAbove()) {
-                        return redScore();
-                }
-
-                if (citrix.getFailedLogons() > kpiProperties.getCitrix().getFailedLogonsYellowAbove()) {
-                        return yellowScore();
-                }
-
-                return greenScore();
-        }
-
-        private int sharePointStorageScore(Microsoft365MetricsHistory microsoft365) {
-
-                if (microsoft365.getSharePointStoragePercent() > kpiProperties.getMicrosoft365().getSharePointRedAbove()) {
-                        return redScore();
-                }
-
-                if (microsoft365.getSharePointStoragePercent() >= kpiProperties.getMicrosoft365().getSharePointYellowMin()) {
-                        return yellowScore();
-                }
-
-                return greenScore();
-        }
-
-        private int usersWithoutMfaScore(Microsoft365MetricsHistory microsoft365) {
-
-                if (microsoft365.getUsersWithoutMfa() > kpiProperties.getMicrosoft365().getUsersWithoutMfaRedAbove()) {
-                        return redScore();
-                }
-
-                if (microsoft365.getUsersWithoutMfa() > kpiProperties.getMicrosoft365().getUsersWithoutMfaYellowAbove()) {
-                        return yellowScore();
-                }
-
-                return greenScore();
-        }
-
-        private int nonCompliantDevicesScore(Microsoft365MetricsHistory microsoft365) {
-
-                if (microsoft365.getNonCompliantDevices() > kpiProperties.getMicrosoft365().getNonCompliantDevicesRedAbove()) {
-                        return redScore();
-                }
-
-                if (microsoft365.getNonCompliantDevices() > kpiProperties.getMicrosoft365().getNonCompliantDevicesYellowAbove()) {
-                        return yellowScore();
-                }
-
-                return greenScore();
-        }
-
-        private int average(int... values) {
-
-                int total = 0;
-
-                for (int value : values) {
-                        total += value;
-                }
-
-                return values.length == 0 ? 0 : total / values.length;
         }
 
         private int clampToInt(double value) {
@@ -619,3 +534,4 @@ public class TransversalKpiHistoryService {
                         List<String> relatedKpis) {
         }
 }
+

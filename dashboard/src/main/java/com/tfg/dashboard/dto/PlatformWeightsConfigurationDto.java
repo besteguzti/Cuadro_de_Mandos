@@ -1,10 +1,26 @@
 package com.tfg.dashboard.dto;
 
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotNull;
+
 public class PlatformWeightsConfigurationDto {
 
+    @NotNull
+    @Min(0)
+    @Max(100)
     private Integer aruba;
+    @NotNull
+    @Min(0)
+    @Max(100)
     private Integer citrix;
+    @NotNull
+    @Min(0)
+    @Max(100)
     private Integer microsoft365;
+    @NotNull
+    @Min(0)
+    @Max(100)
     private Integer glpi;
     private Integer total;
 

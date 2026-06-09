@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import com.tfg.dashboard.config.properties.KpiProperties;
 import com.tfg.dashboard.dto.ExecutiveSummaryDto;
 import com.tfg.dashboard.dto.KpiResultDto;
+import com.tfg.dashboard.dto.PlatformFindingDto;
 import com.tfg.dashboard.model.AnalysisSnapshot;
 import com.tfg.dashboard.dto.summary.ArubaSummary;
 import com.tfg.dashboard.model.CitrixMetricsHistory;
@@ -71,7 +72,11 @@ public class ExecutiveSummaryService {
                                 dashboardSummary,
                                 resolveTrend(dashboardSummary.getGlobalHealthPercentage()),
                                 null,
-                                true);
+                                true,
+                                currentArubaSummary(),
+                                latestCitrixSnapshot(),
+                                latestMicrosoft365Snapshot(),
+                                latestGlpiSnapshot());
         }
 
         /**
@@ -84,22 +89,45 @@ public class ExecutiveSummaryService {
          */
         public ExecutiveSummaryDto buildScenarioSummary(MainDashboardSummary dashboardSummary) {
 
+                return buildScenarioSummary(dashboardSummary, null, null, null, null);
+        }
+
+        /**
+         * Genera el resumen ejecutivo del Banco de pruebas con los mismos datos
+         * manuales usados para calcular los KPIs del escenario.
+         */
+        public ExecutiveSummaryDto buildScenarioSummary(
+                        MainDashboardSummary dashboardSummary,
+                        ArubaSummary aruba,
+                        CitrixMetricsHistory citrix,
+                        Microsoft365MetricsHistory microsoft365,
+                        GlpiMetricsHistory glpi) {
+
                 return buildOperationalSummary(
                                 dashboardSummary,
                                 "Tendencia no disponible en escenario manual",
                                 "No estimable en escenario manual",
-                                false);
+                                false,
+                                aruba,
+                                citrix,
+                                microsoft365,
+                                glpi);
         }
 
         private ExecutiveSummaryDto buildOperationalSummary(
                         MainDashboardSummary dashboardSummary,
                         String trend,
                         String estimatedUsersOverride,
-                        boolean useRealObservedData) {
+                        boolean useRealObservedData,
+                        ArubaSummary aruba,
+                        CitrixMetricsHistory citrix,
+                        Microsoft365MetricsHistory microsoft365,
+                        GlpiMetricsHistory glpi) {
 
                 Map<String, Integer> platformAffectations = extractPlatformAffectations(dashboardSummary);
-                List<String> affectedServices = resolveAffectedServices(platformAffectations);
-                List<String> criticalPlatforms = resolveCriticalPlatforms(platformAffectations);
+                Map<String, String> platformStatuses = extractPlatformStatuses(dashboardSummary);
+                List<String> affectedServices = resolveAffectedServices(platformAffectations, platformStatuses);
+                List<String> criticalPlatforms = resolveCriticalPlatforms(platformAffectations, platformStatuses);
                 String mainAffectedPlatform = resolveMainAffectedPlatform(platformAffectations);
                 String probableOrigin = resolveProbableOrigin(mainAffectedPlatform);
                 String impactLevel = resolveImpactLevel(dashboardSummary.getUserImpact(), criticalPlatforms.size());
@@ -107,6 +135,8 @@ public class ExecutiveSummaryService {
                 String estimatedAffectedUsers = useRealObservedData
                                 ? estimateAffectedUsers(mainAffectedPlatform)
                                 : estimatedUsersOverride;
+                List<PlatformFindingDto> platformFindings =
+                                buildPlatformFindings(platformAffectations, aruba, citrix, microsoft365, glpi);
                 ExecutiveSummaryDto summary = new ExecutiveSummaryDto();
 
                 summary.setGlobalStatus(dashboardSummary.getGlobalHealth());
@@ -118,6 +148,7 @@ public class ExecutiveSummaryService {
                 summary.setPriority(priority);
                 summary.setFirstAction(firstAction(mainAffectedPlatform));
                 summary.setTrend(trend);
+                summary.setPlatformFindings(platformFindings);
                 summary.setSummaryText(
                                 useRealObservedData
                                                 ? buildSummaryText(
@@ -135,6 +166,434 @@ public class ExecutiveSummaryService {
                                                                 priority));
 
                 return summary;
+        }
+
+        private List<PlatformFindingDto> buildPlatformFindings(
+                        Map<String, Integer> platformAffectations,
+                        ArubaSummary aruba,
+                        CitrixMetricsHistory citrix,
+                        Microsoft365MetricsHistory microsoft365,
+                        GlpiMetricsHistory glpi) {
+
+                List<PlatformFindingDto> findings = new ArrayList<>();
+
+                addPlatformFindings(findings, buildArubaFindings(platformAffectations, aruba, glpi));
+                addPlatformFindings(findings, buildCitrixFindings(platformAffectations, citrix, glpi));
+                addPlatformFindings(findings, buildMicrosoft365Findings(platformAffectations, microsoft365, glpi));
+                addPlatformFindings(findings, buildGlpiFindings(platformAffectations, glpi));
+
+                return findings;
+        }
+
+        private void addPlatformFindings(
+                        List<PlatformFindingDto> result,
+                        PlatformFindingAccumulator accumulator) {
+
+                if (!accumulator.findings().isEmpty()) {
+
+                        result.add(new PlatformFindingDto(
+                                        accumulator.platform(),
+                                        accumulator.status(),
+                                        accumulator.findings()));
+                }
+        }
+
+        private PlatformFindingAccumulator buildArubaFindings(
+                        Map<String, Integer> platformAffectations,
+                        ArubaSummary aruba,
+                        GlpiMetricsHistory glpi) {
+
+                PlatformFindingAccumulator findings =
+                                new PlatformFindingAccumulator("Aruba", statusFromAffectation(platformAffectations.getOrDefault("Aruba", 0)));
+
+                if (aruba == null) {
+
+                        return findings;
+                }
+
+                if (aruba.getTotalAps() > 0) {
+
+                        int downApsPercent = aruba.getDownAps() * 100 / aruba.getTotalAps();
+
+                        if (downApsPercent >= kpiProperties.getAruba().getAccessPointDownRedPercent()) {
+
+                                findings.note("El porcentaje de APs caidos alcanza el umbral rojo.");
+                        } else if (downApsPercent >= kpiProperties.getAruba().getAccessPointDownYellowPercent()) {
+
+                                findings.note("El porcentaje de APs caidos alcanza el umbral amarillo.");
+                        }
+                }
+
+                if (aruba.getInactiveAps() >= kpiProperties.getAruba().getInactiveApsYellowMin()) {
+
+                        findings.note("Hay " + aruba.getInactiveAps() + " APs inactivos.");
+                }
+
+                if (aruba.getFirmwareOutdated() >= kpiProperties.getAruba().getPendingFirmwareApsYellowMin()) {
+
+                        findings.note("Hay firmware pendiente en puntos de acceso.");
+                }
+
+                if (aruba.getTotalSwitches() > 0 && aruba.getDownSwitches() >= aruba.getTotalSwitches()) {
+
+                        findings.note("Los switches apagados alcanzan el umbral rojo.");
+                } else if (aruba.getDownSwitches() > kpiProperties.getAruba().getSwitchDownYellowAbove()) {
+
+                        findings.note("Hay " + aruba.getDownSwitches() + " switches caidos.");
+                }
+
+                if (aruba.getSwitchesFirmwareUpgradeRequired() >= kpiProperties.getAruba().getSwitchUpgradeYellowMin()) {
+
+                        findings.note("Hay " + aruba.getSwitchesFirmwareUpgradeRequired() + " switches con upgrade pendiente.");
+                }
+
+                int underusedSwitches = aruba.getUnderusedSwitches() == null ? 0 : aruba.getUnderusedSwitches().size();
+
+                if (underusedSwitches > kpiProperties.getAruba().getUnderusedSwitchesRedAbove()) {
+
+                        findings.note("Los switches infrautilizados alcanzan el umbral rojo.");
+                } else if (underusedSwitches > kpiProperties.getAruba().getUnderusedSwitchesYellowAbove()) {
+
+                        findings.note("Hay " + underusedSwitches + " switches infrautilizados.");
+                }
+
+                if (aruba.getTotalWifiClients() == 0) {
+
+                        findings.note("No hay clientes WiFi conectados.");
+                }
+
+                if (aruba.getMutualiaApsClients() == 0) {
+
+                        findings.note("No hay clientes Mutualia-APS conectados.");
+                }
+
+                if (aruba.getMutualiaWifiClients() == 0) {
+
+                        findings.note("No hay clientes Mutualia-WIFI conectados.");
+                }
+
+                int arubaOpenTickets = arubaOpenTickets(aruba, glpi);
+
+                if (arubaOpenTickets >= kpiProperties.getAruba().getArubaOpenTicketsRedMin()) {
+
+                        findings.note("Los tickets abiertos asociados a Aruba alcanzan el umbral rojo.");
+                } else if (arubaOpenTickets >= kpiProperties.getAruba().getArubaOpenTicketsYellowMin()) {
+
+                        findings.note("Hay " + arubaOpenTickets + " tickets abiertos asociados a Aruba.");
+                }
+
+                return findings;
+        }
+
+        private PlatformFindingAccumulator buildCitrixFindings(
+                        Map<String, Integer> platformAffectations,
+                        CitrixMetricsHistory citrix,
+                        GlpiMetricsHistory glpi) {
+
+                PlatformFindingAccumulator findings =
+                                new PlatformFindingAccumulator("Citrix", statusFromAffectation(platformAffectations.getOrDefault("Citrix", 0)));
+
+                if (citrix == null) {
+
+                        addCitrixTicketFinding(findings, glpi);
+                        return findings;
+                }
+
+                if (citrix.getDisconnectedSessions() > Math.max(10, citrix.getActiveSessions() / 4)) {
+
+                        findings.yellow("Hay " + citrix.getDisconnectedSessions() + " sesiones desconectadas en Citrix.");
+                }
+
+                if (citrix.getActiveSessions() <= 0) {
+
+                        findings.red("No hay sesiones activas observadas en Citrix.");
+                }
+
+                if (citrix.getAvailableDeliveryControllers() == 0) {
+
+                        findings.red("No hay Delivery Controllers disponibles.");
+                } else if (citrix.getTotalDeliveryControllers() > 0
+                                && deliveryControllersAvailablePercent(citrix) < kpiProperties.getStatus().getYellowMin()) {
+
+                        findings.red("Hay "
+                                        + citrix.getAvailableDeliveryControllers()
+                                        + " de "
+                                        + citrix.getTotalDeliveryControllers()
+                                        + " Delivery Controllers disponibles.");
+                } else if (citrix.getTotalDeliveryControllers() > 0
+                                && deliveryControllersAvailablePercent(citrix)
+                                                < kpiProperties.getCitrix().getDeliveryControllerYellowBelowPercent()) {
+
+                        findings.yellow("Hay "
+                                        + citrix.getAvailableDeliveryControllers()
+                                        + " de "
+                                        + citrix.getTotalDeliveryControllers()
+                                        + " Delivery Controllers disponibles.");
+                }
+
+                if (citrix.getAverageLogonDurationSeconds() > kpiProperties.getCitrix().getLogonDurationRedAboveSeconds()) {
+
+                        findings.red("El tiempo medio de logon es critico: "
+                                        + citrix.getAverageLogonDurationSeconds()
+                                        + " segundos.");
+                } else if (citrix.getAverageLogonDurationSeconds() > kpiProperties.getCitrix().getLogonDurationYellowAboveSeconds()) {
+
+                        findings.yellow("El tiempo medio de logon es elevado: "
+                                        + citrix.getAverageLogonDurationSeconds()
+                                        + " segundos.");
+                }
+
+                if (citrix.getServerLoadPercent() >= kpiProperties.getCitrix().getServerLoadRedMin()) {
+
+                        findings.red("La carga media de servidores Citrix es critica: "
+                                        + citrix.getServerLoadPercent()
+                                        + " %.");
+                } else if (citrix.getServerLoadPercent() >= kpiProperties.getCitrix().getServerLoadYellowMin()) {
+
+                        findings.yellow("La carga media de servidores Citrix es alta: "
+                                        + citrix.getServerLoadPercent()
+                                        + " %.");
+                }
+
+                if (citrix.getFailedLogons() > kpiProperties.getCitrix().getFailedLogonsRedAbove()) {
+
+                        findings.red("Hay " + citrix.getFailedLogons() + " errores de inicio de sesion.");
+                } else if (citrix.getFailedLogons() > kpiProperties.getCitrix().getFailedLogonsYellowAbove()) {
+
+                        findings.yellow("Hay " + citrix.getFailedLogons() + " errores de inicio de sesion.");
+                }
+
+                addCitrixTicketFinding(findings, glpi);
+
+                return findings;
+        }
+
+        private int deliveryControllersAvailablePercent(CitrixMetricsHistory citrix) {
+                if (citrix.getTotalDeliveryControllers() <= 0) {
+                        return 0;
+                }
+
+                return citrix.getAvailableDeliveryControllers() * 100 / citrix.getTotalDeliveryControllers();
+        }
+
+        private PlatformFindingAccumulator buildMicrosoft365Findings(
+                        Map<String, Integer> platformAffectations,
+                        Microsoft365MetricsHistory microsoft365,
+                        GlpiMetricsHistory glpi) {
+
+                PlatformFindingAccumulator findings =
+                                new PlatformFindingAccumulator("Microsoft 365", statusFromAffectation(platformAffectations.getOrDefault("Microsoft 365", 0)));
+
+                if (microsoft365 == null) {
+
+                        addMicrosoft365TicketFinding(findings, glpi);
+                        return findings;
+                }
+
+                Microsoft365AffectationCalculator.Result result =
+                                Microsoft365AffectationCalculator.calculate(
+                                                new Microsoft365AffectationCalculator.Input(
+                                                                microsoft365.getActiveUsers(),
+                                                                microsoft365.getUnassignedLicenses(),
+                                                                microsoft365.getOutlookStatus(),
+                                                                microsoft365.getTeamsStatus(),
+                                                                microsoft365.getSharePointStatus(),
+                                                                microsoft365.getNearlyFullMailboxes(),
+                                                                microsoft365.getEmailsQuarantined(),
+                                                                microsoft365.getSharePointStoragePercent(),
+                                                                microsoft365.getRiskyUsers(),
+                                                                microsoft365.getFailedSignIns(),
+                                                                microsoft365.getUsersWithoutMfa(),
+                                                                microsoft365.getAppsSecretsExpiringSoon(),
+                                                                microsoft365.getUnusedApplications(),
+                                                                microsoft365.getHighPrivilegeApplications(),
+                                                                microsoft365.getNonCompliantDevices(),
+                                                                glpi == null ? 0 : glpi.getMicrosoft365OpenTickets(),
+                                                                microsoft365.getOutdatedWindowsDevices(),
+                                                                microsoft365.getDevicesWithoutEncryption(),
+                                                                microsoft365.getStaleDevices()),
+                                                kpiProperties);
+
+                result.reasons().forEach(findings::note);
+
+                if (microsoft365.getActiveUsers() > 0
+                                && microsoft365.getUsersWithoutMfa() > microsoft365.getActiveUsers()) {
+
+                        findings.note("Los usuarios sin MFA superan los usuarios activos observados.");
+                }
+
+                return findings;
+        }
+
+        private PlatformFindingAccumulator buildGlpiFindings(
+                        Map<String, Integer> platformAffectations,
+                        GlpiMetricsHistory glpi) {
+
+                PlatformFindingAccumulator findings =
+                                new PlatformFindingAccumulator("GLPI", statusFromAffectation(platformAffectations.getOrDefault("GLPI", 0)));
+
+                if (glpi == null) {
+
+                        return findings;
+                }
+
+                if (glpi.getOpenTickets() >= kpiProperties.getGlpi().getOpenTicketsRedMin()) {
+
+                        findings.red("Hay " + glpi.getOpenTickets() + " tickets abiertos.");
+                } else if (glpi.getOpenTickets() >= kpiProperties.getGlpi().getOpenTicketsYellowMin()) {
+
+                        findings.yellow("Hay " + glpi.getOpenTickets() + " tickets abiertos.");
+                }
+
+                if (glpi.getCriticalOpenTickets() > kpiProperties.getGlpi().getCriticalTicketsRedAbove()) {
+
+                        findings.red("Hay " + glpi.getCriticalOpenTickets() + " tickets criticos abiertos.");
+                } else if (glpi.getCriticalOpenTickets() > kpiProperties.getGlpi().getCriticalTicketsYellowAbove()) {
+
+                        findings.yellow("Hay " + glpi.getCriticalOpenTickets() + " tickets criticos abiertos.");
+                }
+
+                addClosureFinding(findings, "diario", glpi.getCreatedToday(), glpi.getClosedToday());
+                addClosureFinding(findings, "semanal", glpi.getCreatedThisWeek(), glpi.getClosedThisWeek());
+
+                if (glpi.getCreatedThisWeek() > glpi.getClosedThisWeek()) {
+
+                        findings.yellow("Se han creado mas tickets de los que se han cerrado durante la semana.");
+                }
+
+                if (glpi.getOperationalBacklog() >= kpiProperties.getGlpi().getOpenTicketsRedMin()) {
+
+                        findings.red("El backlog operativo es alto: " + glpi.getOperationalBacklog() + " elementos.");
+                } else if (glpi.getOperationalBacklog() >= kpiProperties.getGlpi().getOpenTicketsYellowMin()) {
+
+                        findings.yellow("El backlog operativo es elevado: " + glpi.getOperationalBacklog() + " elementos.");
+                }
+
+                return findings;
+        }
+
+        private void addClosureFinding(PlatformFindingAccumulator findings, String period, int created, int closed) {
+
+                if (created <= 0) {
+
+                        return;
+                }
+
+                int closurePercent = closed * 100 / created;
+
+                if (closurePercent < kpiProperties.getGlpi().getClosedPercentGreenMin()) {
+
+                        findings.yellow("El porcentaje de cierre " + period + " es bajo: " + closurePercent + " %.");
+                }
+        }
+
+        private void addCitrixTicketFinding(PlatformFindingAccumulator findings, GlpiMetricsHistory glpi) {
+
+                Integer tickets = glpi == null ? null : glpi.getCitrixOpenTicketsRaw();
+
+                if (tickets == null) {
+
+                        return;
+                }
+
+                if (tickets >= kpiProperties.getCitrix().getCitrixOpenTicketsRedMin()) {
+
+                        findings.red("Los tickets abiertos asociados a Citrix alcanzan el umbral rojo.");
+                } else if (tickets >= kpiProperties.getCitrix().getCitrixOpenTicketsYellowMin()) {
+
+                        findings.yellow("Hay " + tickets + " tickets abiertos asociados a Citrix.");
+                }
+        }
+
+        private void addMicrosoft365TicketFinding(PlatformFindingAccumulator findings, GlpiMetricsHistory glpi) {
+
+                Integer tickets = glpi == null ? null : glpi.getMicrosoft365OpenTicketsRaw();
+
+                if (tickets == null) {
+
+                        return;
+                }
+
+                if (tickets >= kpiProperties.getMicrosoft365().getMicrosoft365OpenTicketsRedMin()) {
+
+                        findings.red("Los tickets abiertos asociados a Microsoft 365 alcanzan el umbral rojo.");
+                } else if (tickets >= kpiProperties.getMicrosoft365().getMicrosoft365OpenTicketsYellowMin()) {
+
+                        findings.yellow("Hay " + tickets + " tickets abiertos asociados a Microsoft 365.");
+                }
+        }
+
+        private int arubaOpenTickets(ArubaSummary aruba, GlpiMetricsHistory glpi) {
+
+                if (aruba != null && aruba.getArubaOpenTickets() > 0) {
+
+                        return aruba.getArubaOpenTickets();
+                }
+
+                Integer tickets = glpi == null ? null : glpi.getArubaOpenTicketsRaw();
+
+                return tickets == null ? 0 : tickets;
+        }
+
+        private String statusFromAffectation(int value) {
+
+                if (value >= kpiProperties.getStatus().getRedMin()) {
+
+                        return "RED";
+                }
+
+                if (value >= kpiProperties.getStatus().getYellowMin()) {
+
+                        return "YELLOW";
+                }
+
+                return "GREEN";
+        }
+
+        private ArubaSummary currentArubaSummary() {
+
+                if (arubaService == null) {
+
+                        return null;
+                }
+
+                return arubaService.getSummary();
+        }
+
+        private CitrixMetricsHistory latestCitrixSnapshot() {
+
+                if (citrixRepository == null) {
+
+                        return null;
+                }
+
+                Optional<CitrixMetricsHistory> latest = citrixRepository.findTopByOrderByCollectedAtDesc();
+
+                return latest == null ? null : latest.orElse(null);
+        }
+
+        private Microsoft365MetricsHistory latestMicrosoft365Snapshot() {
+
+                if (microsoft365Repository == null) {
+
+                        return null;
+                }
+
+                Optional<Microsoft365MetricsHistory> latest = microsoft365Repository.findTopByOrderByCollectedAtDesc();
+
+                return latest == null ? null : latest.orElse(null);
+        }
+
+        private GlpiMetricsHistory latestGlpiSnapshot() {
+
+                if (glpiRepository == null) {
+
+                        return null;
+                }
+
+                Optional<GlpiMetricsHistory> latest = glpiRepository.findTopByOrderByCollectedAtDesc();
+
+                return latest == null ? null : latest.orElse(null);
         }
 
         private Map<String, Integer> extractPlatformAffectations(MainDashboardSummary summary) {
@@ -185,6 +644,59 @@ public class ExecutiveSummaryService {
                 return values;
         }
 
+        private Map<String, String> extractPlatformStatuses(MainDashboardSummary summary) {
+
+                Map<String, String> statuses = new HashMap<>();
+
+                statuses.put("Aruba", "GREEN");
+                statuses.put("Citrix", "GREEN");
+                statuses.put("Microsoft 365", "GREEN");
+                statuses.put("GLPI", "GREEN");
+
+                if (summary.getKpis() == null) {
+
+                        return statuses;
+                }
+
+                for (KpiResultDto kpi : summary.getKpis()) {
+
+                        if (kpi.getComponents() == null) {
+
+                                continue;
+                        }
+
+                        for (KpiResultDto component : kpi.getComponents()) {
+
+                                String status =
+                                                component.getStatus() == null
+                                                                ? "GREEN"
+                                                                : component.getStatus().name();
+
+                                if ("aruba_network_affectation".equals(component.getId())) {
+
+                                        statuses.put("Aruba", status);
+                                }
+
+                                if ("citrix_health".equals(component.getId())) {
+
+                                        statuses.put("Citrix", status);
+                                }
+
+                                if ("microsoft365_health".equals(component.getId())) {
+
+                                        statuses.put("Microsoft 365", status);
+                                }
+
+                                if ("glpi_health".equals(component.getId())) {
+
+                                        statuses.put("GLPI", status);
+                                }
+                        }
+                }
+
+                return statuses;
+        }
+
         private int numericValue(KpiResultDto component) {
 
                 if (component.getScore() != null) {
@@ -200,26 +712,28 @@ public class ExecutiveSummaryService {
                 return 0;
         }
 
-        private List<String> resolveAffectedServices(Map<String, Integer> platformAffectations) {
+        private List<String> resolveAffectedServices(
+                        Map<String, Integer> platformAffectations,
+                        Map<String, String> platformStatuses) {
 
                 List<String> services = new ArrayList<>();
 
-                if (platformAffectations.getOrDefault("Aruba", 0) >= kpiProperties.getStatus().getYellowMin()) {
+                if (isAffected("Aruba", platformAffectations, platformStatuses)) {
 
                         services.add("Red corporativa / conectividad");
                 }
 
-                if (platformAffectations.getOrDefault("Citrix", 0) >= kpiProperties.getStatus().getYellowMin()) {
+                if (isAffected("Citrix", platformAffectations, platformStatuses)) {
 
                         services.add("Acceso a aplicaciones corporativas");
                 }
 
-                if (platformAffectations.getOrDefault("Microsoft 365", 0) >= kpiProperties.getStatus().getYellowMin()) {
+                if (isAffected("Microsoft 365", platformAffectations, platformStatuses)) {
 
                         services.add("Servicios cloud / identidad / colaboracion");
                 }
 
-                if (platformAffectations.getOrDefault("GLPI", 0) >= kpiProperties.getStatus().getYellowMin()) {
+                if (isAffected("GLPI", platformAffectations, platformStatuses)) {
 
                         services.add("Soporte IT / gestion de incidencias");
                 }
@@ -227,13 +741,34 @@ public class ExecutiveSummaryService {
                 return services;
         }
 
-        private List<String> resolveCriticalPlatforms(Map<String, Integer> platformAffectations) {
+        private List<String> resolveCriticalPlatforms(
+                        Map<String, Integer> platformAffectations,
+                        Map<String, String> platformStatuses) {
 
                 return platformAffectations.entrySet().stream()
-                                .filter(entry -> entry.getValue() >= kpiProperties.getStatus().getRedMin())
+                                .filter(entry -> isCritical(entry.getKey(), platformAffectations, platformStatuses))
                                 .map(Map.Entry::getKey)
                                 .sorted()
                                 .toList();
+        }
+
+        private boolean isAffected(
+                        String platform,
+                        Map<String, Integer> platformAffectations,
+                        Map<String, String> platformStatuses) {
+
+                return platformAffectations.getOrDefault(platform, 0) >= kpiProperties.getStatus().getYellowMin()
+                                || "YELLOW".equalsIgnoreCase(platformStatuses.get(platform))
+                                || "RED".equalsIgnoreCase(platformStatuses.get(platform));
+        }
+
+        private boolean isCritical(
+                        String platform,
+                        Map<String, Integer> platformAffectations,
+                        Map<String, String> platformStatuses) {
+
+                return platformAffectations.getOrDefault(platform, 0) >= kpiProperties.getStatus().getRedMin()
+                                || "RED".equalsIgnoreCase(platformStatuses.get(platform));
         }
 
         private String resolveMainAffectedPlatform(Map<String, Integer> platformAffectations) {
@@ -557,4 +1092,83 @@ public class ExecutiveSummaryService {
 
                 return status == null ? "desconocido" : status.toLowerCase();
         }
+
+        private static class PlatformFindingAccumulator {
+
+                private final String platform;
+                private final List<String> findings = new ArrayList<>();
+                private String status;
+
+                PlatformFindingAccumulator(String platform, String status) {
+
+                        this.platform = platform;
+                        this.status = status == null ? "GREEN" : status;
+                }
+
+                String platform() {
+
+                        return platform;
+                }
+
+                String status() {
+
+                        return status;
+                }
+
+                List<String> findings() {
+
+                        return findings;
+                }
+
+                void yellow(String finding) {
+
+                        add("YELLOW", finding);
+                }
+
+                void red(String finding) {
+
+                        add("RED", finding);
+                }
+
+                void note(String finding) {
+
+                        if (finding == null || finding.isBlank()) {
+
+                                return;
+                        }
+
+                        findings.add(finding);
+                }
+
+                private void add(String findingStatus, String finding) {
+
+                        if (finding == null || finding.isBlank()) {
+
+                                return;
+                        }
+
+                        findings.add(finding);
+
+                        if (severity(findingStatus) > severity(status)) {
+
+                                status = findingStatus;
+                        }
+                }
+
+                private int severity(String value) {
+
+                        if ("RED".equalsIgnoreCase(value)) {
+
+                                return 3;
+                        }
+
+                        if ("YELLOW".equalsIgnoreCase(value)) {
+
+                                return 2;
+                        }
+
+                        return 1;
+                }
+        }
 }
+

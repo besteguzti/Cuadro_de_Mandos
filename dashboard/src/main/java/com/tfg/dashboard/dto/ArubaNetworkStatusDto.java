@@ -1,6 +1,7 @@
 package com.tfg.dashboard.dto;
 
 import java.util.List;
+import java.util.Map;
 
 public class ArubaNetworkStatusDto {
 
@@ -9,6 +10,7 @@ public class ArubaNetworkStatusDto {
     private AccessPointStatusDto accessPointStatus;
     private SwitchStatusDto switchStatus;
     private List<String> reasons;
+    private Map<String, String> indicatorStatuses;
     private boolean affectedService;
     private boolean criticalCondition;
     private int technicalDegradationValue;
@@ -32,6 +34,10 @@ public class ArubaNetworkStatusDto {
 
     public List<String> getReasons() {
         return reasons;
+    }
+
+    public Map<String, String> getIndicatorStatuses() {
+        return indicatorStatuses;
     }
 
     public boolean isAffectedService() {
@@ -68,6 +74,10 @@ public class ArubaNetworkStatusDto {
 
     public void setReasons(List<String> reasons) {
         this.reasons = reasons;
+    }
+
+    public void setIndicatorStatuses(Map<String, String> indicatorStatuses) {
+        this.indicatorStatuses = indicatorStatuses;
     }
 
     public void setAffectedService(boolean affectedService) {

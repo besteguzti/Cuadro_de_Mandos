@@ -14,6 +14,7 @@ public class ExecutiveSummaryDto {
     private String firstAction;
     private String trend;
     private String summaryText;
+    private List<PlatformFindingDto> platformFindings = List.of();
 
     public ExecutiveSummaryDto() {
     }
@@ -58,6 +59,10 @@ public class ExecutiveSummaryDto {
         return summaryText;
     }
 
+    public List<PlatformFindingDto> getPlatformFindings() {
+        return platformFindings;
+    }
+
     public void setGlobalStatus(String globalStatus) {
         this.globalStatus = globalStatus;
     }
@@ -96,5 +101,9 @@ public class ExecutiveSummaryDto {
 
     public void setSummaryText(String summaryText) {
         this.summaryText = summaryText;
+    }
+
+    public void setPlatformFindings(List<PlatformFindingDto> platformFindings) {
+        this.platformFindings = platformFindings == null ? List.of() : platformFindings;
     }
 }

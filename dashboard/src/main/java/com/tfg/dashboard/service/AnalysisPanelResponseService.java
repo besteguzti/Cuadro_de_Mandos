@@ -19,19 +19,19 @@ public class AnalysisPanelResponseService {
 
     private final AnalysisSnapshotQueryService queryService;
     private final GlpiPlatformRelationService glpiPlatformRelationService;
-    private final TechnicalTimelineService technicalTimelineService;
-    private final SpecificKpiRelationService specificKpiRelationService;
+    private final AnalysisTimelineService analysisTimelineService;
+    private final KpiRelationService kpiRelationService;
 
     public AnalysisPanelResponseService(
             AnalysisSnapshotQueryService queryService,
             GlpiPlatformRelationService glpiPlatformRelationService,
-            TechnicalTimelineService technicalTimelineService,
-            SpecificKpiRelationService specificKpiRelationService) {
+            AnalysisTimelineService analysisTimelineService,
+            KpiRelationService kpiRelationService) {
 
         this.queryService = queryService;
         this.glpiPlatformRelationService = glpiPlatformRelationService;
-        this.technicalTimelineService = technicalTimelineService;
-        this.specificKpiRelationService = specificKpiRelationService;
+        this.analysisTimelineService = analysisTimelineService;
+        this.kpiRelationService = kpiRelationService;
     }
 
     public OperationalImpactAnalysisResponse buildOperationalImpactResponse(String period) {
@@ -42,10 +42,11 @@ public class AnalysisPanelResponseService {
         response.setTechnicalRelations(
                 glpiPlatformRelationService.buildTechnicalRelations(snapshots));
         response.setTechnicalTimeline(
-                technicalTimelineService.buildPlatformEvolution(snapshots));
+                analysisTimelineService.buildPlatformEvolution(snapshots));
         response.setSpecificKpiRelations(
-                specificKpiRelationService.buildRelations(snapshots));
+                kpiRelationService.buildRelations(snapshots));
 
         return response;
     }
 }
+

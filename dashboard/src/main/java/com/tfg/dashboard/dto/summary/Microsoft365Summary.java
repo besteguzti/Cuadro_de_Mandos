@@ -5,12 +5,8 @@ import java.time.LocalDateTime;
 import com.tfg.dashboard.dto.KpiResultDto;
 import com.tfg.dashboard.dto.Microsoft365HealthStatusDto;
 
-/**
- * Respuesta de la vista Microsoft 365.
- *
- * Contiene métricas simuladas de servicios, seguridad y dispositivos junto al
- * índice de salud Microsoft 365 calculado en backend.
- */
+//Respuesta de la vista Microsoft 365.
+
 public class Microsoft365Summary {
 
     private int activeUsers;
@@ -32,7 +28,6 @@ public class Microsoft365Summary {
     private int outdatedWindowsDevices;
     private int devicesWithoutEncryption;
     private int staleDevices;
-    private String microsoft365Health;
     private Microsoft365HealthStatusDto microsoft365HealthDetails;
     private KpiResultDto microsoft365HealthKpi;
     private LocalDateTime lastUpdated;
@@ -191,14 +186,6 @@ public class Microsoft365Summary {
 
     public void setStaleDevices(int staleDevices) {
         this.staleDevices = staleDevices;
-    }
-
-    public String getMicrosoft365Health() {
-        return microsoft365Health;
-    }
-
-    public void setMicrosoft365Health(String microsoft365Health) {
-        this.microsoft365Health = microsoft365Health;
     }
 
     public Microsoft365HealthStatusDto getMicrosoft365HealthDetails() {

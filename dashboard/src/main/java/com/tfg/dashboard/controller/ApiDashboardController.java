@@ -8,10 +8,7 @@ import com.tfg.dashboard.dto.ExecutiveSummaryDto;
 import com.tfg.dashboard.service.ExecutiveSummaryService;
 
 /**
- * Publica endpoints del dashboard principal bajo el prefijo /api.
- *
- * Actualmente expone el diagnóstico ejecutivo, una lectura orientada a
- * responsables IT construida a partir de los KPIs ya calculados por backend.
+ * Endpoints del dashboard principal. Expone el resumen ejecutivo que se muestra en el panel.
  */
 @RestController
 @RequestMapping("/api/dashboard")
@@ -22,12 +19,10 @@ public class ApiDashboardController {
     public ApiDashboardController(ExecutiveSummaryService executiveSummaryService) {
         this.executiveSummaryService = executiveSummaryService;
     }
-
-    
-    //Devuelve servicio afectado, plataforma principal, prioridad, tendencia y primera acción recomendada. 
      
     @GetMapping("/executive-summary")
     public ExecutiveSummaryDto getExecutiveSummary() {
         return executiveSummaryService.getExecutiveSummary();
     }
 }
+

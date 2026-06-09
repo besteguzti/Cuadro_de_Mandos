@@ -7,13 +7,8 @@ import org.springframework.web.bind.annotation.RestController;
 import com.tfg.dashboard.dto.summary.CitrixSummary;
 import com.tfg.dashboard.service.CitrixService;
 
-/**
- * Endpoint REST de Citrix.
- *
- * Citrix se modela como fuente simulada persistida en MySQL. El endpoint de
- * resumen lee el último snapshot para que la página Citrix y el dashboard
- * principal trabajen con la misma captura.
- */
+//Endpoints de Citrix. Usa el último snapshot guardado en MySQL para mostrar los datos en el panel.
+
 @RestController
 @RequestMapping("/citrix")
 public class CitrixController {
@@ -24,10 +19,8 @@ public class CitrixController {
         this.citrixService = citrixService;
     }
 
-    /**
-     * Devuelve sesiones, Delivery Controllers, logon duration, carga de
-     * servidores, errores de inicio e índice de salud Citrix.
-     */
+    // Devuelve el resumen actual de Citrix.
+
     @GetMapping("/summary")
     public CitrixSummary getSummary() {
         return citrixService.getSummary();

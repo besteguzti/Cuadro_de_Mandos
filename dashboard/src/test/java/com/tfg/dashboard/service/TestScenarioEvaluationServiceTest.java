@@ -9,6 +9,8 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.util.List;
+
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.http.MediaType;
@@ -19,6 +21,7 @@ import com.tfg.dashboard.config.properties.KpiProperties;
 import com.tfg.dashboard.controller.TestScenarioController;
 import com.tfg.dashboard.dto.TestScenarioEvaluationResponse;
 import com.tfg.dashboard.dto.TestScenarioRequest;
+import com.tfg.dashboard.dto.PlatformFindingDto;
 import com.tfg.dashboard.dto.summary.ArubaSummary;
 import com.tfg.dashboard.dto.summary.MainDashboardSummary;
 import com.tfg.dashboard.model.CitrixMetricsHistory;
@@ -88,10 +91,61 @@ class TestScenarioEvaluationServiceTest {
 
         assertThat(response.getOperationalSummary().getPriority()).isEqualTo("LOW");
         assertThat(response.getOperationalSummary().getAffectedServices()).isEmpty();
+        assertThat(response.getOperationalSummary().getPlatformFindings()).isEmpty();
         assertThat(response.getOperationalSummary().getMainAffectedPlatform())
                 .isEqualTo("Sin plataforma afectada");
         assertThat(response.getOperationalSummary().getTrend())
                 .isEqualTo("Tendencia no disponible en escenario manual");
+    }
+
+    @Test
+    void citrixHighLogonIsReportedEvenWhenWeightedGlobalStatusIsGreen() {
+        TestScenarioRequest request = validRequest();
+
+        request.getCitrix().setAverageLogonDurationSeconds(55);
+
+        TestScenarioEvaluationResponse response = realService().evaluate(request);
+
+        assertThat(response.getOperationalSummary().getGlobalStatus()).isEqualTo("GREEN");
+        assertThat(findingsFor(response, "Citrix"))
+                .anySatisfy(finding -> assertThat(finding).contains("logon").contains("55"));
+    }
+
+    @Test
+    void arubaDownAccessPointsAreReportedAsPlatformFinding() {
+        TestScenarioRequest request = validRequest();
+
+        request.getAruba().setDownAps(5);
+
+        TestScenarioEvaluationResponse response = realService().evaluate(request);
+
+        assertThat(findingsFor(response, "Aruba"))
+                .anySatisfy(finding -> assertThat(finding).contains("APs caidos"));
+    }
+
+    @Test
+    void microsoft365UsersWithoutMfaAreReportedAsPlatformFinding() {
+        TestScenarioRequest request = validRequest();
+
+        request.getMicrosoft365().setUsersWithoutMfa(2);
+
+        TestScenarioEvaluationResponse response = realService().evaluate(request);
+
+        assertThat(findingsFor(response, "Microsoft 365"))
+                .anySatisfy(finding -> assertThat(finding).contains("usuarios sin MFA"));
+    }
+
+    @Test
+    void glpiCriticalTicketsAreReportedAsPlatformFinding() {
+        TestScenarioRequest request = validRequest();
+
+        request.getAruba().setArubaOpenTickets(5);
+        request.getGlpi().setCriticalOpenTickets(2);
+
+        TestScenarioEvaluationResponse response = realService().evaluate(request);
+
+        assertThat(findingsFor(response, "GLPI"))
+                .anySatisfy(finding -> assertThat(finding).contains("tickets criticos"));
     }
 
     @Test
@@ -120,15 +174,30 @@ class TestScenarioEvaluationServiceTest {
     }
 
     @Test
-    void microsoft365ActiveUsersAboveCitrixSessionsFailWithControlledValidationError() {
+    void microsoft365ActiveUsersAboveCitrixSessionsAreAllowed() {
         TestScenarioRequest request = validRequest();
 
-        request.getCitrix().setActiveSessions(100);
+        request.getCitrix().setActiveSessions(0);
+        request.getCitrix().setDisconnectedSessions(0);
         request.getMicrosoft365().setActiveUsers(101);
+        request.getMicrosoft365().setUsersWithoutMfa(3);
+
+        TestScenarioEvaluationResponse response = realService().evaluate(request);
+
+        assertThat(response.getSummary()).isNotNull();
+        assertThat(response.getPlatformStatus().getMicrosoft365()).isNotBlank();
+    }
+
+    @Test
+    void usersWithoutMfaAboveActiveUsersFailWithControlledValidationError() {
+        TestScenarioRequest request = validRequest();
+
+        request.getMicrosoft365().setActiveUsers(3);
+        request.getMicrosoft365().setUsersWithoutMfa(4);
 
         assertThatThrownBy(() -> realService().evaluate(request))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Usuarios activos Microsoft 365 no puede ser mayor que sesiones activas Citrix");
+                .hasMessageContaining("Usuarios sin MFA no puede ser mayor que usuarios activos Microsoft 365");
     }
 
     @Test
@@ -214,7 +283,7 @@ class TestScenarioEvaluationServiceTest {
         GlobalKpiCalculationService globalKpiCalculationService =
                 new GlobalKpiCalculationService(kpiScoringService, kpiProperties);
         DashboardFreshnessService dashboardFreshnessService =
-                new DashboardFreshnessService(kpiScoringService);
+                new DashboardFreshnessService(kpiScoringService, kpiProperties);
         MainDashboardService mainDashboardService =
                 new MainDashboardService(
                         null,
@@ -278,8 +347,8 @@ class TestScenarioEvaluationServiceTest {
         microsoft365.setMicrosoft365OpenTickets(0);
 
         glpi.setCriticalOpenTickets(0);
-        glpi.setDailyClosurePercent(80);
-        glpi.setWeeklyClosurePercent(80);
+        glpi.setDailyClosurePercent(100);
+        glpi.setWeeklyClosurePercent(100);
 
         request.setAruba(aruba);
         request.setCitrix(citrix);
@@ -288,4 +357,15 @@ class TestScenarioEvaluationServiceTest {
 
         return request;
     }
+
+    private List<String> findingsFor(TestScenarioEvaluationResponse response, String platform) {
+        return response.getOperationalSummary()
+                .getPlatformFindings()
+                .stream()
+                .filter(finding -> platform.equals(finding.getPlatform()))
+                .findFirst()
+                .map(PlatformFindingDto::getFindings)
+                .orElse(List.of());
+    }
 }
+

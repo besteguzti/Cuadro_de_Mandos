@@ -139,6 +139,7 @@ public class GlpiService {
                                 calculateGlpiHealthDetails(
                                                 openTickets,
                                                 criticalOpenTickets,
+                                                slaBreachedTickets,
                                                 createdToday,
                                                 closedToday,
                                                 createdThisWeek,
@@ -174,6 +175,7 @@ public class GlpiService {
                                 calculateGlpiHealthDetails(
                                                 history.getOpenTickets(),
                                                 history.getCriticalOpenTickets(),
+                                                history.getSlaBreachedTickets(),
                                                 history.getCreatedToday(),
                                                 history.getClosedToday(),
                                                 history.getCreatedThisWeek(),
@@ -223,7 +225,9 @@ public class GlpiService {
                 }
 
                 if (collectedAt.isAfter(
-                                LocalDateTime.now().minusMinutes(2))) {
+                                LocalDateTime.now().minusMinutes(
+                                                kpiProperties.getFreshness()
+                                                                .getGlpiMinutes()))) {
 
                         return "OK";
                 }
@@ -239,6 +243,7 @@ public class GlpiService {
         private GlpiHealthStatusDto calculateGlpiHealthDetails(
                         int openTickets,
                         int criticalOpenTickets,
+                        int slaBreachedTickets,
                         int createdToday,
                         int closedToday,
                         int createdThisWeek,
@@ -248,6 +253,8 @@ public class GlpiService {
                                 evaluateOpenTickets(openTickets),
                                 evaluateCriticalOpenTickets(
                                                 criticalOpenTickets),
+                                evaluateSlaBreachedTickets(
+                                                slaBreachedTickets),
                                 evaluateClosedPercentage(
                                                 "Porcentaje de tickets cerrados",
                                                 createdToday,
@@ -259,14 +266,18 @@ public class GlpiService {
                                                 closedThisWeek,
                                                 "semanal"));
 
-                int percentage = (int) Math.round(
+                int aggregatePercentage = (int) Math.round(
                                 indicators.stream()
                                                 .mapToInt(
                                                                 GlpiIndicatorStatusDto::getAffectionPercent)
                                                 .average()
                                                 .orElse(100));
+                int percentage = PlatformSeverityRules.applyInternalSeverityFloor(
+                                aggregatePercentage,
+                                kpiProperties,
+                                indicators.stream().map(GlpiIndicatorStatusDto::getColor).toList());
 
-                String color = colorByPercentage(percentage);
+                String color = PlatformSeverityRules.statusFromAffection(percentage, kpiProperties);
 
                 List<String> reasons = indicators.stream()
                                 .filter(indicator -> !GREEN.equals(indicator.getColor()))
@@ -353,6 +364,37 @@ public class GlpiService {
                                 "No hay tickets críticos abiertos");
         }
 
+        private GlpiIndicatorStatusDto evaluateSlaBreachedTickets(
+                        int slaBreachedTickets) {
+
+                if (slaBreachedTickets > kpiProperties.getGlpi().getSlaBreachedTicketsRedAbove()) {
+
+                        return indicator(
+                                        "Tickets vencidos SLA",
+                                        RED,
+                                        "Hay más de "
+                                                        + kpiProperties.getGlpi().getSlaBreachedTicketsRedAbove()
+                                                        + " tickets vencidos SLA");
+                }
+
+                if (slaBreachedTickets > kpiProperties.getGlpi().getSlaBreachedTicketsYellowAbove()) {
+
+                        return indicator(
+                                        "Tickets vencidos SLA",
+                                        YELLOW,
+                                        "Hay entre "
+                                                        + (kpiProperties.getGlpi().getSlaBreachedTicketsYellowAbove() + 1)
+                                                        + " y "
+                                                        + kpiProperties.getGlpi().getSlaBreachedTicketsRedAbove()
+                                                        + " tickets vencidos SLA");
+                }
+
+                return indicator(
+                                "Tickets vencidos SLA",
+                                GREEN,
+                                "No hay tickets vencidos SLA");
+        }
+
         private GlpiIndicatorStatusDto evaluateClosedPercentage(
                         String name,
                         int created,
@@ -414,22 +456,6 @@ public class GlpiService {
                 return kpiProperties.getAffection().getGreen();
         }
 
-        private String colorByPercentage(
-                        int percentage) {
-
-                if (percentage >= kpiProperties.getStatus().getRedMin()) {
-
-                        return RED;
-                }
-
-                if (percentage >= kpiProperties.getStatus().getYellowMin()) {
-
-                        return YELLOW;
-                }
-
-                return GREEN;
-        }
-
         private GlpiHealthStatusDto noDataGlpiHealthDetails() {
 
                 GlpiIndicatorStatusDto noData = indicator(
@@ -462,7 +488,7 @@ public class GlpiService {
                                 details.getPercentage(),
                                 KpiStatus.from(details.getColor()),
                                 "Afección normalizada de GLPI como consecuencia operativa.",
-                                "Media uniforme de tickets abiertos, tickets críticos, porcentaje de cierre diario y porcentaje de cierre semanal.",
+                                "Media uniforme de tickets abiertos, tickets críticos, tickets vencidos SLA, porcentaje de cierre diario y porcentaje de cierre semanal.",
                                 timestamp,
                                 freshness,
                                 details.getPercentage(),
@@ -488,3 +514,4 @@ public class GlpiService {
                                 .replace("%", "percent");
         }
 }
+

@@ -7,7 +7,7 @@ import org.springframework.stereotype.Service;
 
 import com.tfg.dashboard.dto.AnalyticsComparePoint;
 import com.tfg.dashboard.dto.OperationalImpactAnalysisResponse;
-import com.tfg.dashboard.dto.TechnicalTimelinePointDto;
+import com.tfg.dashboard.dto.TimelinePointDto;
 import com.tfg.dashboard.model.AnalysisSnapshot;
 
 /**
@@ -20,14 +20,14 @@ import com.tfg.dashboard.model.AnalysisSnapshot;
 @Service
 public class TransversalKpiAnalyticsService {
 
-        private final AnalysisSnapshotOrchestrator analysisSnapshotOrchestrator;
+        private final AnalysisOrchestrator analysisOrchestrator;
         private final TransversalKpiHistoryService historyService;
 
         public TransversalKpiAnalyticsService(
-                        AnalysisSnapshotOrchestrator analysisSnapshotOrchestrator,
+                        AnalysisOrchestrator analysisOrchestrator,
                         TransversalKpiHistoryService historyService) {
 
-                this.analysisSnapshotOrchestrator = analysisSnapshotOrchestrator;
+                this.analysisOrchestrator = analysisOrchestrator;
                 this.historyService = historyService;
         }
 
@@ -36,35 +36,25 @@ public class TransversalKpiAnalyticsService {
          */
         public List<AnalysisSnapshot> getAnalysisSnapshots(String period) {
 
-                return analysisSnapshotOrchestrator.getAnalysisSnapshots(period);
+                return analysisOrchestrator.getAnalysisSnapshots(period);
         }
 
         /**
-         * Devuelve el análisis operativo principal.
-         *
-         * El parametro platform se mantiene por compatibilidad con llamadas
-         * antiguas, aunque el panel actual ya no tiene selector de plataforma.
+         * Devuelve el analisis operativo principal del panel de analisis.
          */
-        public OperationalImpactAnalysisResponse getGlpiPlatformRelation(
-                        String platform,
-                        String period) {
-
-                return analysisSnapshotOrchestrator.getGlpiPlatformRelation(platform, period);
-        }
-
         public OperationalImpactAnalysisResponse getGlpiPlatformRelation(String period) {
 
-                return analysisSnapshotOrchestrator.getGlpiPlatformRelation(period);
+                return analysisOrchestrator.getGlpiPlatformRelation(period);
         }
 
         public List<AnalyticsComparePoint> getTechnicalDegradationImpact(String period) {
 
-                return analysisSnapshotOrchestrator.getTechnicalDegradationImpact(period);
+                return analysisOrchestrator.getTechnicalDegradationImpact(period);
         }
 
-        public List<TechnicalTimelinePointDto> getPlatformEvolution(String period) {
+        public List<TimelinePointDto> getPlatformEvolution(String period) {
 
-                return analysisSnapshotOrchestrator.getPlatformEvolution(period);
+                return analysisOrchestrator.getPlatformEvolution(period);
         }
 
         /**
@@ -80,6 +70,7 @@ public class TransversalKpiAnalyticsService {
          */
         public void saveAnalysisSnapshot(LocalDateTime collectedAt) {
 
-                analysisSnapshotOrchestrator.saveAnalysisSnapshot(collectedAt);
+                analysisOrchestrator.saveAnalysisSnapshot(collectedAt);
         }
 }
+

@@ -17,7 +17,8 @@ import org.springframework.test.web.servlet.MockMvc;
 import com.tfg.dashboard.dto.AnalyticsComparePoint;
 import com.tfg.dashboard.dto.OperationalImpactAnalysisResponse;
 import com.tfg.dashboard.dto.TechnicalPlatformRelationDto;
-import com.tfg.dashboard.dto.TechnicalTimelinePointDto;
+import com.tfg.dashboard.dto.TimelinePointDto;
+import com.tfg.dashboard.model.AnalysisSnapshot;
 import com.tfg.dashboard.service.TransversalKpiAnalyticsService;
 
 @WebMvcTest(AnalysisController.class)
@@ -67,10 +68,40 @@ class AnalysisControllerTest {
     }
 
     @Test
+    void snapshotsEndpointReturnsExtendedAnalysisFields() throws Exception {
+
+        AnalysisSnapshot snapshot = new AnalysisSnapshot();
+        snapshot.setTimestamp(LocalDateTime.of(2026, 5, 25, 12, 0));
+        snapshot.setMicrosoft365ActiveUsers(180);
+        snapshot.setCitrixAvailableDeliveryControllers(3);
+        snapshot.setArubaDownAps(4);
+        snapshot.setGlpiCreatedToday(22);
+        snapshot.setGlpiClosedToday(18);
+        snapshot.setGlpiCreatedThisWeek(120);
+        snapshot.setGlpiClosedThisWeek(90);
+        snapshot.setGlpiOperationalBacklog(30);
+
+        when(analyticsService.getAnalysisSnapshots("30d"))
+                .thenReturn(List.of(snapshot));
+
+        mockMvc.perform(get("/api/analysis/snapshots")
+                        .param("period", "30d"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].microsoft365ActiveUsers").value(180))
+                .andExpect(jsonPath("$[0].citrixAvailableDeliveryControllers").value(3))
+                .andExpect(jsonPath("$[0].arubaDownAps").value(4))
+                .andExpect(jsonPath("$[0].glpiCreatedToday").value(22))
+                .andExpect(jsonPath("$[0].glpiClosedToday").value(18))
+                .andExpect(jsonPath("$[0].glpiCreatedThisWeek").value(120))
+                .andExpect(jsonPath("$[0].glpiClosedThisWeek").value(90))
+                .andExpect(jsonPath("$[0].glpiOperationalBacklog").value(30));
+    }
+
+    @Test
     void platformEvolutionReturnsTimeline() throws Exception {
 
-        TechnicalTimelinePointDto point =
-                new TechnicalTimelinePointDto();
+        TimelinePointDto point =
+                new TimelinePointDto();
         point.setTimestamp(LocalDateTime.now());
         point.setAruba(20.0);
         point.setCitrix(30.0);
@@ -130,10 +161,10 @@ class AnalysisControllerTest {
         );
     }
 
-    private TechnicalTimelinePointDto timelinePoint() {
+    private TimelinePointDto timelinePoint() {
 
-        TechnicalTimelinePointDto point =
-                new TechnicalTimelinePointDto();
+        TimelinePointDto point =
+                new TimelinePointDto();
         point.setTimestamp(LocalDateTime.now());
         point.setAruba(20.0);
         point.setCitrix(30.0);

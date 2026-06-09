@@ -9,12 +9,9 @@ import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 
 /**
- * Valor editable de configuración de umbrales KPI.
+ * Umbral KPI editable desde la configuración.
  *
- * Cada fila representa un parametro concreto del modelo de scoring, por
- * ejemplo el inicio del estado amarillo global o el umbral rojo de logon
- * Citrix. La aplicacion carga estos valores desde MySQL y los aplica sobre
- * KpiProperties en tiempo de ejecucion.
+ * La aplicación carga estos valores desde MySQL y los aplica sobre KpiProperties en tiempo de ejecución.
  */
 @Entity
 @Table(
@@ -112,3 +109,4 @@ public class KpiThresholdConfiguration {
         this.description = description;
     }
 }
+

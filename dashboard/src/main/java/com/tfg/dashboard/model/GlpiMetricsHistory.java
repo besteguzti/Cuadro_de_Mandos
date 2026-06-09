@@ -12,8 +12,7 @@ import jakarta.persistence.Table;
 /**
  * Snapshot histórico de métricas GLPI simuladas.
  *
- * Conserva tickets, SLA y capacidad de cierre para calcular presión operativa,
- * frescura y análisis transversal.
+ * Conserva tickets, SLA y capacidad de cierre para calcular presión operativa, frescura y análisis transversal.
  */
 @Entity
 @Table(name = "glpi_metrics_history")
@@ -167,3 +166,4 @@ public class GlpiMetricsHistory {
         this.collectedAt = collectedAt;
     }
 }
+

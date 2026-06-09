@@ -29,20 +29,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.tfg.dashboard.dto.ArubaApInfo;
+import com.tfg.dashboard.dto.ArubaFirmwareSwarmsResult;
 import com.tfg.dashboard.dto.ArubaSwitchInfo;
 import com.tfg.dashboard.dto.ArubaWifiClientInfo;
 import com.tfg.dashboard.service.ArubaAuthService;
 
-/**
- * Cliente que se encarga de hablar con Aruba Central.
- *
- * Aquí se concentran las llamadas reales a la API de Aruba para no repartir esa
- * lógica por el resto del backend. Se piden APs, switches, firmware y clientes
- * WiFi, y después se transforman las respuestas al formato que usa la aplicación.
- *
- * Si una parte de Aruba falla, por ejemplo firmware, se registra el problema y
- * se intenta continuar con el resto de la sincronización. La idea es no tirar
- * abajo todo el proceso por un fallo parcial de la API.
+/*
+ * Clase que realiza llamadas a la API de Aruba. Se piden APs, switches, firmware y clientes WiFi.
  */
 @Component
 public class ArubaApiClient {
@@ -67,10 +60,7 @@ public class ArubaApiClient {
         }
 
         /**
-         * Obtiene los Access Points desde Aruba Central.
-         *
-         * Aruba devuelve la información paginada, así que este método recorre las páginas
-         * necesarias y convierte cada AP al DTO que después usa la sincronización.
+         * Obneter los Access Points desde Aruba Central.
          */
         public List<ArubaApInfo> getApsList() {
 
@@ -117,18 +107,15 @@ public class ArubaApiClient {
 
                 } catch (Exception e) {
                         log.error("Error obteniendo listado de APs desde Aruba", e);
+                        throw new ArubaApiException("API_ERROR obteniendo listado de APs desde Aruba", e);
                 }
                 return result;
         }
 
         /**
-         * Consulta la información de firmware de los swarms.
-         *
-         * Este endpoint puede devolver un 503 si Aruba no tiene disponible el módulo de
-         * firmware en ese momento. En ese caso no se considera un fallo general de la
-         * aplicación, sino un dato temporalmente no disponible.
+         * Consultar la información de firmware de los swarms.
          */
-        public JsonNode getFirmwareSwarms() {
+        public ArubaFirmwareSwarmsResult getFirmwareSwarms() {
 
                 try {
                         String token = authService.getAccessToken();
@@ -159,23 +146,25 @@ public class ArubaApiClient {
 
                         ObjectNode result = mapper.createObjectNode();
                         result.set("swarms", allSwarms);
-                        return result;
+                        return allSwarms.size() == 0
+                                        ? ArubaFirmwareSwarmsResult.noData("Aruba no devolvio swarms de firmware.")
+                                        : ArubaFirmwareSwarmsResult.ok(result);
 
                 } catch (HttpStatusCodeException e) {
                         if (isServiceUnavailable(e)) {
                                 log.warn("Firmware de swarms Aruba no disponible temporalmente (503). Se omite este bloque sin detener la sincronizacion.");
-                                return null;
+                                return ArubaFirmwareSwarmsResult.apiError("Firmware de swarms Aruba no disponible temporalmente (503).");
                         }
 
                         log.error("Error obteniendo firmware de swarms desde Aruba", e);
-                        return null;
+                        return ArubaFirmwareSwarmsResult.apiError("Error HTTP obteniendo firmware de swarms desde Aruba.");
                 } catch (Exception e) {
                         log.error("Error obteniendo firmware de swarms desde Aruba", e);
-                        return null;
+                        return ArubaFirmwareSwarmsResult.apiError("Error obteniendo firmware de swarms desde Aruba.");
                 }
         }
 
-        // Revisa el firmware de los switches para saber si hay actualizaciones pendientes.
+        // Revisar el firmware de los switches para saber si hay actualizaciones pendientes.
         
         public List<ArubaSwitchInfo> getSwitchesList() {
 
@@ -225,13 +214,15 @@ public class ArubaApiClient {
                         }
 
                         log.error("Error obteniendo switches desde Aruba", e);
+                        throw new ArubaApiException("API_ERROR obteniendo switches desde Aruba", e);
                 } catch (Exception e) {
                         log.error("Error obteniendo switches desde Aruba", e);
+                        throw new ArubaApiException("API_ERROR obteniendo switches desde Aruba", e);
                 }
                 return result;
         }
 
-        //Obtiene los switches desde la parte de monitoring de Aruba.
+        //Obtener los switches desde la parte de monitoring de Aruba.
 
         public List<ArubaSwitchInfo> getMonitoringSwitchesList() {
 
@@ -279,12 +270,13 @@ public class ArubaApiClient {
                 } catch (Exception e) {
 
                         log.error("Error obteniendo switches desde Aruba monitoring", e);
+                        throw new ArubaApiException("API_ERROR obteniendo switches desde Aruba monitoring", e);
                 }
 
                 return result;
         }
 
-        //Consulta los clientes WiFi conectados.
+        //Consultar los clientes WiFi conectados.
         
         public List<ArubaWifiClientInfo> getWifiClientsList() {
 
@@ -368,6 +360,7 @@ public class ArubaApiClient {
                 } catch (Exception e) {
 
                         log.error("Error obteniendo " + logLabel + " desde Aruba",e);
+                        throw new ArubaApiException("API_ERROR obteniendo " + logLabel + " desde Aruba", e);
                 }
 
                 log.info("{} obtenidos desde Aruba: {}",logLabel, result.size());
@@ -571,3 +564,4 @@ public class ArubaApiClient {
                 return e.getStatusCode().value() == 503;
         }
 }
+

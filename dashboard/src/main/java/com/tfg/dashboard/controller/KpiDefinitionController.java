@@ -10,9 +10,7 @@ import com.tfg.dashboard.dto.KpiDefinitionDto;
 import com.tfg.dashboard.service.KpiDefinitionService;
 
 /**
- * Endpoint documental de KPIs.
- *
- * No calcula valores actuales; expone definiciones, fórmulas, fuentes y umbrales del proyecto usado como catalogo de referencia para el desarrollo.
+ * Endpoint documental de KPIs. Expone definiciones, fórmulas, fuentes y umbrales del proyecto usado como catalogo de referencia para el desarrollo.
  */
 @RestController
 @RequestMapping("/api/kpis")
@@ -31,3 +29,4 @@ public class KpiDefinitionController {
         return kpiDefinitionService.getDefinitions();
     }
 }
+

@@ -4,11 +4,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
 /**
- * Configuración de pesos y umbrales usados en el cálculo de KPIs.
- * Se usa para que las reglas principales del dashboard no queden repartidas en
- * varios servicios como números fijos. Así, los cálculos pueden reutilizar la
- * misma configuración y se reduce el riesgo de que una fórmula y su explicación
- * acaben diciendo cosas distintas.
+ * Configuración común para pesos y umbrales de KPIs.
  */
 @Component
 @ConfigurationProperties(prefix = "kpi")
@@ -21,6 +17,7 @@ public class KpiProperties {
         private Microsoft365 microsoft365 = new Microsoft365();
         private Glpi glpi = new Glpi();
         private Aruba aruba = new Aruba();
+        private Freshness freshness = new Freshness();
         private Transversal transversal = new Transversal();
         private Executive executive = new Executive();
 
@@ -78,6 +75,14 @@ public class KpiProperties {
 
         public void setAruba(Aruba aruba) {
                 this.aruba = aruba;
+        }
+
+        public Freshness getFreshness() {
+                return freshness;
+        }
+
+        public void setFreshness(Freshness freshness) {
+                this.freshness = freshness;
         }
 
         public Transversal getTransversal() {
@@ -165,6 +170,46 @@ public class KpiProperties {
 
                 public void setRed(int red) {
                         this.red = red;
+                }
+        }
+
+        public static class Freshness {
+
+                private int arubaMinutes = 70;
+                private int citrixMinutes = 70;
+                private int microsoft365Minutes = 70;
+                private int glpiMinutes = 70;
+
+                public int getArubaMinutes() {
+                        return arubaMinutes;
+                }
+
+                public void setArubaMinutes(int arubaMinutes) {
+                        this.arubaMinutes = arubaMinutes;
+                }
+
+                public int getCitrixMinutes() {
+                        return citrixMinutes;
+                }
+
+                public void setCitrixMinutes(int citrixMinutes) {
+                        this.citrixMinutes = citrixMinutes;
+                }
+
+                public int getMicrosoft365Minutes() {
+                        return microsoft365Minutes;
+                }
+
+                public void setMicrosoft365Minutes(int microsoft365Minutes) {
+                        this.microsoft365Minutes = microsoft365Minutes;
+                }
+
+                public int getGlpiMinutes() {
+                        return glpiMinutes;
+                }
+
+                public void setGlpiMinutes(int glpiMinutes) {
+                        this.glpiMinutes = glpiMinutes;
                 }
         }
 
@@ -369,13 +414,17 @@ public class KpiProperties {
 
         public static class Citrix {
 
-                private int deliveryControllerYellowBelowPercent = 50;
+                private int deliveryControllerYellowBelowPercent = 67;
                 private int logonDurationYellowAboveSeconds = 20;
                 private int logonDurationRedAboveSeconds = 60;
-                private int serverLoadYellowMin = 34;
-                private int serverLoadRedMin = 67;
-                private int failedLogonsYellowAbove = 10;
-                private int failedLogonsRedAbove = 30;
+                private int serverLoadYellowMin = 80;
+                private int serverLoadRedMin = 90;
+                private int failedLogonsYellowAbove = 5;
+                private int failedLogonsRedAbove = 20;
+                private int activeLicensesYellowBelow = 20;
+                private int activeLicensesRedBelowOrEqual = 2;
+                private int citrixOpenTicketsYellowMin = 100;
+                private int citrixOpenTicketsRedMin = 200;
 
                 public int getDeliveryControllerYellowBelowPercent() {
                         return deliveryControllerYellowBelowPercent;
@@ -432,20 +481,79 @@ public class KpiProperties {
                 public void setFailedLogonsRedAbove(int failedLogonsRedAbove) {
                         this.failedLogonsRedAbove = failedLogonsRedAbove;
                 }
+
+                public int getActiveLicensesYellowBelow() {
+                        return activeLicensesYellowBelow;
+                }
+
+                public void setActiveLicensesYellowBelow(int activeLicensesYellowBelow) {
+                        this.activeLicensesYellowBelow = activeLicensesYellowBelow;
+                }
+
+                public int getActiveLicensesRedBelowOrEqual() {
+                        return activeLicensesRedBelowOrEqual;
+                }
+
+                public void setActiveLicensesRedBelowOrEqual(int activeLicensesRedBelowOrEqual) {
+                        this.activeLicensesRedBelowOrEqual = activeLicensesRedBelowOrEqual;
+                }
+
+                public int getCitrixOpenTicketsYellowMin() {
+                        return citrixOpenTicketsYellowMin;
+                }
+
+                public void setCitrixOpenTicketsYellowMin(int citrixOpenTicketsYellowMin) {
+                        this.citrixOpenTicketsYellowMin = citrixOpenTicketsYellowMin;
+                }
+
+                public int getCitrixOpenTicketsRedMin() {
+                        return citrixOpenTicketsRedMin;
+                }
+
+                public void setCitrixOpenTicketsRedMin(int citrixOpenTicketsRedMin) {
+                        this.citrixOpenTicketsRedMin = citrixOpenTicketsRedMin;
+                }
         }
 
         public static class Microsoft365 {
 
+                private int unassignedLicensesYellowBelow = 20;
+                private int unassignedLicensesRedBelowOrEqual = 2;
                 private int sharePointYellowMin = 80;
                 private int sharePointRedAbove = 90;
+                private int riskyUsersYellowAbove = 0;
+                private int riskyUsersRedAbove = 9;
+                private int failedSignInsYellowMin = 10;
+                private int failedSignInsRedMin = 20;
                 private int usersWithoutMfaYellowAbove = 0;
-                private int usersWithoutMfaRedAbove = 3;
+                private int usersWithoutMfaRedAbove = 4;
                 private int secretsYellowAbove = 0;
-                private int nonCompliantDevicesYellowAbove = 50;
-                private int nonCompliantDevicesRedAbove = 100;
+                private int unusedApplicationsYellowAbove = 0;
+                private int highPrivilegeApplicationsYellowAbove = 0;
+                private int nonCompliantDevicesYellowAbove = 30;
+                private int nonCompliantDevicesRedAbove = 50;
+                private int microsoft365OpenTicketsYellowMin = 100;
+                private int microsoft365OpenTicketsRedMin = 200;
                 private int outdatedWindowsYellowAbove = 0;
                 private int devicesWithoutEncryptionYellowAbove = 0;
-                private int devicesWithoutEncryptionRedAbove = 5;
+                private int devicesWithoutEncryptionRedAbove = 0;
+                private int staleDevicesRedAbove = 0;
+
+                public int getUnassignedLicensesYellowBelow() {
+                        return unassignedLicensesYellowBelow;
+                }
+
+                public void setUnassignedLicensesYellowBelow(int unassignedLicensesYellowBelow) {
+                        this.unassignedLicensesYellowBelow = unassignedLicensesYellowBelow;
+                }
+
+                public int getUnassignedLicensesRedBelowOrEqual() {
+                        return unassignedLicensesRedBelowOrEqual;
+                }
+
+                public void setUnassignedLicensesRedBelowOrEqual(int unassignedLicensesRedBelowOrEqual) {
+                        this.unassignedLicensesRedBelowOrEqual = unassignedLicensesRedBelowOrEqual;
+                }
 
                 public int getSharePointYellowMin() {
                         return sharePointYellowMin;
@@ -461,6 +569,38 @@ public class KpiProperties {
 
                 public void setSharePointRedAbove(int sharePointRedAbove) {
                         this.sharePointRedAbove = sharePointRedAbove;
+                }
+
+                public int getRiskyUsersYellowAbove() {
+                        return riskyUsersYellowAbove;
+                }
+
+                public void setRiskyUsersYellowAbove(int riskyUsersYellowAbove) {
+                        this.riskyUsersYellowAbove = riskyUsersYellowAbove;
+                }
+
+                public int getRiskyUsersRedAbove() {
+                        return riskyUsersRedAbove;
+                }
+
+                public void setRiskyUsersRedAbove(int riskyUsersRedAbove) {
+                        this.riskyUsersRedAbove = riskyUsersRedAbove;
+                }
+
+                public int getFailedSignInsYellowMin() {
+                        return failedSignInsYellowMin;
+                }
+
+                public void setFailedSignInsYellowMin(int failedSignInsYellowMin) {
+                        this.failedSignInsYellowMin = failedSignInsYellowMin;
+                }
+
+                public int getFailedSignInsRedMin() {
+                        return failedSignInsRedMin;
+                }
+
+                public void setFailedSignInsRedMin(int failedSignInsRedMin) {
+                        this.failedSignInsRedMin = failedSignInsRedMin;
                 }
 
                 public int getUsersWithoutMfaYellowAbove() {
@@ -487,6 +627,22 @@ public class KpiProperties {
                         this.secretsYellowAbove = secretsYellowAbove;
                 }
 
+                public int getUnusedApplicationsYellowAbove() {
+                        return unusedApplicationsYellowAbove;
+                }
+
+                public void setUnusedApplicationsYellowAbove(int unusedApplicationsYellowAbove) {
+                        this.unusedApplicationsYellowAbove = unusedApplicationsYellowAbove;
+                }
+
+                public int getHighPrivilegeApplicationsYellowAbove() {
+                        return highPrivilegeApplicationsYellowAbove;
+                }
+
+                public void setHighPrivilegeApplicationsYellowAbove(int highPrivilegeApplicationsYellowAbove) {
+                        this.highPrivilegeApplicationsYellowAbove = highPrivilegeApplicationsYellowAbove;
+                }
+
                 public int getNonCompliantDevicesYellowAbove() {
                         return nonCompliantDevicesYellowAbove;
                 }
@@ -501,6 +657,22 @@ public class KpiProperties {
 
                 public void setNonCompliantDevicesRedAbove(int nonCompliantDevicesRedAbove) {
                         this.nonCompliantDevicesRedAbove = nonCompliantDevicesRedAbove;
+                }
+
+                public int getMicrosoft365OpenTicketsYellowMin() {
+                        return microsoft365OpenTicketsYellowMin;
+                }
+
+                public void setMicrosoft365OpenTicketsYellowMin(int microsoft365OpenTicketsYellowMin) {
+                        this.microsoft365OpenTicketsYellowMin = microsoft365OpenTicketsYellowMin;
+                }
+
+                public int getMicrosoft365OpenTicketsRedMin() {
+                        return microsoft365OpenTicketsRedMin;
+                }
+
+                public void setMicrosoft365OpenTicketsRedMin(int microsoft365OpenTicketsRedMin) {
+                        this.microsoft365OpenTicketsRedMin = microsoft365OpenTicketsRedMin;
                 }
 
                 public int getOutdatedWindowsYellowAbove() {
@@ -526,6 +698,14 @@ public class KpiProperties {
                 public void setDevicesWithoutEncryptionRedAbove(int devicesWithoutEncryptionRedAbove) {
                         this.devicesWithoutEncryptionRedAbove = devicesWithoutEncryptionRedAbove;
                 }
+
+                public int getStaleDevicesRedAbove() {
+                        return staleDevicesRedAbove;
+                }
+
+                public void setStaleDevicesRedAbove(int staleDevicesRedAbove) {
+                        this.staleDevicesRedAbove = staleDevicesRedAbove;
+                }
         }
 
         public static class Glpi {
@@ -534,6 +714,8 @@ public class KpiProperties {
                 private int openTicketsRedMin = 201;
                 private int criticalTicketsYellowAbove = 0;
                 private int criticalTicketsRedAbove = 10;
+                private int slaBreachedTicketsYellowAbove = 0;
+                private int slaBreachedTicketsRedAbove = 10;
                 private int closedPercentGreenMin = 50;
 
                 public int getOpenTicketsYellowMin() {
@@ -568,6 +750,22 @@ public class KpiProperties {
                         this.criticalTicketsRedAbove = criticalTicketsRedAbove;
                 }
 
+                public int getSlaBreachedTicketsYellowAbove() {
+                        return slaBreachedTicketsYellowAbove;
+                }
+
+                public void setSlaBreachedTicketsYellowAbove(int slaBreachedTicketsYellowAbove) {
+                        this.slaBreachedTicketsYellowAbove = slaBreachedTicketsYellowAbove;
+                }
+
+                public int getSlaBreachedTicketsRedAbove() {
+                        return slaBreachedTicketsRedAbove;
+                }
+
+                public void setSlaBreachedTicketsRedAbove(int slaBreachedTicketsRedAbove) {
+                        this.slaBreachedTicketsRedAbove = slaBreachedTicketsRedAbove;
+                }
+
                 public int getClosedPercentGreenMin() {
                         return closedPercentGreenMin;
                 }
@@ -579,21 +777,33 @@ public class KpiProperties {
 
         public static class Aruba {
 
-                private int freshnessMinutes = 10;
+                private int freshnessMinutes = 70;
                 private int underusedSwitchDownInterfaceLimit = 17;
                 private int underusedSwitchDays = 30;
                 private int inactiveApDaysThreshold = 30;
+                private int arubaOpenTicketsYellowMin = 100;
+                private int arubaOpenTicketsRedMin = 200;
+                private int arubaOpenTicketsYellowAffection = 2;
+                private int arubaOpenTicketsRedAffection = 5;
                 private int accessPointDownYellowPercent = 50;
                 private int accessPointDownRedPercent = 100;
-                private int switchDownYellowMin = 2;
-                private int pendingFirmwareApsYellowAbove = 0;
-                private int inactiveApsYellowAbove = 0;
-                private int pendingFirmwareSwitchesYellowAbove = 0;
+                private int accessPointDownYellowAffection = 20;
+                private int accessPointDownRedAffection = 80;
+                private int switchDownYellowAbove = 1;
+                private int switchDownYellowAffection = 20;
+                private int switchDownRedAffection = 80;
+                private int switchUpgradeYellowMin = 1;
+                private int switchUpgradeYellowAffection = 2;
+                private int pendingFirmwareApsYellowMin = 1;
+                private int pendingFirmwareApsYellowAffection = 2;
+                private int inactiveApsYellowMin = 1;
+                private int inactiveApsYellowAffection = 10;
                 private int criticalClientsGreenAbove = 0;
-                private int accessPointBlockWeight = 50;
-                private int switchBlockWeight = 50;
-                private int blockYellowContribution = 25;
-                private int blockRedContribution = 50;
+                private int totalWifiClientsRedAffection = 20;
+                private int underusedSwitchesYellowAbove = 1;
+                private int underusedSwitchesRedAbove = 5;
+                private int underusedSwitchesYellowAffection = 2;
+                private int underusedSwitchesRedAffection = 5;
 
                 public int getFreshnessMinutes() {
                         return freshnessMinutes;
@@ -627,6 +837,38 @@ public class KpiProperties {
                         this.inactiveApDaysThreshold = inactiveApDaysThreshold;
                 }
 
+                public int getArubaOpenTicketsYellowMin() {
+                        return arubaOpenTicketsYellowMin;
+                }
+
+                public void setArubaOpenTicketsYellowMin(int arubaOpenTicketsYellowMin) {
+                        this.arubaOpenTicketsYellowMin = arubaOpenTicketsYellowMin;
+                }
+
+                public int getArubaOpenTicketsRedMin() {
+                        return arubaOpenTicketsRedMin;
+                }
+
+                public void setArubaOpenTicketsRedMin(int arubaOpenTicketsRedMin) {
+                        this.arubaOpenTicketsRedMin = arubaOpenTicketsRedMin;
+                }
+
+                public int getArubaOpenTicketsYellowAffection() {
+                        return arubaOpenTicketsYellowAffection;
+                }
+
+                public void setArubaOpenTicketsYellowAffection(int arubaOpenTicketsYellowAffection) {
+                        this.arubaOpenTicketsYellowAffection = arubaOpenTicketsYellowAffection;
+                }
+
+                public int getArubaOpenTicketsRedAffection() {
+                        return arubaOpenTicketsRedAffection;
+                }
+
+                public void setArubaOpenTicketsRedAffection(int arubaOpenTicketsRedAffection) {
+                        this.arubaOpenTicketsRedAffection = arubaOpenTicketsRedAffection;
+                }
+
                 public int getAccessPointDownRedPercent() {
                         return accessPointDownRedPercent;
                 }
@@ -643,36 +885,92 @@ public class KpiProperties {
                         this.accessPointDownRedPercent = accessPointDownRedPercent;
                 }
 
-                public int getSwitchDownYellowMin() {
-                        return switchDownYellowMin;
+                public int getAccessPointDownYellowAffection() {
+                        return accessPointDownYellowAffection;
                 }
 
-                public void setSwitchDownYellowMin(int switchDownYellowMin) {
-                        this.switchDownYellowMin = switchDownYellowMin;
+                public void setAccessPointDownYellowAffection(int accessPointDownYellowAffection) {
+                        this.accessPointDownYellowAffection = accessPointDownYellowAffection;
                 }
 
-                public int getPendingFirmwareApsYellowAbove() {
-                        return pendingFirmwareApsYellowAbove;
+                public int getAccessPointDownRedAffection() {
+                        return accessPointDownRedAffection;
                 }
 
-                public void setPendingFirmwareApsYellowAbove(int pendingFirmwareApsYellowAbove) {
-                        this.pendingFirmwareApsYellowAbove = pendingFirmwareApsYellowAbove;
+                public void setAccessPointDownRedAffection(int accessPointDownRedAffection) {
+                        this.accessPointDownRedAffection = accessPointDownRedAffection;
                 }
 
-                public int getInactiveApsYellowAbove() {
-                        return inactiveApsYellowAbove;
+                public int getSwitchDownYellowAbove() {
+                        return switchDownYellowAbove;
                 }
 
-                public void setInactiveApsYellowAbove(int inactiveApsYellowAbove) {
-                        this.inactiveApsYellowAbove = inactiveApsYellowAbove;
+                public void setSwitchDownYellowAbove(int switchDownYellowAbove) {
+                        this.switchDownYellowAbove = switchDownYellowAbove;
                 }
 
-                public int getPendingFirmwareSwitchesYellowAbove() {
-                        return pendingFirmwareSwitchesYellowAbove;
+                public int getSwitchDownYellowAffection() {
+                        return switchDownYellowAffection;
                 }
 
-                public void setPendingFirmwareSwitchesYellowAbove(int pendingFirmwareSwitchesYellowAbove) {
-                        this.pendingFirmwareSwitchesYellowAbove = pendingFirmwareSwitchesYellowAbove;
+                public void setSwitchDownYellowAffection(int switchDownYellowAffection) {
+                        this.switchDownYellowAffection = switchDownYellowAffection;
+                }
+
+                public int getSwitchDownRedAffection() {
+                        return switchDownRedAffection;
+                }
+
+                public void setSwitchDownRedAffection(int switchDownRedAffection) {
+                        this.switchDownRedAffection = switchDownRedAffection;
+                }
+
+                public int getSwitchUpgradeYellowMin() {
+                        return switchUpgradeYellowMin;
+                }
+
+                public void setSwitchUpgradeYellowMin(int switchUpgradeYellowMin) {
+                        this.switchUpgradeYellowMin = switchUpgradeYellowMin;
+                }
+
+                public int getSwitchUpgradeYellowAffection() {
+                        return switchUpgradeYellowAffection;
+                }
+
+                public void setSwitchUpgradeYellowAffection(int switchUpgradeYellowAffection) {
+                        this.switchUpgradeYellowAffection = switchUpgradeYellowAffection;
+                }
+
+                public int getPendingFirmwareApsYellowMin() {
+                        return pendingFirmwareApsYellowMin;
+                }
+
+                public void setPendingFirmwareApsYellowMin(int pendingFirmwareApsYellowMin) {
+                        this.pendingFirmwareApsYellowMin = pendingFirmwareApsYellowMin;
+                }
+
+                public int getPendingFirmwareApsYellowAffection() {
+                        return pendingFirmwareApsYellowAffection;
+                }
+
+                public void setPendingFirmwareApsYellowAffection(int pendingFirmwareApsYellowAffection) {
+                        this.pendingFirmwareApsYellowAffection = pendingFirmwareApsYellowAffection;
+                }
+
+                public int getInactiveApsYellowMin() {
+                        return inactiveApsYellowMin;
+                }
+
+                public void setInactiveApsYellowMin(int inactiveApsYellowMin) {
+                        this.inactiveApsYellowMin = inactiveApsYellowMin;
+                }
+
+                public int getInactiveApsYellowAffection() {
+                        return inactiveApsYellowAffection;
+                }
+
+                public void setInactiveApsYellowAffection(int inactiveApsYellowAffection) {
+                        this.inactiveApsYellowAffection = inactiveApsYellowAffection;
                 }
 
                 public int getCriticalClientsGreenAbove() {
@@ -683,37 +981,46 @@ public class KpiProperties {
                         this.criticalClientsGreenAbove = criticalClientsGreenAbove;
                 }
 
-                public int getAccessPointBlockWeight() {
-                        return accessPointBlockWeight;
+                public int getTotalWifiClientsRedAffection() {
+                        return totalWifiClientsRedAffection;
                 }
 
-                public void setAccessPointBlockWeight(int accessPointBlockWeight) {
-                        this.accessPointBlockWeight = accessPointBlockWeight;
+                public void setTotalWifiClientsRedAffection(int totalWifiClientsRedAffection) {
+                        this.totalWifiClientsRedAffection = totalWifiClientsRedAffection;
                 }
 
-                public int getSwitchBlockWeight() {
-                        return switchBlockWeight;
+                public int getUnderusedSwitchesYellowAbove() {
+                        return underusedSwitchesYellowAbove;
                 }
 
-                public void setSwitchBlockWeight(int switchBlockWeight) {
-                        this.switchBlockWeight = switchBlockWeight;
+                public void setUnderusedSwitchesYellowAbove(int underusedSwitchesYellowAbove) {
+                        this.underusedSwitchesYellowAbove = underusedSwitchesYellowAbove;
                 }
 
-                public int getBlockYellowContribution() {
-                        return blockYellowContribution;
+                public int getUnderusedSwitchesRedAbove() {
+                        return underusedSwitchesRedAbove;
                 }
 
-                public void setBlockYellowContribution(int blockYellowContribution) {
-                        this.blockYellowContribution = blockYellowContribution;
+                public void setUnderusedSwitchesRedAbove(int underusedSwitchesRedAbove) {
+                        this.underusedSwitchesRedAbove = underusedSwitchesRedAbove;
                 }
 
-                public int getBlockRedContribution() {
-                        return blockRedContribution;
+                public int getUnderusedSwitchesYellowAffection() {
+                        return underusedSwitchesYellowAffection;
                 }
 
-                public void setBlockRedContribution(int blockRedContribution) {
-                        this.blockRedContribution = blockRedContribution;
+                public void setUnderusedSwitchesYellowAffection(int underusedSwitchesYellowAffection) {
+                        this.underusedSwitchesYellowAffection = underusedSwitchesYellowAffection;
                 }
+
+                public int getUnderusedSwitchesRedAffection() {
+                        return underusedSwitchesRedAffection;
+                }
+
+                public void setUnderusedSwitchesRedAffection(int underusedSwitchesRedAffection) {
+                        this.underusedSwitchesRedAffection = underusedSwitchesRedAffection;
+                }
+
         }
 
         public static class Transversal {
@@ -885,3 +1192,4 @@ public class KpiProperties {
                 }
         }
 }
+

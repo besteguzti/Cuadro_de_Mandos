@@ -7,13 +7,9 @@ import org.springframework.web.bind.annotation.RestController;
 import com.tfg.dashboard.dto.summary.GlpiSummary;
 import com.tfg.dashboard.service.GlpiService;
 
-/**
- * Endpoint REST de GLPI.
- *
- * GLPI representa la consecuencia operativa del entorno: tickets abiertos,
- * críticos, SLA y capacidad de cierre. Los datos se generan en backend y se
- * consultan desde el último snapshot persistido.
- */
+
+ //Endpoints de GLPI. Usa el último snapshot guardado para mostrar tickets, SLA y estado operativo.
+
 @RestController
 @RequestMapping("/glpi")
 public class GlpiController {
@@ -25,10 +21,11 @@ public class GlpiController {
     }
 
     /**
-     * Devuelve KPIs operativos e índice de salud GLPI normalizado.
+     * Devuelve el resumen actual de GLPI.
      */
     @GetMapping("/summary")
     public GlpiSummary getSummary() {
         return glpiService.getSummary();
     }
 }
+

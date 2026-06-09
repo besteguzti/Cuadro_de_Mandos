@@ -13,6 +13,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.tfg.dashboard.config.properties.KpiProperties;
+import com.tfg.dashboard.dto.ArubaNetworkStatusDto;
 import com.tfg.dashboard.dto.summary.ArubaSummary;
 import com.tfg.dashboard.model.CitrixMetricsHistory;
 import com.tfg.dashboard.model.GlpiMetricsHistory;
@@ -57,7 +58,7 @@ class MainDashboardServiceTest {
                 glpiRepository,
                 kpiScoringService,
                 new GlobalKpiCalculationService(kpiScoringService, kpiProperties),
-                new DashboardFreshnessService(kpiScoringService),
+                new DashboardFreshnessService(kpiScoringService, kpiProperties),
                 kpiProperties
         );
     }
@@ -69,15 +70,28 @@ class MainDashboardServiceTest {
 
         ArubaSummary aruba =
                 healthyAruba();
-        aruba.setNetworkStatus("RED");
+        aruba.setDownAps(8);
+        aruba.setTotalWifiClients(0);
+        aruba.setTotalSwitches(10);
+        aruba.setDownSwitches(6);
+        aruba.getNetworkStatusDetails().setPercentage(100);
+        aruba.getNetworkStatusDetails().setColor("RED");
 
         CitrixMetricsHistory citrix =
                 healthyCitrix(LocalDateTime.now());
-        citrix.setCitrixHealth("RED");
+        citrix.setActiveSessions(0);
+        citrix.setAvailableDeliveryControllers(0);
+        citrix.setAverageLogonDurationSeconds(80);
+        citrix.setServerLoadPercent(90);
+        citrix.setFailedLogons(30);
 
         Microsoft365MetricsHistory microsoft365 =
                 healthyMicrosoft365(LocalDateTime.now());
-        microsoft365.setMicrosoft365Health("RED");
+        microsoft365.setSharePointStoragePercent(95);
+        microsoft365.setUsersWithoutMfa(5);
+        microsoft365.setNonCompliantDevices(51);
+        microsoft365.setDevicesWithoutEncryption(1);
+        microsoft365.setStaleDevices(1);
 
         when(arubaService.getSummary())
                 .thenReturn(aruba);
@@ -100,7 +114,8 @@ class MainDashboardServiceTest {
         baseHealthyData();
 
         Microsoft365MetricsHistory microsoft365 =
-                healthyMicrosoft365(LocalDateTime.now().minusMinutes(3));
+                healthyMicrosoft365(LocalDateTime.now().minusMinutes(
+                        kpiProperties.getFreshness().getMicrosoft365Minutes() + 1));
 
         when(microsoft365Repository.findTopByOrderByCollectedAtDesc())
                 .thenReturn(Optional.of(microsoft365));
@@ -155,6 +170,36 @@ class MainDashboardServiceTest {
         assertThat(summary.getGlobalAvailabilityStatus()).isEqualTo("GREEN");
     }
 
+    @Test
+    void citrixComponentUsesAffectionTotalForTopStatus() {
+
+        baseHealthyData();
+
+        CitrixMetricsHistory citrix =
+                healthyCitrix(LocalDateTime.now());
+        citrix.setActiveSessions(42);
+        citrix.setActiveLicenses(580);
+        citrix.setAvailableDeliveryControllers(3);
+        citrix.setTotalDeliveryControllers(4);
+        citrix.setAverageLogonDurationSeconds(21);
+        citrix.setServerLoadPercent(75);
+        citrix.setFailedLogons(7);
+
+        when(citrixRepository.findTopByOrderByCollectedAtDesc())
+                .thenReturn(Optional.of(citrix));
+
+        MainDashboardSummary summary =
+                service.getSummary();
+
+        assertThat(summary.getKpis())
+                .flatExtracting(kpi -> kpi.getComponents())
+                .filteredOn(component -> "citrix_health".equals(component.getId()))
+                .allSatisfy(component -> {
+                    assertThat(component.getScore()).isEqualTo(30);
+                    assertThat(component.getStatus().name()).isEqualTo("GREEN");
+                });
+    }
+
     private void baseHealthyData() {
 
         when(arubaService.getSummary())
@@ -174,7 +219,11 @@ class MainDashboardServiceTest {
         ArubaSummary summary =
                 new ArubaSummary();
 
-        summary.setNetworkStatus("GREEN");
+        ArubaNetworkStatusDto networkStatusDetails =
+                new ArubaNetworkStatusDto();
+        networkStatusDetails.setColor("GREEN");
+        networkStatusDetails.setPercentage(0);
+        summary.setNetworkStatusDetails(networkStatusDetails);
         summary.setDataStatus("OK");
         summary.setLastUpdated(LocalDateTime.now());
         summary.setTotalAps(10);
@@ -208,9 +257,18 @@ class MainDashboardServiceTest {
                 new Microsoft365MetricsHistory();
 
         history.setMicrosoft365Health("GREEN");
+        history.setActiveUsers(100);
+        history.setUnassignedLicenses(20);
         history.setOutlookStatus("HEALTHY");
         history.setTeamsStatus("HEALTHY");
         history.setSharePointStatus("HEALTHY");
+        history.setSharePointStoragePercent(40);
+        history.setUsersWithoutMfa(0);
+        history.setAppsSecretsExpiringSoon(0);
+        history.setNonCompliantDevices(10);
+        history.setOutdatedWindowsDevices(0);
+        history.setDevicesWithoutEncryption(0);
+        history.setStaleDevices(0);
         history.setCollectedAt(collectedAt);
 
         return history;

@@ -12,8 +12,7 @@ import jakarta.persistence.UniqueConstraint;
  * Peso editable de una plataforma dentro del KPI Estado global.
  *
  * Se persiste en porcentaje entero para facilitar validaciónes de suma 100 en
- * el panel de configuración. El servicio lo convierte a decimal antes de
- * aplicarlo sobre KpiProperties.
+ * el panel de configuración. El servicio lo convierte a decimal antes de aplicarlo sobre KpiProperties.
  */
 @Entity
 @Table(
@@ -68,3 +67,4 @@ public class PlatformWeightConfiguration {
         this.defaultWeightPercent = defaultWeightPercent;
     }
 }
+

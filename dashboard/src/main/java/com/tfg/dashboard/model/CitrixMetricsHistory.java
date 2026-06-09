@@ -12,8 +12,8 @@ import jakarta.persistence.Table;
 /**
  * Snapshot histórico de métricas Citrix simuladas.
  *
- * Cada fila representa una captura generada por MetricsSyncService y sirve para
- * consultar el último estado, calcular frescura y alimentar KPIs transversales.
+ * Cada fila representa una captura generada por MetricsSyncService y sirve para consultar el último estado,
+ * calcular frescura y alimentar KPIs transversales.
  */
 @Entity
 @Table(name = "citrix_metrics_history")
@@ -132,3 +132,4 @@ public class CitrixMetricsHistory {
         this.collectedAt = collectedAt;
     }
 }
+

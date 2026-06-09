@@ -73,7 +73,8 @@ class DataFreshnessServiceTest {
 
         Microsoft365MetricsHistory history =
                 new Microsoft365MetricsHistory();
-        history.setCollectedAt(LocalDateTime.now().minusMinutes(3));
+        history.setCollectedAt(LocalDateTime.now().minusMinutes(
+                kpiProperties.getFreshness().getMicrosoft365Minutes() + 1));
         history.setMicrosoft365Health("GREEN");
 
         when(microsoft365Repository.findTopByOrderByCollectedAtDesc())
@@ -84,6 +85,25 @@ class DataFreshnessServiceTest {
 
         assertThat(service.getSummary().getDataStatus())
                 .isEqualTo("STALE");
+    }
+
+    @Test
+    void microsoft365SnapshotInsideHourlyFreshnessWindowReturnsOk() {
+
+        Microsoft365MetricsHistory history =
+                new Microsoft365MetricsHistory();
+        history.setCollectedAt(LocalDateTime.now().minusMinutes(
+                kpiProperties.getFreshness().getMicrosoft365Minutes() - 1));
+        history.setMicrosoft365Health("GREEN");
+
+        when(microsoft365Repository.findTopByOrderByCollectedAtDesc())
+                .thenReturn(Optional.of(history));
+
+        Microsoft365Service service =
+                new Microsoft365Service(microsoft365Repository, glpiPlatformTicketService, kpiProperties);
+
+        assertThat(service.getSummary().getDataStatus())
+                .isEqualTo("OK");
     }
 
     @Test

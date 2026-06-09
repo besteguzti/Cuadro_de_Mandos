@@ -5,6 +5,7 @@ import java.util.Optional;
 
 import org.springframework.stereotype.Service;
 
+import com.tfg.dashboard.config.properties.KpiProperties;
 import com.tfg.dashboard.model.CitrixMetricsHistory;
 import com.tfg.dashboard.model.GlpiMetricsHistory;
 import com.tfg.dashboard.model.Microsoft365MetricsHistory;
@@ -19,9 +20,13 @@ import com.tfg.dashboard.model.Microsoft365MetricsHistory;
 public class DashboardFreshnessService {
 
     private final KpiScoringService kpiScoringService;
+    private final KpiProperties kpiProperties;
 
-    public DashboardFreshnessService(KpiScoringService kpiScoringService) {
+    public DashboardFreshnessService(
+            KpiScoringService kpiScoringService,
+            KpiProperties kpiProperties) {
         this.kpiScoringService = kpiScoringService;
+        this.kpiProperties = kpiProperties;
     }
 
     /**
@@ -36,17 +41,23 @@ public class DashboardFreshnessService {
 
         if (snapshot.get() instanceof CitrixMetricsHistory citrix) {
 
-            return calculateDataStatus(citrix.getCollectedAt());
+            return calculateDataStatus(
+                    citrix.getCollectedAt(),
+                    kpiProperties.getFreshness().getCitrixMinutes());
         }
 
         if (snapshot.get() instanceof Microsoft365MetricsHistory microsoft365) {
 
-            return calculateDataStatus(microsoft365.getCollectedAt());
+            return calculateDataStatus(
+                    microsoft365.getCollectedAt(),
+                    kpiProperties.getFreshness().getMicrosoft365Minutes());
         }
 
         if (snapshot.get() instanceof GlpiMetricsHistory glpi) {
 
-            return calculateDataStatus(glpi.getCollectedAt());
+            return calculateDataStatus(
+                    glpi.getCollectedAt(),
+                    kpiProperties.getFreshness().getGlpiMinutes());
         }
 
         return "NO_DATA";
@@ -57,14 +68,36 @@ public class DashboardFreshnessService {
      */
     public String calculateDataStatus(LocalDateTime collectedAt) {
 
-        // El margen replica la cadencia del scheduler de datos simulados.
+        return calculateDataStatus(
+                collectedAt,
+                defaultFreshnessMinutes());
+    }
+
+    private int defaultFreshnessMinutes() {
+
+        return Math.max(
+                Math.max(
+                        kpiProperties.getFreshness().getArubaMinutes(),
+                        kpiProperties.getFreshness().getCitrixMinutes()),
+                Math.max(
+                        kpiProperties.getFreshness().getMicrosoft365Minutes(),
+                        kpiProperties.getFreshness().getGlpiMinutes()));
+    }
+
+    private String calculateDataStatus(
+            LocalDateTime collectedAt,
+            int freshnessMinutes) {
+
+        // El margen supera ligeramente la cadencia horaria del scheduler para
+        // evitar marcar STALE un snapshot valido entre sincronizaciones.
 
         if (collectedAt == null) {
 
             return "NO_DATA";
         }
 
-        if (collectedAt.isAfter(LocalDateTime.now().minusMinutes(2))) {
+        if (collectedAt.isAfter(
+                LocalDateTime.now().minusMinutes(freshnessMinutes))) {
 
             return "OK";
         }
@@ -174,3 +207,4 @@ public class DashboardFreshnessService {
         return current;
     }
 }
+

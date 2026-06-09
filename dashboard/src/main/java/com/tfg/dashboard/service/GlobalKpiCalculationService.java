@@ -67,7 +67,23 @@ public class GlobalKpiCalculationService {
                         return clamp(details.getPercentage());
                 }
 
-                return Math.max(colorToAffection(aruba.getNetworkStatus()),calculateArubaRisk(aruba));
+                ArubaAffectationCalculator.Result affectation = ArubaAffectationCalculator.calculate(
+                                new ArubaAffectationCalculator.Input(
+                                                aruba.getTotalAps(),
+                                                aruba.getDownAps(),
+                                                aruba.getInactiveAps(),
+                                                aruba.getFirmwareOutdated(),
+                                                aruba.getTotalWifiClients(),
+                                                aruba.getMutualiaApsClients(),
+                                                aruba.getMutualiaWifiClients(),
+                                                aruba.getTotalSwitches(),
+                                                aruba.getDownSwitches(),
+                                                aruba.getSwitchesFirmwareUpgradeRequired(),
+                                                aruba.getUnderusedSwitches() == null ? 0 : aruba.getUnderusedSwitches().size(),
+                                                aruba.getArubaOpenTickets()),
+                                kpiProperties);
+
+                return clamp(affectation.totalAffection());
         }
 
         /**
@@ -75,14 +91,36 @@ public class GlobalKpiCalculationService {
          */
         public int calculateCitrixHealthAffection(CitrixMetricsHistory citrix) {
 
-                int calculated = average(
-                                activeSessionsIndicator(citrix),
-                                deliveryControllersIndicator(citrix),
-                                logonDurationIndicator(citrix),
-                                serverLoadIndicator(citrix),
-                                failedLogonsIndicator(citrix));
+                CitrixAffectationCalculator.Result result = calculateCitrixHealthResult(citrix);
 
-                return Math.max(calculated,colorToAffection(citrix.getCitrixHealth()));
+                return result.percentage();
+        }
+
+        /**
+         * Devuelve la severidad final de Citrix separada del porcentaje.
+         *
+         * Una metrica interna en rojo puede marcar Citrix como critico aunque
+         * la suma ponderada no llegue a 100 % de afeccion.
+         */
+        public String calculateCitrixHealthStatus(CitrixMetricsHistory citrix) {
+
+                return calculateCitrixHealthResult(citrix).color();
+        }
+
+        private CitrixAffectationCalculator.Result calculateCitrixHealthResult(CitrixMetricsHistory citrix) {
+
+                return CitrixAffectationCalculator.calculate(
+                                new CitrixAffectationCalculator.Input(
+                                                citrix.getActiveSessions(),
+                                                citrix.getActiveLicenses(),
+                                                citrix.getAvailableDeliveryControllers(),
+                                                citrix.getTotalDeliveryControllers(),
+                                                citrix.getDisconnectedSessions(),
+                                                citrix.getAverageLogonDurationSeconds(),
+                                                citrix.getServerLoadPercent(),
+                                                citrix.getFailedLogons(),
+                                                0),
+                                kpiProperties);
         }
 
         /**
@@ -90,15 +128,19 @@ public class GlobalKpiCalculationService {
          */
         public int calculateMicrosoft365HealthAffection(Microsoft365MetricsHistory microsoft365) {
 
-                int calculated = average(
-                                sharePointStorageIndicator(microsoft365),
-                                usersWithoutMfaIndicator(microsoft365),
-                                secretsIndicator(microsoft365),
-                                nonCompliantDevicesIndicator(microsoft365),
-                                outdatedWindowsIndicator(microsoft365),
-                                devicesWithoutEncryptionIndicator(microsoft365));
+                return calculateMicrosoft365HealthAffection(microsoft365, 0);
+        }
 
-                return Math.max(calculated,colorToAffection(microsoft365.getMicrosoft365Health()));
+        public int calculateMicrosoft365HealthAffection(
+                        Microsoft365MetricsHistory microsoft365,
+                        int microsoft365OpenTickets) {
+
+                Microsoft365AffectationCalculator.Result result =
+                                Microsoft365AffectationCalculator.calculate(
+                                                microsoft365Input(microsoft365, microsoft365OpenTickets),
+                                                kpiProperties);
+
+                return result.percentage();
         }
 
         /**
@@ -107,11 +149,26 @@ public class GlobalKpiCalculationService {
          */
         public int calculateGlpiHealthAffection(GlpiMetricsHistory glpi) {
 
-                return average(
-                                openTicketsIndicator(glpi),
-                                criticalTicketsIndicator(glpi),
-                                closedPercentageIndicator(glpi.getCreatedToday(),glpi.getClosedToday()),
-                                closedPercentageIndicator(glpi.getCreatedThisWeek(),glpi.getClosedThisWeek()));
+                int openTickets = openTicketsIndicator(glpi);
+                int criticalTickets = criticalTicketsIndicator(glpi);
+                int closedToday = closedPercentageIndicator(glpi.getCreatedToday(),glpi.getClosedToday());
+                int closedThisWeek = closedPercentageIndicator(glpi.getCreatedThisWeek(),glpi.getClosedThisWeek());
+
+                int calculated = average(
+                                openTickets,
+                                criticalTickets,
+                                slaBreachedTicketsIndicator(glpi),
+                                closedToday,
+                                closedThisWeek);
+
+                return PlatformSeverityRules.applyInternalSeverityFloorFromScores(
+                                calculated,
+                                kpiProperties,
+                                openTickets,
+                                criticalTickets,
+                                slaBreachedTicketsIndicator(glpi),
+                                closedToday,
+                                closedThisWeek);
         }
 
         /**
@@ -208,7 +265,7 @@ public class GlobalKpiCalculationService {
         }
 
         /**
-         * Mide deterioro técnico aunque no haya caída total del servicio.
+         * Detecta deterioro técnico aunque no haya caída total del servicio.
          */
         public int calculateTechnicalDegradation(
                         ArubaSummary aruba,
@@ -264,6 +321,7 @@ public class GlobalKpiCalculationService {
                 int arubaSlaRisk = calculateArubaNetworkAffection(aruba);
 
                 int glpiSlaRisk = average(
+                                slaBreachedTicketsIndicator(glpi),
                                 criticalTicketsIndicator(glpi),
                                 closedPercentageIndicator(glpi.getCreatedToday(),glpi.getClosedToday()),
                                 closedPercentageIndicator(glpi.getCreatedThisWeek(),glpi.getClosedThisWeek()));
@@ -431,23 +489,6 @@ public class GlobalKpiCalculationService {
                                                 + fourthValue * fourthWeight) / totalWeight);
         }
 
-        private int calculateArubaRisk(
-                        ArubaSummary aruba) {
-
-                ArubaNetworkStatusDto networkStatusDetails = aruba.getNetworkStatusDetails();
-
-                if (networkStatusDetails != null) {
-
-                        return clamp(networkStatusDetails.getTechnicalDegradationValue());
-                }
-
-                return clamp(
-                                aruba.getDownAps() * 10
-                                                + aruba.getFirmwareOutdated() * 5
-                                                + aruba.getDownSwitches() * 15
-                                                + aruba.getSwitchesFirmwareUpgradeRequired() * 5);
-        }
-
         private int apAvailabilityIndicator(ArubaSummary aruba) {
 
                 if (aruba.getTotalAps() <= 0 || aruba.getDownAps() >= aruba.getTotalAps()) {
@@ -530,7 +571,7 @@ public class GlobalKpiCalculationService {
 
         private int activeSessionsIndicator(CitrixMetricsHistory citrix) {
 
-                return citrix.getActiveSessions() <= 0 ? redScore() : greenScore();
+                return greenScore();
         }
 
         private int deliveryControllersIndicator(CitrixMetricsHistory citrix) {
@@ -541,6 +582,11 @@ public class GlobalKpiCalculationService {
                 }
 
                 int availablePercent = citrix.getAvailableDeliveryControllers() * 100 / citrix.getTotalDeliveryControllers();
+
+                if (availablePercent < kpiProperties.getStatus().getYellowMin()) {
+
+                        return redScore();
+                }
 
                 return availablePercent < kpiProperties.getCitrix().getDeliveryControllerYellowBelowPercent()
                                 ? yellowScore()
@@ -592,9 +638,35 @@ public class GlobalKpiCalculationService {
                 return greenScore();
         }
 
+        private Microsoft365AffectationCalculator.Input microsoft365Input(
+                        Microsoft365MetricsHistory microsoft365,
+                        int microsoft365OpenTickets) {
+
+                return new Microsoft365AffectationCalculator.Input(
+                                microsoft365.getActiveUsers(),
+                                microsoft365.getUnassignedLicenses(),
+                                microsoft365.getOutlookStatus(),
+                                microsoft365.getTeamsStatus(),
+                                microsoft365.getSharePointStatus(),
+                                microsoft365.getNearlyFullMailboxes(),
+                                microsoft365.getEmailsQuarantined(),
+                                microsoft365.getSharePointStoragePercent(),
+                                microsoft365.getRiskyUsers(),
+                                microsoft365.getFailedSignIns(),
+                                microsoft365.getUsersWithoutMfa(),
+                                microsoft365.getAppsSecretsExpiringSoon(),
+                                microsoft365.getUnusedApplications(),
+                                microsoft365.getHighPrivilegeApplications(),
+                                microsoft365.getNonCompliantDevices(),
+                                microsoft365OpenTickets,
+                                microsoft365.getOutdatedWindowsDevices(),
+                                microsoft365.getDevicesWithoutEncryption(),
+                                microsoft365.getStaleDevices());
+        }
+
         private int sharePointStorageIndicator(Microsoft365MetricsHistory microsoft365) {
 
-                if (microsoft365.getSharePointStoragePercent() > kpiProperties.getMicrosoft365().getSharePointRedAbove()) {
+                if (microsoft365.getSharePointStoragePercent() >= kpiProperties.getMicrosoft365().getSharePointRedAbove()) {
 
                         return redScore();
                 }
@@ -696,6 +768,21 @@ public class GlobalKpiCalculationService {
                 return greenScore();
         }
 
+        private int slaBreachedTicketsIndicator(GlpiMetricsHistory glpi) {
+
+                if (glpi.getSlaBreachedTickets() > kpiProperties.getGlpi().getSlaBreachedTicketsRedAbove()) {
+
+                        return redScore();
+                }
+
+                if (glpi.getSlaBreachedTickets() > kpiProperties.getGlpi().getSlaBreachedTicketsYellowAbove()) {
+
+                        return yellowScore();
+                }
+
+                return greenScore();
+        }
+
         private int closedPercentageIndicator(int created,int closed) {
 
                 if (created <= 0) {
@@ -713,21 +800,6 @@ public class GlobalKpiCalculationService {
         private int countIndicator(int value) {
 
                 return value > 0 ? yellowScore() : greenScore();
-        }
-
-        private int colorToAffection(String status) {
-
-                if (isRed(status)) {
-
-                        return redScore();
-                }
-
-                if (isYellow(status)) {
-
-                        return yellowScore();
-                }
-
-                return greenScore();
         }
 
         private int average(int... values) {
@@ -753,16 +825,6 @@ public class GlobalKpiCalculationService {
                 // como correcto porque podria ocultar falta de datos.
 
                 return "GREEN".equalsIgnoreCase(status);
-        }
-
-        private boolean isYellow(String status) {
-
-                return "YELLOW".equalsIgnoreCase(status);
-        }
-
-        private boolean isRed(String status) {
-
-                return "RED".equalsIgnoreCase(status);
         }
 
         private int clamp(int value) {
@@ -800,3 +862,4 @@ public class GlobalKpiCalculationService {
                 return kpiProperties.getAffection().getRed();
         }
 }
+

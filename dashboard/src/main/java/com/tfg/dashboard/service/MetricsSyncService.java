@@ -1,12 +1,18 @@
 package com.tfg.dashboard.service;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
+import com.tfg.dashboard.dto.ManualSyncPlatformResultDto;
 import com.tfg.dashboard.model.CitrixMetricsHistory;
 import com.tfg.dashboard.dto.summary.CitrixSummary;
 import com.tfg.dashboard.model.GlpiMetricsHistory;
@@ -32,6 +38,7 @@ public class MetricsSyncService {
             LoggerFactory.getLogger(MetricsSyncService.class);
 
     private static final int RETENTION_DAYS = 90;
+    private static final String STATUS_IN_PROGRESS = "IN_PROGRESS";
 
     private final CitrixService citrixService;
 
@@ -47,7 +54,10 @@ public class MetricsSyncService {
 
     private final TransversalKpiAnalyticsService analyticsService;
 
-    private final SimulatedMetricsConsistencyService consistencyService;
+    private final SimulationConsistencyService consistencyService;
+    private final SynchronizationControlService synchronizationControlService;
+    private final AtomicBoolean syncInProgress =
+            new AtomicBoolean(false);
 
     public MetricsSyncService(
             CitrixService citrixService,
@@ -57,7 +67,8 @@ public class MetricsSyncService {
             Microsoft365MetricsHistoryRepository microsoft365Repository,
             GlpiMetricsHistoryRepository glpiRepository,
             TransversalKpiAnalyticsService analyticsService,
-            SimulatedMetricsConsistencyService consistencyService
+            SimulationConsistencyService consistencyService,
+            SynchronizationControlService synchronizationControlService
     ) {
 
         this.citrixService = citrixService;
@@ -68,17 +79,68 @@ public class MetricsSyncService {
         this.glpiRepository = glpiRepository;
         this.analyticsService = analyticsService;
         this.consistencyService = consistencyService;
+        this.synchronizationControlService = synchronizationControlService;
     }
 
     /**
      * Ejecuta la sincronización periódica de las fuentes simuladas y snapshots
      * de análisis.
      */
-    @Scheduled(fixedRate = 60000)
+    @EventListener(ApplicationReadyEvent.class)
+    public void syncExternalPlatformMetricsOnStartup() {
+
+        if (!synchronizationControlService.isAutomaticSyncEnabled()) {
+            log.info("Automatic synchronization skipped because it is paused");
+            return;
+        }
+
+        log.info("Sincronizacion inicial de metricas externas al arrancar Spring");
+        syncExternalPlatformMetricsOnce();
+    }
+
+    @Scheduled(
+            initialDelayString = "${metrics.sync.initial-delay-ms:3600000}",
+            fixedRateString = "${metrics.sync.fixed-rate-ms:3600000}"
+    )
     public void syncExternalPlatformMetrics() {
+
+        if (!synchronizationControlService.isAutomaticSyncEnabled()) {
+            log.info("Automatic synchronization skipped because it is paused");
+            return;
+        }
+
+        syncExternalPlatformMetricsOnce();
+    }
+
+    /**
+     * Ejecuta una sincronizacion de Citrix, Microsoft 365 y GLPI reutilizable
+     * tanto por el scheduler como por la sincronizacion manual del panel de
+     * configuracion.
+     */
+    public List<ManualSyncPlatformResultDto> syncExternalPlatformMetricsOnce() {
+
+        if (!syncInProgress.compareAndSet(false, true)) {
+            log.warn("Se omite sincronizacion de metricas externas porque ya hay otra en curso");
+            return List.of(new ManualSyncPlatformResultDto(
+                    "Plataformas simuladas",
+                    STATUS_IN_PROGRESS,
+                    "Ya hay una sincronizacion de metricas externas en curso."
+            ));
+        }
+
+        try {
+            return doSyncExternalPlatformMetricsOnce();
+        } finally {
+            syncInProgress.set(false);
+        }
+    }
+
+    private List<ManualSyncPlatformResultDto> doSyncExternalPlatformMetricsOnce() {
 
         log.info("Sincronizacion de metricas externas iniciada");
 
+        List<ManualSyncPlatformResultDto> platformResults =
+                new ArrayList<>();
         LocalDateTime collectedAt =
                 LocalDateTime.now();
         CitrixSummary citrixSummary =
@@ -96,6 +158,10 @@ public class MetricsSyncService {
         } catch (Exception exception) {
 
             log.error("Error sincronizando metricas Citrix", exception);
+            platformResults.add(error(
+                    "Citrix",
+                    "Error generando datos simulados Citrix: " + exception.getMessage()
+            ));
         }
 
         try {
@@ -109,6 +175,10 @@ public class MetricsSyncService {
                     "Error sincronizando metricas Microsoft 365",
                     exception
             );
+            platformResults.add(error(
+                    "Microsoft 365",
+                    "Error generando datos simulados Microsoft 365: " + exception.getMessage()
+            ));
         }
 
         try {
@@ -119,6 +189,10 @@ public class MetricsSyncService {
         } catch (Exception exception) {
 
             log.error("Error sincronizando metricas GLPI", exception);
+            platformResults.add(error(
+                    "GLPI",
+                    "Error generando datos simulados GLPI: " + exception.getMessage()
+            ));
         }
 
         if (citrixSummary != null
@@ -143,24 +217,48 @@ public class MetricsSyncService {
         if (citrixSummary != null) {
             try {
                 syncCitrixMetrics(citrixSummary, collectedAt);
+                platformResults.add(ok(
+                        "Citrix",
+                        "Datos simulados Citrix actualizados."
+                ));
             } catch (Exception exception) {
                 log.error("Error guardando metricas Citrix", exception);
+                platformResults.add(error(
+                        "Citrix",
+                        "Error guardando metricas Citrix: " + exception.getMessage()
+                ));
             }
         }
 
         if (microsoft365Summary != null) {
             try {
                 syncMicrosoft365Metrics(microsoft365Summary, collectedAt);
+                platformResults.add(ok(
+                        "Microsoft 365",
+                        "Datos simulados Microsoft 365 actualizados."
+                ));
             } catch (Exception exception) {
                 log.error("Error guardando metricas Microsoft 365", exception);
+                platformResults.add(error(
+                        "Microsoft 365",
+                        "Error guardando metricas Microsoft 365: " + exception.getMessage()
+                ));
             }
         }
 
         if (glpiSummary != null) {
             try {
                 syncGlpiMetrics(glpiSummary, collectedAt);
+                platformResults.add(ok(
+                        "GLPI",
+                        "Datos simulados GLPI actualizados."
+                ));
             } catch (Exception exception) {
                 log.error("Error guardando metricas GLPI", exception);
+                platformResults.add(error(
+                        "GLPI",
+                        "Error guardando metricas GLPI: " + exception.getMessage()
+                ));
             }
         }
 
@@ -179,6 +277,8 @@ public class MetricsSyncService {
         cleanOldMetrics();
 
         log.info("Sincronizacion de metricas externas finalizada");
+
+        return platformResults;
     }
 
     /**
@@ -286,7 +386,11 @@ public class MetricsSyncService {
         );
         history.setServerLoadPercent(summary.getServerLoadPercent());
         history.setFailedLogons(summary.getFailedLogons());
-        history.setCitrixHealth(summary.getCitrixHealth());
+        history.setCitrixHealth(
+                summary.getCitrixHealthDetails() != null
+                        ? summary.getCitrixHealthDetails().getColor()
+                        : "NO_DATA"
+        );
         history.setCollectedAt(collectedAt);
 
         return history;
@@ -328,7 +432,11 @@ public class MetricsSyncService {
                 summary.getDevicesWithoutEncryption()
         );
         history.setStaleDevices(summary.getStaleDevices());
-        history.setMicrosoft365Health(summary.getMicrosoft365Health());
+        history.setMicrosoft365Health(
+                summary.getMicrosoft365HealthDetails() != null
+                        ? summary.getMicrosoft365HealthDetails().getColor()
+                        : "NO_DATA"
+        );
         history.setCollectedAt(collectedAt);
 
         return history;
@@ -360,4 +468,13 @@ public class MetricsSyncService {
 
         return history;
     }
+
+    private ManualSyncPlatformResultDto ok(String name, String message) {
+        return new ManualSyncPlatformResultDto(name, "OK", message);
+    }
+
+    private ManualSyncPlatformResultDto error(String name, String message) {
+        return new ManualSyncPlatformResultDto(name, "ERROR", message);
+    }
 }
+

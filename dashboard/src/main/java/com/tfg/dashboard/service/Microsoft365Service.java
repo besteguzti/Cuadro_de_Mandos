@@ -83,11 +83,11 @@ public class Microsoft365Service {
 
                 int sharePointStoragePercent = 45 + random.nextInt(50);
 
-                int riskyUsers = random.nextInt(12);
+                int riskyUsers = random.nextInt(21);
 
-                int failedSignIns = 50 + random.nextInt(600);
+                int failedSignIns = random.nextInt(31);
 
-                int usersWithoutMfa = 10 + random.nextInt(80);
+                int usersWithoutMfa = Math.min(activeUsers, random.nextInt(11));
 
                 int appsSecretsExpiringSoon = random.nextInt(15);
 
@@ -103,13 +103,29 @@ public class Microsoft365Service {
 
                 int staleDevices = random.nextInt(50);
 
+                int microsoft365OpenTickets =
+                                glpiPlatformTicketService.getMicrosoft365OpenTickets();
+
                 Microsoft365HealthStatusDto healthDetails = calculateHealthDetails(
+                                activeUsers,
+                                unassignedLicenses,
+                                outlookStatus,
+                                teamsStatus,
+                                sharePointStatus,
+                                nearlyFullMailboxes,
+                                emailsQuarantined,
                                 sharePointStoragePercent,
+                                riskyUsers,
+                                failedSignIns,
                                 usersWithoutMfa,
                                 appsSecretsExpiringSoon,
+                                unusedApplications,
+                                highPrivilegeApplications,
                                 nonCompliantDevices,
+                                microsoft365OpenTickets,
                                 outdatedWindowsDevices,
-                                devicesWithoutEncryption);
+                                devicesWithoutEncryption,
+                                staleDevices);
 
                 summary.setActiveUsers(
                                 activeUsers);
@@ -156,7 +172,7 @@ public class Microsoft365Service {
                 summary.setNonCompliantDevices(
                                 nonCompliantDevices);
                 summary.setMicrosoft365OpenTickets(
-                                glpiPlatformTicketService.getMicrosoft365OpenTickets());
+                                microsoft365OpenTickets);
 
                 summary.setOutdatedWindowsDevices(
                                 outdatedWindowsDevices);
@@ -166,8 +182,6 @@ public class Microsoft365Service {
 
                 summary.setStaleDevices(
                                 staleDevices);
-                summary.setMicrosoft365Health(
-                                healthDetails.getColor());
                 summary.setMicrosoft365HealthDetails(
                                 healthDetails);
                 summary.setMicrosoft365HealthKpi(
@@ -202,21 +216,34 @@ public class Microsoft365Service {
                 summary.setHighPrivilegeApplications(
                                 history.getHighPrivilegeApplications());
                 summary.setNonCompliantDevices(history.getNonCompliantDevices());
-                summary.setMicrosoft365OpenTickets(glpiPlatformTicketService.getMicrosoft365OpenTickets());
+                int microsoft365OpenTickets = glpiPlatformTicketService.getMicrosoft365OpenTickets();
+                summary.setMicrosoft365OpenTickets(microsoft365OpenTickets);
                 summary.setOutdatedWindowsDevices(
                                 history.getOutdatedWindowsDevices());
                 summary.setDevicesWithoutEncryption(
                                 history.getDevicesWithoutEncryption());
                 summary.setStaleDevices(history.getStaleDevices());
                 Microsoft365HealthStatusDto healthDetails = calculateHealthDetails(
+                                history.getActiveUsers(),
+                                history.getUnassignedLicenses(),
+                                history.getOutlookStatus(),
+                                history.getTeamsStatus(),
+                                history.getSharePointStatus(),
+                                history.getNearlyFullMailboxes(),
+                                history.getEmailsQuarantined(),
                                 history.getSharePointStoragePercent(),
+                                history.getRiskyUsers(),
+                                history.getFailedSignIns(),
                                 history.getUsersWithoutMfa(),
                                 history.getAppsSecretsExpiringSoon(),
+                                history.getUnusedApplications(),
+                                history.getHighPrivilegeApplications(),
                                 history.getNonCompliantDevices(),
+                                microsoft365OpenTickets,
                                 history.getOutdatedWindowsDevices(),
-                                history.getDevicesWithoutEncryption());
+                                history.getDevicesWithoutEncryption(),
+                                history.getStaleDevices());
 
-                summary.setMicrosoft365Health(healthDetails.getColor());
                 summary.setMicrosoft365HealthDetails(healthDetails);
                 summary.setLastUpdated(history.getCollectedAt());
                 summary.setDataStatus(
@@ -237,7 +264,6 @@ public class Microsoft365Service {
                 summary.setOutlookStatus("NO_DATA");
                 summary.setTeamsStatus("NO_DATA");
                 summary.setSharePointStatus("NO_DATA");
-                summary.setMicrosoft365Health("NO_DATA");
                 summary.setDataStatus("NO_DATA");
                 summary.setMicrosoft365HealthDetails(noDataHealthDetails());
                 summary.setMicrosoft365HealthKpi(
@@ -263,7 +289,9 @@ public class Microsoft365Service {
                 }
 
                 if (collectedAt.isAfter(
-                                LocalDateTime.now().minusMinutes(2))) {
+                                LocalDateTime.now().minusMinutes(
+                                                kpiProperties.getFreshness()
+                                                                .getMicrosoft365Minutes()))) {
 
                         return "OK";
                 }
@@ -293,220 +321,66 @@ public class Microsoft365Service {
         }
 
         /**
-         * Normaliza seis indicadores de Microsoft 365 en una escala común de
+         * Normaliza los indicadores de Microsoft 365 en una escala común de
          * afección 0-100.
          */
         private Microsoft365HealthStatusDto calculateHealthDetails(
+                        int activeUsers,
+                        int unassignedLicenses,
+                        String outlookStatus,
+                        String teamsStatus,
+                        String sharePointStatus,
+                        int nearlyFullMailboxes,
+                        int emailsQuarantined,
                         int sharePointStoragePercent,
+                        int riskyUsers,
+                        int failedSignIns,
                         int usersWithoutMfa,
                         int appsSecretsExpiringSoon,
+                        int unusedApplications,
+                        int highPrivilegeApplications,
                         int nonCompliantDevices,
+                        int microsoft365OpenTickets,
                         int outdatedWindowsDevices,
-                        int devicesWithoutEncryption) {
+                        int devicesWithoutEncryption,
+                        int staleDevices) {
 
-                List<Microsoft365IndicatorStatusDto> indicators = List.of(
-                                evaluateSharePointStorage(
-                                                sharePointStoragePercent),
-                                evaluateUsersWithoutMfa(usersWithoutMfa),
-                                evaluateSecretsExpiringSoon(
-                                                appsSecretsExpiringSoon),
-                                evaluateNonCompliantDevices(
-                                                nonCompliantDevices),
-                                evaluateOutdatedWindowsDevices(
-                                                outdatedWindowsDevices),
-                                evaluateDevicesWithoutEncryption(
-                                                devicesWithoutEncryption));
-
-                int percentage = (int) Math.round(
-                                indicators.stream()
-                                                .mapToInt(
-                                                                Microsoft365IndicatorStatusDto::getAffectionPercent)
-                                                .average()
-                                                .orElse(100));
-
-                String color = colorByPercentage(percentage);
-
-                List<String> reasons = indicators.stream()
-                                .filter(indicator -> !GREEN.equals(indicator.getColor()))
-                                .map(Microsoft365IndicatorStatusDto::getReason)
-                                .toList();
+                Microsoft365AffectationCalculator.Result result =
+                                Microsoft365AffectationCalculator.calculate(
+                                                new Microsoft365AffectationCalculator.Input(
+                                                                activeUsers,
+                                                                unassignedLicenses,
+                                                                outlookStatus,
+                                                                teamsStatus,
+                                                                sharePointStatus,
+                                                                nearlyFullMailboxes,
+                                                                emailsQuarantined,
+                                                                sharePointStoragePercent,
+                                                                riskyUsers,
+                                                                failedSignIns,
+                                                                usersWithoutMfa,
+                                                                appsSecretsExpiringSoon,
+                                                                unusedApplications,
+                                                                highPrivilegeApplications,
+                                                                nonCompliantDevices,
+                                                                microsoft365OpenTickets,
+                                                                outdatedWindowsDevices,
+                                                                devicesWithoutEncryption,
+                                                                staleDevices),
+                                                kpiProperties);
 
                 Microsoft365HealthStatusDto details = new Microsoft365HealthStatusDto();
 
-                details.setPercentage(percentage);
-                details.setColor(color);
-                details.setIndicators(indicators);
-                details.setReasons(reasons);
-                details.setAffectedService(!GREEN.equals(color));
-                details.setCriticalCondition(
-                                indicators.stream()
-                                                .anyMatch(indicator -> RED.equals(indicator.getColor())));
-                details.setTechnicalDegradationValue(percentage);
+                details.setPercentage(result.percentage());
+                details.setColor(result.color());
+                details.setIndicators(result.indicators());
+                details.setReasons(result.reasons());
+                details.setAffectedService(result.affectedService());
+                details.setCriticalCondition(result.criticalCondition());
+                details.setTechnicalDegradationValue(result.percentage());
                 details.setTransversalReady(true);
 
                 return details;
-        }
-
-        private Microsoft365IndicatorStatusDto evaluateSharePointStorage(
-                        int sharePointStoragePercent) {
-
-                if (sharePointStoragePercent > kpiProperties.getMicrosoft365().getSharePointRedAbove()) {
-
-                        return indicator(
-                                        "Almacenamiento de SharePoint",
-                                        RED,
-                                        "SharePoint supera el "
-                                                        + kpiProperties.getMicrosoft365().getSharePointRedAbove()
-                                                        + " % de almacenamiento usado");
-                }
-
-                if (sharePointStoragePercent >= kpiProperties.getMicrosoft365().getSharePointYellowMin()) {
-
-                        return indicator(
-                                        "Almacenamiento de SharePoint",
-                                        YELLOW,
-                                        "SharePoint esta entre el "
-                                                        + kpiProperties.getMicrosoft365().getSharePointYellowMin()
-                                                        + " % y el "
-                                                        + kpiProperties.getMicrosoft365().getSharePointRedAbove()
-                                                        + " % de almacenamiento usado");
-                }
-
-                return indicator(
-                                "Almacenamiento de SharePoint",
-                                GREEN,
-                                "SharePoint esta por debajo del "
-                                                + kpiProperties.getMicrosoft365().getSharePointYellowMin()
-                                                + " % de almacenamiento usado");
-        }
-
-        private Microsoft365IndicatorStatusDto evaluateUsersWithoutMfa(
-                        int usersWithoutMfa) {
-
-                if (usersWithoutMfa > kpiProperties.getMicrosoft365().getUsersWithoutMfaRedAbove()) {
-
-                        return indicator(
-                                        "Usuarios sin MFA",
-                                        RED,
-                                        "Hay mas de "
-                                                        + kpiProperties.getMicrosoft365().getUsersWithoutMfaRedAbove()
-                                                        + " usuarios sin MFA");
-                }
-
-                if (usersWithoutMfa > kpiProperties.getMicrosoft365().getUsersWithoutMfaYellowAbove()) {
-
-                        return indicator(
-                                        "Usuarios sin MFA",
-                                        YELLOW,
-                                        "Hay entre "
-                                                        + (kpiProperties.getMicrosoft365().getUsersWithoutMfaYellowAbove() + 1)
-                                                        + " y "
-                                                        + kpiProperties.getMicrosoft365().getUsersWithoutMfaRedAbove()
-                                                        + " usuarios sin MFA");
-                }
-
-                return indicator(
-                                "Usuarios sin MFA",
-                                GREEN,
-                                "No hay usuarios sin MFA");
-        }
-
-        private Microsoft365IndicatorStatusDto evaluateSecretsExpiringSoon(
-                        int appsSecretsExpiringSoon) {
-
-                if (appsSecretsExpiringSoon > kpiProperties.getMicrosoft365().getSecretsYellowAbove()) {
-
-                        return indicator(
-                                        "Secretos proximos a caducar",
-                                        YELLOW,
-                                        "Hay secretos de aplicaciones proximos a caducar");
-                }
-
-                return indicator(
-                                "Secretos proximos a caducar",
-                                GREEN,
-                                "No hay secretos proximos a caducar");
-        }
-
-        private Microsoft365IndicatorStatusDto evaluateNonCompliantDevices(
-                        int nonCompliantDevices) {
-
-                if (nonCompliantDevices > kpiProperties.getMicrosoft365().getNonCompliantDevicesRedAbove()) {
-
-                        return indicator(
-                                        "Equipos no conformes",
-                                        RED,
-                                        "Hay mas de "
-                                                        + kpiProperties.getMicrosoft365().getNonCompliantDevicesRedAbove()
-                                                        + " equipos no conformes");
-                }
-
-                if (nonCompliantDevices > kpiProperties.getMicrosoft365().getNonCompliantDevicesYellowAbove()) {
-
-                        return indicator(
-                                        "Equipos no conformes",
-                                        YELLOW,
-                                        "Hay entre "
-                                                        + (kpiProperties.getMicrosoft365().getNonCompliantDevicesYellowAbove() + 1)
-                                                        + " y "
-                                                        + kpiProperties.getMicrosoft365().getNonCompliantDevicesRedAbove()
-                                                        + " equipos no conformes");
-                }
-
-                return indicator(
-                                "Equipos no conformes",
-                                GREEN,
-                                "Hay entre 0 y "
-                                                + kpiProperties.getMicrosoft365().getNonCompliantDevicesYellowAbove()
-                                                + " equipos no conformes");
-        }
-
-        private Microsoft365IndicatorStatusDto evaluateOutdatedWindowsDevices(
-                        int outdatedWindowsDevices) {
-
-                if (outdatedWindowsDevices > kpiProperties.getMicrosoft365().getOutdatedWindowsYellowAbove()) {
-
-                        return indicator(
-                                        "Windows desactualizados",
-                                        YELLOW,
-                                        "Hay equipos con Windows desactualizado");
-                }
-
-                return indicator(
-                                "Windows desactualizados",
-                                GREEN,
-                                "No hay equipos con Windows desactualizado");
-        }
-
-        private Microsoft365IndicatorStatusDto evaluateDevicesWithoutEncryption(
-                        int devicesWithoutEncryption) {
-
-                if (devicesWithoutEncryption > kpiProperties.getMicrosoft365().getDevicesWithoutEncryptionRedAbove()) {
-
-                        return indicator(
-                                        "Equipos sin cifrado",
-                                        RED,
-                                        "Hay mas de "
-                                                        + kpiProperties.getMicrosoft365().getDevicesWithoutEncryptionRedAbove()
-                                                        + " equipos sin cifrado");
-                }
-
-                if (devicesWithoutEncryption > kpiProperties.getMicrosoft365().getDevicesWithoutEncryptionYellowAbove()) {
-
-                        return indicator(
-                                        "Equipos sin cifrado",
-                                        YELLOW,
-                                        "Hay entre "
-                                                        + (kpiProperties.getMicrosoft365().getDevicesWithoutEncryptionYellowAbove() + 1)
-                                                        + " y "
-                                                        + kpiProperties.getMicrosoft365().getDevicesWithoutEncryptionRedAbove()
-                                                        + " equipos sin cifrado");
-                }
-
-                return indicator(
-                                "Equipos sin cifrado",
-                                GREEN,
-                                "No hay equipos sin cifrado");
         }
 
         private Microsoft365IndicatorStatusDto indicator(
@@ -540,22 +414,6 @@ public class Microsoft365Service {
                 return kpiProperties.getAffection().getGreen();
         }
 
-        private String colorByPercentage(
-                        int percentage) {
-
-                if (percentage >= kpiProperties.getStatus().getRedMin()) {
-
-                        return RED;
-                }
-
-                if (percentage >= kpiProperties.getStatus().getYellowMin()) {
-
-                        return YELLOW;
-                }
-
-                return GREEN;
-        }
-
         private Microsoft365HealthStatusDto noDataHealthDetails() {
 
                 Microsoft365IndicatorStatusDto noData = indicator(
@@ -584,11 +442,11 @@ public class Microsoft365Service {
 
                 return new KpiResultDto(
                                 "microsoft365_health",
-                                "Indice de salud Microsoft 365",
+                                "Índice de salud Microsoft 365",
                                 details.getPercentage(),
                                 KpiStatus.from(details.getColor()),
                                 "Afección normalizada de Microsoft 365.",
-                                "Media uniforme de almacenamiento SharePoint, usuarios sin MFA, secretos proximos a caducar, equipos no conformes, Windows desactualizados y equipos sin cifrado.",
+                                "Suma de afecciones parciales de servicios, licencias, seguridad, dispositivos, SharePoint y tickets Microsoft 365, limitada a 100.",
                                 timestamp,
                                 freshness,
                                 details.getPercentage(),
@@ -614,3 +472,4 @@ public class Microsoft365Service {
                                 .replace("%", "percent");
         }
 }
+

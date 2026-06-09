@@ -10,10 +10,9 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
 /**
- * Histórico del estado normalizado de red Aruba.
+ * Histórico del índice de salud Aruba.
  *
- * Guarda porcentaje, color, contribución de APs/switches y motivos para poder
- * explicar el semáforo y alimentar el análisis transversal.
+ * Guarda el porcentaje de afección, el color y los motivos calculados para poder revisar cómo ha evolucionado el índice.
  */
 @Entity
 @Table(name = "aruba_network_status_history")

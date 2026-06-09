@@ -2,6 +2,7 @@ package com.tfg.dashboard.service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -9,6 +10,7 @@ import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.tfg.dashboard.client.ArubaApiClient;
+import com.tfg.dashboard.dto.ArubaFirmwareSwarmsResult;
 import com.tfg.dashboard.dto.ArubaApInfo;
 import com.tfg.dashboard.dto.ArubaSwitchInfo;
 import com.tfg.dashboard.dto.ArubaWifiClientInfo;
@@ -109,7 +111,7 @@ public class ArubaInventorySyncService {
         public void syncAll() {
 
                 List<ArubaApInfo> aps = client.getApsList();
-                JsonNode firmwareSwarms = client.getFirmwareSwarms();
+                ArubaFirmwareSwarmsResult firmwareSwarms = client.getFirmwareSwarms();
                 List<ArubaSwitchInfo> switches = client.getMonitoringSwitchesList();
                 List<ArubaSwitchInfo> firmwareSwitches = client.getSwitchesList();
                 List<ArubaWifiClientInfo> wifiClients = client.getWifiClientsList();
@@ -232,11 +234,19 @@ public class ArubaInventorySyncService {
                 }
         }
 
-        private void syncFirmwareMetrics(JsonNode firmwareSwarms) {
+        private void syncFirmwareMetrics(ArubaFirmwareSwarmsResult firmwareSwarms) {
 
                 ArubaDashboardMetrics metrics = getOrCreateMetrics();
 
-                metrics.setFirmwareOutdated(countFirmwareOutdated(firmwareSwarms));
+                Optional<Integer> firmwareOutdated = countFirmwareOutdated(firmwareSwarms);
+
+                if (firmwareOutdated.isEmpty()) {
+                        log.warn("No se actualiza firmwareOutdated porque firmware Aruba no ha devuelto datos validos: {}",
+                                        firmwareSwarms == null ? "sin resultado" : firmwareSwarms.getStatus());
+                        return;
+                }
+
+                metrics.setFirmwareOutdated(firmwareOutdated.get());
                 metrics.setUpdatedAt(LocalDateTime.now());
 
                 dashboardMetricsRepository.save(metrics);
@@ -246,13 +256,13 @@ public class ArubaInventorySyncService {
          * Actualiza la fila agregada que resume firmware y clientes WiFi para
          * construir el resumen Aruba.
          */
-        private void syncDashboardMetrics(JsonNode firmwareSwarms,List<ArubaWifiClientInfo> wifiClients) {
+        private void syncDashboardMetrics(ArubaFirmwareSwarmsResult firmwareSwarms,List<ArubaWifiClientInfo> wifiClients) {
 
                 ArubaDashboardMetrics metrics = getOrCreateMetrics();
                 ArubaWifiClientAggregationService.WifiClientMetrics clientMetrics =
                                 wifiClientAggregationService.buildMetrics(wifiClients);
 
-                metrics.setFirmwareOutdated(countFirmwareOutdated(firmwareSwarms));
+                countFirmwareOutdated(firmwareSwarms).ifPresent(metrics::setFirmwareOutdated);
                 metrics.setTotalWifiClients(clientMetrics.getTotalWifiClients());
                 metrics.setMutualiaApsClients(clientMetrics.getMutualiaApsClients());
                 metrics.setMutualiaWifiClients(clientMetrics.getMutualiaWifiClients());
@@ -280,20 +290,20 @@ public class ArubaInventorySyncService {
                                 });
         }
 
-        private int countFirmwareOutdated(JsonNode firmwareSwarms) {
+        private Optional<Integer> countFirmwareOutdated(ArubaFirmwareSwarmsResult firmwareSwarms) {
 
                 int firmwareOutdated = 0;
 
-                if (firmwareSwarms == null) {
+                if (firmwareSwarms == null || !firmwareSwarms.hasPayload()) {
 
-                        return firmwareOutdated;
+                        return Optional.empty();
                 }
 
-                JsonNode swarms = firmwareSwarms.get("swarms");
+                JsonNode swarms = firmwareSwarms.getPayload().get("swarms");
 
                 if (swarms == null || !swarms.isArray()) {
 
-                        return firmwareOutdated;
+                        return Optional.empty();
                 }
 
                 for (JsonNode swarm : swarms) {
@@ -306,6 +316,7 @@ public class ArubaInventorySyncService {
                         }
                 }
 
-                return firmwareOutdated;
+                return Optional.of(firmwareOutdated);
         }
 }
+

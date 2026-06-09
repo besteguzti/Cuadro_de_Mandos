@@ -144,6 +144,116 @@ class KpiConfigurationServiceTest {
     }
 
     @Test
+    void keepsPersistedCitrixThresholdsEvenWhenTheyMatchPreviousDefaults() {
+        List<KpiThresholdConfiguration> stored = defaultThresholds().stream()
+                .map(threshold -> {
+                    if ("citrix.deliveryControllerYellowBelowPercent".equals(threshold.getConfigKey())) {
+                        return threshold("citrix.deliveryControllerYellowBelowPercent", 50);
+                    }
+                    if ("citrix.failedLogonsYellowAbove".equals(threshold.getConfigKey())) {
+                        return threshold("citrix.failedLogonsYellowAbove", 10);
+                    }
+                    if ("citrix.failedLogonsRedAbove".equals(threshold.getConfigKey())) {
+                        return threshold("citrix.failedLogonsRedAbove", 30);
+                    }
+                    return threshold(threshold.getConfigKey(), threshold.getValue());
+                })
+                .toList();
+        when(thresholdRepository.findAll()).thenReturn(stored);
+
+        service.ensureDefaultConfigurationExists();
+
+        assertThat(kpiProperties.getCitrix().getDeliveryControllerYellowBelowPercent()).isEqualTo(50);
+        assertThat(kpiProperties.getCitrix().getFailedLogonsYellowAbove()).isEqualTo(10);
+        assertThat(kpiProperties.getCitrix().getFailedLogonsRedAbove()).isEqualTo(30);
+        assertThat(findStoredThreshold(stored, "citrix.deliveryControllerYellowBelowPercent").getValue()).isEqualTo(50);
+        assertThat(findStoredThreshold(stored, "citrix.failedLogonsYellowAbove").getValue()).isEqualTo(10);
+        assertThat(findStoredThreshold(stored, "citrix.failedLogonsRedAbove").getValue()).isEqualTo(30);
+        verify(thresholdRepository, never()).save(any(KpiThresholdConfiguration.class));
+    }
+
+    @Test
+    void keepsPersistedMicrosoft365ThresholdsEvenWhenTheyMatchPreviousDefaults() {
+        List<KpiThresholdConfiguration> stored = defaultThresholds().stream()
+                .map(threshold -> {
+                    if ("microsoft365.usersWithoutMfaRedAbove".equals(threshold.getConfigKey())) {
+                        return threshold("microsoft365.usersWithoutMfaRedAbove", 3);
+                    }
+                    if ("microsoft365.nonCompliantDevicesYellowAbove".equals(threshold.getConfigKey())) {
+                        return threshold("microsoft365.nonCompliantDevicesYellowAbove", 50);
+                    }
+                    if ("microsoft365.nonCompliantDevicesRedAbove".equals(threshold.getConfigKey())) {
+                        return threshold("microsoft365.nonCompliantDevicesRedAbove", 100);
+                    }
+                    if ("microsoft365.devicesWithoutEncryptionRedAbove".equals(threshold.getConfigKey())) {
+                        return threshold("microsoft365.devicesWithoutEncryptionRedAbove", 5);
+                    }
+                    return threshold(threshold.getConfigKey(), threshold.getValue());
+                })
+                .toList();
+        when(thresholdRepository.findAll()).thenReturn(stored);
+
+        service.ensureDefaultConfigurationExists();
+
+        assertThat(kpiProperties.getMicrosoft365().getUsersWithoutMfaRedAbove()).isEqualTo(3);
+        assertThat(kpiProperties.getMicrosoft365().getNonCompliantDevicesYellowAbove()).isEqualTo(50);
+        assertThat(kpiProperties.getMicrosoft365().getNonCompliantDevicesRedAbove()).isEqualTo(100);
+        assertThat(kpiProperties.getMicrosoft365().getDevicesWithoutEncryptionRedAbove()).isEqualTo(5);
+        assertThat(findStoredThreshold(stored, "microsoft365.usersWithoutMfaRedAbove").getValue()).isEqualTo(3);
+        assertThat(findStoredThreshold(stored, "microsoft365.nonCompliantDevicesYellowAbove").getValue()).isEqualTo(50);
+        assertThat(findStoredThreshold(stored, "microsoft365.nonCompliantDevicesRedAbove").getValue()).isEqualTo(100);
+        assertThat(findStoredThreshold(stored, "microsoft365.devicesWithoutEncryptionRedAbove").getValue()).isEqualTo(5);
+        verify(thresholdRepository, never()).save(any(KpiThresholdConfiguration.class));
+    }
+
+    @Test
+    void citrixCalculatorUsesThresholdsLoadedFromDatabase() {
+        List<KpiThresholdConfiguration> stored = defaultThresholds().stream()
+                .map(threshold -> {
+                    if ("citrix.serverLoadYellowMin".equals(threshold.getConfigKey())) {
+                        return threshold("citrix.serverLoadYellowMin", 50);
+                    }
+                    if ("citrix.serverLoadRedMin".equals(threshold.getConfigKey())) {
+                        return threshold("citrix.serverLoadRedMin", 80);
+                    }
+                    if ("citrix.failedLogonsYellowAbove".equals(threshold.getConfigKey())) {
+                        return threshold("citrix.failedLogonsYellowAbove", 10);
+                    }
+                    return threshold(threshold.getConfigKey(), threshold.getValue());
+                })
+                .toList();
+        when(thresholdRepository.findAll()).thenReturn(stored);
+
+        service.ensureDefaultConfigurationExists();
+
+        CitrixAffectationCalculator.Result result =
+                CitrixAffectationCalculator.calculate(
+                        new CitrixAffectationCalculator.Input(
+                                42,
+                                580,
+                                4,
+                                4,
+                                0,
+                                20,
+                                75,
+                                8,
+                                26),
+                        kpiProperties);
+
+        assertThat(result.percentage()).isEqualTo(15);
+        assertThat(result.color()).isEqualTo("GREEN");
+        assertThat(result.indicators())
+                .anySatisfy(indicator -> {
+                    assertThat(indicator.getName()).isEqualTo("Carga de servidores");
+                    assertThat(indicator.getColor()).isEqualTo("YELLOW");
+                })
+                .anySatisfy(indicator -> {
+                    assertThat(indicator.getName()).isEqualTo("Errores de inicio");
+                    assertThat(indicator.getColor()).isEqualTo("GREEN");
+                });
+    }
+
+    @Test
     void updateThresholdsStoresOnlyRequestedKeys() {
         ThresholdConfigurationDto request =
                 new ThresholdConfigurationDto(List.of(
@@ -253,6 +363,25 @@ class KpiConfigurationServiceTest {
     }
 
     @Test
+    void addsMissingPlatformWeightWithoutOverwritingExistingWeights() {
+        when(weightRepository.findAll())
+                .thenReturn(List.of(
+                        weight("ARUBA", 50),
+                        weight("CITRIX", 20),
+                        weight("MICROSOFT365", 20)));
+
+        service.ensureDefaultConfigurationExists();
+
+        ArgumentCaptor<PlatformWeightConfiguration> captor =
+                ArgumentCaptor.forClass(PlatformWeightConfiguration.class);
+        verify(weightRepository).save(captor.capture());
+        assertThat(captor.getValue().getPlatform()).isEqualTo("GLPI");
+        assertThat(captor.getValue().getWeightPercent()).isEqualTo(10);
+        assertThat(kpiProperties.getWeights().getGlobalStatus().getAruba())
+                .isEqualTo(0.50);
+    }
+
+    @Test
     void repairsInvalidStoredPlatformWeightsBeforeApplyingThem() {
         when(weightRepository.findAll())
                 .thenReturn(List.of(
@@ -266,19 +395,6 @@ class KpiConfigurationServiceTest {
         assertThat(kpiProperties.getWeights().getGlobalStatus().getAruba())
                 .isEqualTo(0.40);
         verify(weightRepository, atLeast(4)).save(any(PlatformWeightConfiguration.class));
-    }
-
-    @Test
-    void rejectsArubaInternalWeightsThatDoNotSumOneHundred() {
-        ThresholdConfigurationDto request =
-                new ThresholdConfigurationDto(List.of(
-                        section(
-                                value("aruba.accessPointBlockWeight", 70),
-                                value("aruba.switchBlockWeight", 20))));
-
-        assertThatThrownBy(() -> service.updateThresholds(request))
-                .isInstanceOf(ResponseStatusException.class)
-                .hasMessageContaining("pesos internos de Aruba");
     }
 
     @Test
@@ -332,6 +448,13 @@ class KpiConfigurationServiceTest {
         return threshold;
     }
 
+    private KpiThresholdConfiguration findStoredThreshold(List<KpiThresholdConfiguration> thresholds, String key) {
+        return thresholds.stream()
+                .filter(threshold -> key.equals(threshold.getConfigKey()))
+                .findFirst()
+                .orElseThrow();
+    }
+
     private List<KpiThresholdConfiguration> defaultThresholdsWith(String key, int value) {
         return defaultThresholds().stream()
                 .map(threshold ->
@@ -377,3 +500,4 @@ class KpiConfigurationServiceTest {
         return (Integer) method.invoke(target);
     }
 }
+

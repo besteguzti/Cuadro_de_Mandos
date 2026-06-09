@@ -5,12 +5,7 @@ import java.util.List;
 
 public class KpiResultDto {
 
-    /**
-     * DTO común para los KPIs del sistema.
-     * Permite que Aruba, Citrix, Microsoft 365 y GLPI devuelvan los indicadores con
-     * la misma estructura: valor, estado, fórmula y componentes usados en el cálculo.
-     * Esto facilita la trazabilidad de los KPIs compuestos.
-     */
+    //DTO común para devolver KPIs con la misma estructura en todos los paneles.
     private String id;
     private String name;
     private Object value;
@@ -129,3 +124,4 @@ public class KpiResultDto {
         this.components = components;
     }
 }
+

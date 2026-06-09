@@ -25,7 +25,7 @@ import com.tfg.dashboard.model.ArubaSwitchClientUsage;
  * dashboard.
  *
  * No concentra ya toda la lógica: delega sincronización, clientes WiFi,
- * switches, estado de red y construcción del resumen en servicios
+ * switches, índice de salud Aruba y construcción del resumen en servicios
  * especializados.
  */
 @Service
@@ -139,7 +139,7 @@ public class ArubaService {
 
         /**
          * Ejecuta la sincronización completa de Aruba y guarda el snapshot del
-         * estado de red sin bloquear la sincronización si falla el histórico.
+         * índice de salud Aruba sin bloquear la sincronización si falla el histórico.
          */
         public void syncAll() {
 
@@ -151,7 +151,8 @@ public class ArubaService {
 
                         // El histórico de afectacion alimenta el análisis transversal, pero no debe
                         // bloquear la sincronizacion real de APs, switches y clientes Aruba.
-                        log.error("Error guardando histórico de estado de red Aruba", exception);
+                        log.error("Error guardando histórico del índice de salud Aruba", exception);
                 }
         }
 }
+

@@ -15,7 +15,7 @@ import com.tfg.dashboard.dto.ArubaWifiClientInfo;
  * Agrupa clientes WiFi de Aruba por grupos y redes relevantes para Mutualia.
  *
  * La sincronización usa estos contadores para alimentar el resumen Aruba y las
- * reglas del estado de red.
+ * reglas del índice de salud Aruba.
  */
 @Service
 public class ArubaWifiClientAggregationService {
@@ -193,3 +193,4 @@ public class ArubaWifiClientAggregationService {
                 }
         }
 }
+

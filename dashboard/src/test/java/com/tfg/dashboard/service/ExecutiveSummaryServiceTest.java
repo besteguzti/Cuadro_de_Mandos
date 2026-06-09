@@ -17,8 +17,11 @@ import com.tfg.dashboard.config.properties.KpiProperties;
 import com.tfg.dashboard.dto.ExecutiveSummaryDto;
 import com.tfg.dashboard.dto.KpiResultDto;
 import com.tfg.dashboard.dto.KpiStatus;
+import com.tfg.dashboard.dto.PlatformFindingDto;
 import com.tfg.dashboard.model.AnalysisSnapshot;
 import com.tfg.dashboard.model.CitrixMetricsHistory;
+import com.tfg.dashboard.model.GlpiMetricsHistory;
+import com.tfg.dashboard.dto.summary.ArubaSummary;
 import com.tfg.dashboard.dto.summary.MainDashboardSummary;
 import com.tfg.dashboard.repository.AnalysisSnapshotRepository;
 import com.tfg.dashboard.repository.CitrixMetricsHistoryRepository;
@@ -158,6 +161,149 @@ class ExecutiveSummaryServiceTest {
     }
 
     @Test
+    void executiveSummaryReportsCitrixLogonFindingEvenWhenGlobalStatusIsGreen() {
+
+        when(mainDashboardService.getSummary())
+                .thenReturn(summaryWithPlatformScores("GREEN", 3, 10, 0, 10, 0, 0));
+        when(analysisSnapshotRepository.findTop5ByOrderByTimestampDesc())
+                .thenReturn(List.of());
+
+        CitrixMetricsHistory citrix =
+                new CitrixMetricsHistory();
+        citrix.setActiveSessions(120);
+        citrix.setTotalDeliveryControllers(2);
+        citrix.setAvailableDeliveryControllers(2);
+        citrix.setAverageLogonDurationSeconds(55);
+        citrix.setServerLoadPercent(20);
+        citrix.setFailedLogons(0);
+
+        when(citrixRepository.findTopByOrderByCollectedAtDesc())
+                .thenReturn(Optional.of(citrix));
+
+        ExecutiveSummaryDto executiveSummary =
+                service.getExecutiveSummary();
+
+        assertThat(executiveSummary.getGlobalStatus())
+                .isEqualTo("GREEN");
+        assertThat(findingsFor(executiveSummary, "Citrix"))
+                .anySatisfy(finding -> assertThat(finding).contains("logon").contains("55"));
+    }
+
+    @Test
+    void citrixGreenWithSevenTicketsDoesNotCreateOperationalFinding() {
+
+        when(mainDashboardService.getSummary())
+                .thenReturn(summaryWithPlatformScores("GREEN", 0, 10, 0, 0, 0, 0));
+        when(analysisSnapshotRepository.findTop5ByOrderByTimestampDesc())
+                .thenReturn(List.of());
+        when(citrixRepository.findTopByOrderByCollectedAtDesc())
+                .thenReturn(Optional.of(healthyCitrixSnapshot()));
+        when(glpiRepository.findTopByOrderByCollectedAtDesc())
+                .thenReturn(Optional.of(glpiWithCitrixTickets(7)));
+
+        ExecutiveSummaryDto executiveSummary =
+                service.getExecutiveSummary();
+
+        assertThat(executiveSummary.getMainAffectedPlatform())
+                .isEqualTo("Sin plataforma afectada");
+        assertThat(executiveSummary.getAffectedServices())
+                .doesNotContain("Acceso a aplicaciones corporativas");
+        assertThat(findingsFor(executiveSummary, "Citrix"))
+                .isEmpty();
+        assertThat(findingStatusFor(executiveSummary, "Citrix"))
+                .isNull();
+    }
+
+    @Test
+    void citrixTicketsAtYellowThresholdCreateYellowOperationalFinding() {
+
+        when(mainDashboardService.getSummary())
+                .thenReturn(summaryWithPlatformScores("GREEN", 0, 10, 0, 0, 0, 0));
+        when(analysisSnapshotRepository.findTop5ByOrderByTimestampDesc())
+                .thenReturn(List.of());
+        when(citrixRepository.findTopByOrderByCollectedAtDesc())
+                .thenReturn(Optional.of(healthyCitrixSnapshot()));
+        when(glpiRepository.findTopByOrderByCollectedAtDesc())
+                .thenReturn(Optional.of(glpiWithCitrixTickets(120)));
+
+        ExecutiveSummaryDto executiveSummary =
+                service.getExecutiveSummary();
+
+        assertThat(findingStatusFor(executiveSummary, "Citrix"))
+                .isEqualTo("YELLOW");
+        assertThat(findingsFor(executiveSummary, "Citrix"))
+                .anyMatch(finding -> finding.contains("120 tickets abiertos asociados a Citrix"));
+    }
+
+    @Test
+    void citrixTicketsAtRedThresholdCreateRedOperationalFinding() {
+
+        when(mainDashboardService.getSummary())
+                .thenReturn(summaryWithPlatformScores("GREEN", 0, 10, 0, 0, 0, 0));
+        when(analysisSnapshotRepository.findTop5ByOrderByTimestampDesc())
+                .thenReturn(List.of());
+        when(citrixRepository.findTopByOrderByCollectedAtDesc())
+                .thenReturn(Optional.of(healthyCitrixSnapshot()));
+        when(glpiRepository.findTopByOrderByCollectedAtDesc())
+                .thenReturn(Optional.of(glpiWithCitrixTickets(220)));
+
+        ExecutiveSummaryDto executiveSummary =
+                service.getExecutiveSummary();
+
+        assertThat(findingStatusFor(executiveSummary, "Citrix"))
+                .isEqualTo("RED");
+        assertThat(findingsFor(executiveSummary, "Citrix"))
+                .anyMatch(finding -> finding.contains("umbral rojo"));
+    }
+
+    @Test
+    void citrixInternalYellowIndicatorStillCreatesOperationalFinding() {
+
+        CitrixMetricsHistory citrix =
+                healthyCitrixSnapshot();
+        citrix.setAverageLogonDurationSeconds(55);
+
+        when(mainDashboardService.getSummary())
+                .thenReturn(summaryWithPlatformScores("GREEN", 0, 10, 0, 0, 0, 0));
+        when(analysisSnapshotRepository.findTop5ByOrderByTimestampDesc())
+                .thenReturn(List.of());
+        when(citrixRepository.findTopByOrderByCollectedAtDesc())
+                .thenReturn(Optional.of(citrix));
+        when(glpiRepository.findTopByOrderByCollectedAtDesc())
+                .thenReturn(Optional.of(glpiWithCitrixTickets(7)));
+
+        ExecutiveSummaryDto executiveSummary =
+                service.getExecutiveSummary();
+
+        assertThat(findingStatusFor(executiveSummary, "Citrix"))
+                .isEqualTo("YELLOW");
+        assertThat(findingsFor(executiveSummary, "Citrix"))
+                .anyMatch(finding -> finding.contains("logon"));
+    }
+
+    @Test
+    void citrixCompletelyHealthyDoesNotAppearInOperationalFindings() {
+
+        when(mainDashboardService.getSummary())
+                .thenReturn(summaryWithPlatformScores("GREEN", 0, 10, 0, 0, 0, 0));
+        when(analysisSnapshotRepository.findTop5ByOrderByTimestampDesc())
+                .thenReturn(List.of());
+        when(citrixRepository.findTopByOrderByCollectedAtDesc())
+                .thenReturn(Optional.of(healthyCitrixSnapshot()));
+        when(glpiRepository.findTopByOrderByCollectedAtDesc())
+                .thenReturn(Optional.of(glpiWithCitrixTickets(0)));
+
+        ExecutiveSummaryDto executiveSummary =
+                service.getExecutiveSummary();
+
+        assertThat(findingsFor(executiveSummary, "Citrix"))
+                .isEmpty();
+        assertThat(executiveSummary.getPlatformFindings())
+                .extracting(PlatformFindingDto::getPlatform)
+                .doesNotContain("Citrix");
+    }
+
+    @Test
     void scenarioWithCitrixRedKeepsOperationalPriorityAtLeastMedium() {
 
         ExecutiveSummaryDto summary =
@@ -256,6 +402,88 @@ class ExecutiveSummaryServiceTest {
                 .contains("APs")
                 .contains("switches")
                 .contains("clientes WiFi");
+    }
+
+    @Test
+    void arubaFindingKeepsYellowWhenFinalAffectationIsThirtySevenEvenWithRedInternalSignals() {
+
+        ExecutiveSummaryDto summary =
+                service.buildScenarioSummary(
+                        summaryWithPlatformScores("YELLOW", 37, 20, 37, 0, 0, 0),
+                        arubaWithRedInternalSignals(),
+                        null,
+                        null,
+                        null);
+
+        assertThat(summary.getMainAffectedPlatform())
+                .isEqualTo("Aruba");
+        assertThat(summary.getAffectedServices())
+                .contains("Red corporativa / conectividad");
+        assertThat(summary.getPriority())
+                .isEqualTo("MEDIUM");
+        assertThat(findingStatusFor(summary, "Aruba"))
+                .isEqualTo("YELLOW");
+        assertThat(summary.getSummaryText())
+                .doesNotContain("Aruba presenta estado critico")
+                .doesNotContain("estado critico en Aruba");
+    }
+
+    @Test
+    void arubaFindingKeepsYellowWhenFinalAffectationIsFiftySix() {
+
+        ExecutiveSummaryDto summary =
+                service.buildScenarioSummary(
+                        summaryWithPlatformScores("YELLOW", 56, 20, 56, 0, 0, 0),
+                        arubaWithRedInternalSignals(),
+                        null,
+                        null,
+                        null);
+
+        assertThat(findingStatusFor(summary, "Aruba"))
+                .isEqualTo("YELLOW");
+        assertThat(summary.getPriority())
+                .isEqualTo("MEDIUM");
+        assertThat(summary.getImpactLevel())
+                .isEqualTo("LOW");
+    }
+
+    @Test
+    void arubaFindingIsRedWhenFinalAffectationReachesRedRange() {
+
+        ExecutiveSummaryDto summary =
+                service.buildScenarioSummary(
+                        summaryWithPlatformScores("RED", 67, 20, 67, 0, 0, 0),
+                        arubaWithRedInternalSignals(),
+                        null,
+                        null,
+                        null);
+
+        assertThat(findingStatusFor(summary, "Aruba"))
+                .isEqualTo("RED");
+        assertThat(summary.getSummaryText())
+                .contains("Aruba")
+                .contains("critico");
+    }
+
+    @Test
+    void arubaPlatformFindingsIncludeSwitchesWithPendingUpgrade() {
+
+        ArubaSummary aruba =
+                new ArubaSummary();
+        aruba.setTotalAps(10);
+        aruba.setTotalWifiClients(10);
+        aruba.setSwitchesFirmwareUpgradeRequired(3);
+
+        ExecutiveSummaryDto summary =
+                service.buildScenarioSummary(
+                        summaryWithPlatformScores("GREEN", 2, 20, 2, 0, 0, 0),
+                        aruba,
+                        null,
+                        null,
+                        null);
+
+        assertThat(findingsFor(summary, "Aruba"))
+                .anyMatch(finding -> finding.contains("switches con upgrade pendiente"));
     }
 
     private MainDashboardSummary summaryWithPlatformComponents() {
@@ -365,7 +593,7 @@ class ExecutiveSummaryServiceTest {
                 id,
                 id,
                 score,
-                KpiStatus.YELLOW,
+                statusForScore(score),
                 null,
                 null,
                 null,
@@ -373,6 +601,21 @@ class ExecutiveSummaryServiceTest {
                 score,
                 List.of()
         );
+    }
+
+    private KpiStatus statusForScore(int score) {
+
+        if (score >= kpiProperties.getStatus().getRedMin()) {
+
+            return KpiStatus.RED;
+        }
+
+        if (score >= kpiProperties.getStatus().getYellowMin()) {
+
+            return KpiStatus.YELLOW;
+        }
+
+        return KpiStatus.GREEN;
     }
 
     private AnalysisSnapshot snapshot(int globalStatus) {
@@ -384,5 +627,65 @@ class ExecutiveSummaryServiceTest {
         snapshot.setGlobalStatus(globalStatus);
 
         return snapshot;
+    }
+
+    private List<String> findingsFor(ExecutiveSummaryDto summary, String platform) {
+        return summary.getPlatformFindings()
+                .stream()
+                .filter(finding -> platform.equals(finding.getPlatform()))
+                .findFirst()
+                .map(PlatformFindingDto::getFindings)
+                .orElse(List.of());
+    }
+
+    private String findingStatusFor(ExecutiveSummaryDto summary, String platform) {
+        return summary.getPlatformFindings()
+                .stream()
+                .filter(finding -> platform.equals(finding.getPlatform()))
+                .findFirst()
+                .map(PlatformFindingDto::getStatus)
+                .orElse(null);
+    }
+
+    private ArubaSummary arubaWithRedInternalSignals() {
+
+        ArubaSummary aruba =
+                new ArubaSummary();
+
+        aruba.setTotalAps(100);
+        aruba.setDownAps(80);
+        aruba.setFirmwareOutdated(6);
+        aruba.setInactiveAps(20);
+        aruba.setTotalWifiClients(0);
+        aruba.setDownSwitches(6);
+        aruba.setArubaOpenTickets(200);
+
+        return aruba;
+    }
+
+    private CitrixMetricsHistory healthyCitrixSnapshot() {
+
+        CitrixMetricsHistory citrix =
+                new CitrixMetricsHistory();
+
+        citrix.setActiveSessions(42);
+        citrix.setAvailableDeliveryControllers(4);
+        citrix.setTotalDeliveryControllers(4);
+        citrix.setDisconnectedSessions(0);
+        citrix.setAverageLogonDurationSeconds(20);
+        citrix.setServerLoadPercent(50);
+        citrix.setFailedLogons(0);
+
+        return citrix;
+    }
+
+    private GlpiMetricsHistory glpiWithCitrixTickets(int tickets) {
+
+        GlpiMetricsHistory glpi =
+                new GlpiMetricsHistory();
+
+        glpi.setCitrixOpenTickets(tickets);
+
+        return glpi;
     }
 }

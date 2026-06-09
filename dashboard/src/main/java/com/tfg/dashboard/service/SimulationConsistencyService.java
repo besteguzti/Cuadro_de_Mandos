@@ -10,6 +10,8 @@ import java.util.Map;
 
 import org.springframework.stereotype.Service;
 
+import com.tfg.dashboard.dto.CitrixHealthStatusDto;
+import com.tfg.dashboard.dto.Microsoft365HealthStatusDto;
 import com.tfg.dashboard.dto.summary.ArubaSummary;
 import com.tfg.dashboard.dto.summary.CitrixSummary;
 import com.tfg.dashboard.dto.summary.GlpiSummary;
@@ -20,7 +22,7 @@ import com.tfg.dashboard.model.Microsoft365MetricsHistory;
 import com.tfg.dashboard.repository.GlpiMetricsHistoryRepository;
 
 @Service
-public class SimulatedMetricsConsistencyService {
+public class SimulationConsistencyService {
 
     private static final String RED = "RED";
     private static final String YELLOW = "YELLOW";
@@ -36,7 +38,7 @@ public class SimulatedMetricsConsistencyService {
     private final KpiScoringService kpiScoringService;
     private final GlpiMetricsHistoryRepository glpiRepository;
 
-    public SimulatedMetricsConsistencyService(
+    public SimulationConsistencyService(
             ArubaSummaryService arubaSummaryService,
             GlobalKpiCalculationService globalKpiCalculationService,
             KpiScoringService kpiScoringService,
@@ -60,14 +62,20 @@ public class SimulatedMetricsConsistencyService {
 
         String arubaStatus = kpiScoringService.statusFromAffection(
                 globalKpiCalculationService.calculateArubaNetworkAffection(aruba));
-        String citrixStatus = kpiScoringService.statusFromAffection(
-                globalKpiCalculationService.calculateCitrixHealthAffection(toCitrixHistory(citrix, collectedAt)));
+        String citrixStatus =
+                globalKpiCalculationService.calculateCitrixHealthStatus(toCitrixHistory(citrix, collectedAt));
         String microsoft365Status = kpiScoringService.statusFromAffection(
                 globalKpiCalculationService.calculateMicrosoft365HealthAffection(
                         toMicrosoft365History(microsoft365, collectedAt)));
 
-        citrix.setCitrixHealth(citrixStatus);
-        microsoft365.setMicrosoft365Health(microsoft365Status);
+        if (citrix.getCitrixHealthDetails() == null) {
+            citrix.setCitrixHealthDetails(new CitrixHealthStatusDto());
+        }
+        citrix.getCitrixHealthDetails().setColor(citrixStatus);
+        if (microsoft365.getMicrosoft365HealthDetails() == null) {
+            microsoft365.setMicrosoft365HealthDetails(new Microsoft365HealthStatusDto());
+        }
+        microsoft365.getMicrosoft365HealthDetails().setColor(microsoft365Status);
 
         applyGlpiConsistency(glpi, arubaStatus, citrixStatus, microsoft365Status, collectedAt);
     }
@@ -102,11 +110,12 @@ public class SimulatedMetricsConsistencyService {
         citrix.setServerLoadPercent(percent(citrix.getServerLoadPercent()));
         citrix.setFailedLogons(nonNegative(citrix.getFailedLogons()));
 
-        int activeUsers = Math.min(nonNegative(microsoft365.getActiveUsers()), activeSessions);
+        int activeUsers = nonNegative(microsoft365.getActiveUsers());
         int nonCompliantDevices = nonNegative(microsoft365.getNonCompliantDevices());
 
         microsoft365.setActiveUsers(activeUsers);
         microsoft365.setSharePointStoragePercent(percent(microsoft365.getSharePointStoragePercent()));
+        microsoft365.setRiskyUsers(Math.min(nonNegative(microsoft365.getRiskyUsers()), activeUsers));
         microsoft365.setUsersWithoutMfa(Math.min(nonNegative(microsoft365.getUsersWithoutMfa()), activeUsers));
         microsoft365.setAppsSecretsExpiringSoon(nonNegative(microsoft365.getAppsSecretsExpiringSoon()));
         microsoft365.setNonCompliantDevices(nonCompliantDevices);
@@ -302,12 +311,23 @@ public class SimulatedMetricsConsistencyService {
     private Microsoft365MetricsHistory toMicrosoft365History(Microsoft365Summary summary, LocalDateTime collectedAt) {
         Microsoft365MetricsHistory history = new Microsoft365MetricsHistory();
         history.setActiveUsers(summary.getActiveUsers());
+        history.setUnassignedLicenses(summary.getUnassignedLicenses());
+        history.setOutlookStatus(summary.getOutlookStatus());
+        history.setTeamsStatus(summary.getTeamsStatus());
+        history.setSharePointStatus(summary.getSharePointStatus());
+        history.setNearlyFullMailboxes(summary.getNearlyFullMailboxes());
+        history.setEmailsQuarantined(summary.getEmailsQuarantined());
         history.setSharePointStoragePercent(summary.getSharePointStoragePercent());
+        history.setRiskyUsers(summary.getRiskyUsers());
+        history.setFailedSignIns(summary.getFailedSignIns());
         history.setUsersWithoutMfa(summary.getUsersWithoutMfa());
         history.setAppsSecretsExpiringSoon(summary.getAppsSecretsExpiringSoon());
+        history.setUnusedApplications(summary.getUnusedApplications());
+        history.setHighPrivilegeApplications(summary.getHighPrivilegeApplications());
         history.setNonCompliantDevices(summary.getNonCompliantDevices());
         history.setOutdatedWindowsDevices(summary.getOutdatedWindowsDevices());
         history.setDevicesWithoutEncryption(summary.getDevicesWithoutEncryption());
+        history.setStaleDevices(summary.getStaleDevices());
         history.setCollectedAt(collectedAt);
         return history;
     }

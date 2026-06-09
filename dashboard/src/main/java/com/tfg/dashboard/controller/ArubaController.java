@@ -10,28 +10,33 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.validation.annotation.Validated;
 
 import com.tfg.dashboard.dto.ArubaApAnnotationDto;
 import com.tfg.dashboard.dto.ArubaApAnnotationRequest;
 import com.tfg.dashboard.dto.ArubaApInfo;
 import com.tfg.dashboard.dto.ArubaInactiveApDto;
 import com.tfg.dashboard.dto.ArubaNetworkStatusDto;
+import com.tfg.dashboard.dto.ArubaStoredAccessPointDto;
+import com.tfg.dashboard.dto.ArubaStoredSwitchDto;
 import com.tfg.dashboard.dto.ArubaSwitchInfo;
+import com.tfg.dashboard.dto.ArubaSwitchClientUsageDto;
 import com.tfg.dashboard.dto.ArubaWifiClientInfo;
-import com.tfg.dashboard.model.AccessPoint;
 import com.tfg.dashboard.dto.summary.ArubaSummary;
-import com.tfg.dashboard.model.ArubaSwitch;
-import com.tfg.dashboard.model.ArubaSwitchClientUsage;
 import com.tfg.dashboard.service.ArubaService;
+
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
 
 /**
  * Controlador de Aruba Central.
  *
- * Indica el estado de red normalizado y endpoints de consulta/sincronización manual. La integración real y la
- * persistencia se mantienen en {@link ArubaService} y servicios especializados.
+ * Indica el índice de salud Aruba normalizado y endpoints de consulta/sincronización manual. La integración real y la
+ * persistencia se mantienen en {@link ArubaService}.
  */
 @RestController
 @RequestMapping("/aruba")
+@Validated
 public class ArubaController {
 
     private final ArubaService service;
@@ -57,8 +62,8 @@ public class ArubaController {
 
     @PutMapping("/inactive-aps/{serial}/annotation")
     public ArubaApAnnotationDto saveInactiveApAnnotation(
-            @PathVariable String serial,
-            @RequestBody ArubaApAnnotationRequest request) {
+            @PathVariable @NotBlank String serial,
+            @Valid @RequestBody ArubaApAnnotationRequest request) {
 
         return service.saveInactiveApAnnotation(serial, request);
     }
@@ -69,8 +74,10 @@ public class ArubaController {
     }
 
     @GetMapping("/stored-aps")
-    public List<AccessPoint> getStoredAps() {
-        return service.getStoredAccessPoints();
+    public List<ArubaStoredAccessPointDto> getStoredAps() {
+        return service.getStoredAccessPoints().stream()
+                .map(ArubaStoredAccessPointDto::new)
+                .toList();
     }
 
     @GetMapping("/switches")
@@ -79,13 +86,17 @@ public class ArubaController {
     }
 
     @GetMapping("/stored-switches")
-    public List<ArubaSwitch> getStoredSwitches() {
-        return service.getStoredSwitches();
+    public List<ArubaStoredSwitchDto> getStoredSwitches() {
+        return service.getStoredSwitches().stream()
+                .map(ArubaStoredSwitchDto::new)
+                .toList();
     }
 
     @GetMapping("/switch-client-usage")
-    public List<ArubaSwitchClientUsage> getSwitchClientUsage() {
-        return service.getSwitchClientUsage();
+    public List<ArubaSwitchClientUsageDto> getSwitchClientUsage() {
+        return service.getSwitchClientUsage().stream()
+                .map(ArubaSwitchClientUsageDto::new)
+                .toList();
     }
 
     @GetMapping("/wifi-clients")

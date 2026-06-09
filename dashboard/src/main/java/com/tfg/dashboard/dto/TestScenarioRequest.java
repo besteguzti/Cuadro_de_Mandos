@@ -1,15 +1,28 @@
 package com.tfg.dashboard.dto;
 
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 
+/**
+ * Datos enviados desde el banco de pruebas para evaluar un escenario manual.
+ */
 public class TestScenarioRequest {
 
-        private ArubaData aruba;
+    @Valid
+    @NotNull
+    private ArubaData aruba;
 
-        private CitrixData citrix;
+    @Valid
+    @NotNull
+    private CitrixData citrix;
 
-        private Microsoft365Data microsoft365;
+    @Valid
+    @NotNull
+    private Microsoft365Data microsoft365;
 
-        private GlpiData glpi;
+    @Valid
+    @NotNull
+    private GlpiData glpi;
 
     public TestScenarioRequest() {
     }
@@ -163,6 +176,8 @@ public class TestScenarioRequest {
 
         private Integer activeSessions;
 
+        private Integer activeLicenses;
+
         private Integer disconnectedSessions;
 
         private Integer totalDeliveryControllers;
@@ -183,6 +198,14 @@ public class TestScenarioRequest {
 
         public void setActiveSessions(Integer activeSessions) {
             this.activeSessions = activeSessions;
+        }
+
+        public Integer getActiveLicenses() {
+            return activeLicenses;
+        }
+
+        public void setActiveLicenses(Integer activeLicenses) {
+            this.activeLicenses = activeLicenses;
         }
 
         public Integer getDisconnectedSessions() {

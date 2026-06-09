@@ -3,11 +3,16 @@ package com.tfg.dashboard.dto;
 import java.util.ArrayList;
 import java.util.List;
 
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
+
 public class ThresholdSectionDto {
 
     private String key;
     private String title;
     private String description;
+    @Valid
+    @NotNull
     private List<ThresholdValueDto> values = new ArrayList<>();
 
     public ThresholdSectionDto() {

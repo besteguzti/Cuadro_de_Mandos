@@ -3,11 +3,8 @@ package com.tfg.dashboard.dto;
 import java.time.LocalDateTime;
 
 /**
- * Detalle de un Access Point considerado inactivo por Aruba.
- *
- * Se usa para explicar el contador de "APs inactivos" del resumen Aruba:
- * cada elemento representa un AP cuyo lastSeenAt real es anterior al umbral
- * configurable. No se basa en collectedAt ni en la fecha de guardado local.
+ * AP considerado inactivo en Aruba.
+ * Se usa para explicar el contador de APs inactivos. El cálculo se basa en lastSeenAt y no en la fecha de guardado local.
  */
 public class ArubaInactiveApDto {
 

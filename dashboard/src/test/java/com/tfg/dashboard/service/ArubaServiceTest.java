@@ -2,6 +2,8 @@ package com.tfg.dashboard.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -196,15 +198,21 @@ class ArubaServiceTest {
         assertThat(summary.getMutualiaRedInternaClients()).isEqualTo(1);
         assertThat(summary.getWifiPacsClients()).isEqualTo(1);
         assertThat(summary.getMutVideoClients()).isEqualTo(1);
-        assertThat(summary.getNetworkStatus()).isEqualTo("YELLOW");
+        assertThat(summary.getNetworkStatusDetails().getColor()).isEqualTo("GREEN");
         assertThat(summary.getNetworkStatusDetails().getPercentage())
-                .isEqualTo(50);
+                .isEqualTo(14);
         assertThat(summary.getNetworkStatusDetails()
                 .getAccessPointStatus().getColor())
                 .isEqualTo("YELLOW");
         assertThat(summary.getNetworkStatusDetails()
                 .getSwitchStatus().getColor())
                 .isEqualTo("YELLOW");
+        assertThat(summary.getKpiStatuses())
+                .containsEntry("downAps", "GREEN")
+                .containsEntry("firmwareOutdated", "YELLOW")
+                .containsEntry("switchesFirmwareUpgradeRequired", "YELLOW")
+                .containsEntry("totalWifiClients", "NEUTRAL")
+                .containsEntry("totalAps", "NEUTRAL");
         assertThat(summary.getLastUpdated()).isNotNull();
         assertThat(summary.getDataStatus()).isEqualTo("OK");
 
@@ -252,6 +260,28 @@ class ArubaServiceTest {
         assertThat(inactiveLimitCaptor.getValue())
                 .isAfter(LocalDateTime.now().minusDays(3))
                 .isBefore(LocalDateTime.now().minusDays(1));
+    }
+
+    @Test
+    void arubaSnapshotNewerThanSeventyMinutesIsFresh() {
+
+        mockMinimalSummaryData(LocalDateTime.now().minusMinutes(69));
+
+        ArubaSummary summary =
+                arubaService.getSummary();
+
+        assertThat(summary.getDataStatus()).isEqualTo("OK");
+    }
+
+    @Test
+    void arubaSnapshotOlderThanSeventyMinutesIsStale() {
+
+        mockMinimalSummaryData(LocalDateTime.now().minusMinutes(71));
+
+        ArubaSummary summary =
+                arubaService.getSummary();
+
+        assertThat(summary.getDataStatus()).isEqualTo("STALE");
     }
 
     @Test
@@ -599,6 +629,11 @@ class ArubaServiceTest {
 
     private ArubaDashboardMetrics metrics() {
 
+        return metrics(LocalDateTime.now());
+    }
+
+    private ArubaDashboardMetrics metrics(LocalDateTime updatedAt) {
+
         ArubaDashboardMetrics metrics =
                 new ArubaDashboardMetrics();
 
@@ -611,9 +646,24 @@ class ArubaServiceTest {
         metrics.setMutualiaRedInternaClients(1);
         metrics.setWifiPacsClients(1);
         metrics.setMutVideoClients(1);
-        metrics.setUpdatedAt(LocalDateTime.now());
+        metrics.setUpdatedAt(updatedAt);
 
         return metrics;
+    }
+
+    private void mockMinimalSummaryData(LocalDateTime updatedAt) {
+        when(accessPointRepository.findAll()).thenReturn(List.of());
+        when(arubaSwitchRepository.findAll()).thenReturn(List.of());
+        when(dashboardMetricsRepository.findById(1L))
+                .thenReturn(Optional.of(metrics(updatedAt)));
+        when(switchInterfaceUsageHistoryRepository
+                .findDevicesAlwaysOverDownInterfaceLimitSince(anyString(), anyInt(), any()))
+                .thenReturn(List.of());
+        when(accessPointRepository
+                .countBySerialIsNotNullAndLastSeenAtBefore(any()))
+                .thenReturn(0L);
+        when(glpiPlatformTicketService.getArubaOpenTickets())
+                .thenReturn(0);
     }
 
     private ArubaSwitchInfo arubaSwitch(

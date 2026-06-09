@@ -11,12 +11,10 @@ import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 
 /**
- * Anotacion manual asociada a un Access Point Aruba.
+ * Anotación manual asociada a un AP Aruba.
  *
- * Esta tabla guarda información escrita por el usuario para explicar o seguir
- * APs inactivos. No procede de Aruba Central y se mantiene separada del
- * inventario sincronizado para que las sincronizaciones no sobrescriban notas
- * operativas.
+ * Se guarda separada del inventario sincronizado para que las sincronizaciones
+ * no sobrescriban notas escritas por el usuario.
  */
 @Entity
 @Table(
@@ -70,3 +68,4 @@ public class ArubaApAnnotation {
         this.updatedAt = updatedAt;
     }
 }
+

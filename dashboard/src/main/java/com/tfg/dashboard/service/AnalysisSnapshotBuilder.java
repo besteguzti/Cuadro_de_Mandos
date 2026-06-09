@@ -20,7 +20,7 @@ import com.tfg.dashboard.repository.Microsoft365MetricsHistoryRepository;
  * Construye objetos AnalysisSnapshot a partir del estado actual del dashboard.
  */
 @Service
-public class AnalysisSnapshotBuilderService {
+public class AnalysisSnapshotBuilder {
 
     private final TransversalKpiHistoryService historyService;
     private final MainDashboardService mainDashboardService;
@@ -31,7 +31,7 @@ public class AnalysisSnapshotBuilderService {
     private final GlpiMetricsHistoryRepository glpiRepository;
     private final KpiProperties kpiProperties;
 
-    public AnalysisSnapshotBuilderService(
+    public AnalysisSnapshotBuilder(
                     TransversalKpiHistoryService historyService,
                     MainDashboardService mainDashboardService,
                     KpiScoringService kpiScoringService,
@@ -74,6 +74,11 @@ public class AnalysisSnapshotBuilderService {
                                         TransversalKpiHistoryService.GLPI_OPERATIONAL_PRESSURE));
 
         snapshot.setTimestamp(collectedAt);
+        /*
+         * La entidad mantiene sufijo Health por compatibilidad historica con la
+         * tabla analysis_snapshots. Los valores guardados son afecciones
+         * normalizadas: mayor valor implica peor estado.
+         */
         snapshot.setArubaHealth(aruba);
         snapshot.setCitrixHealth(citrix);
         snapshot.setMicrosoft365Health(microsoft365);
@@ -89,26 +94,66 @@ public class AnalysisSnapshotBuilderService {
                         "NO_DATA".equalsIgnoreCase(arubaSummary.getDataStatus())
                                         ? null
                                         : arubaSummary.getTotalWifiClients());
+        snapshot.setArubaInactiveAps(
+                        "NO_DATA".equalsIgnoreCase(arubaSummary.getDataStatus())
+                                        ? null
+                                        : arubaSummary.getInactiveAps());
+        snapshot.setArubaDownSwitches(
+                        "NO_DATA".equalsIgnoreCase(arubaSummary.getDataStatus())
+                                        ? null
+                                        : arubaSummary.getDownSwitches());
+        snapshot.setArubaDownAps(
+                        "NO_DATA".equalsIgnoreCase(arubaSummary.getDataStatus())
+                                        ? null
+                                        : arubaSummary.getDownAps());
         snapshot.setCitrixAverageLogonDurationSeconds(
                         citrixSnapshot == null
                                         ? null
                                         : citrixSnapshot.getAverageLogonDurationSeconds());
         snapshot.setCitrixActiveSessions(
                         citrixSnapshot == null ? null : citrixSnapshot.getActiveSessions());
+        snapshot.setCitrixAvailableDeliveryControllers(
+                        citrixSnapshot == null
+                                        ? null
+                                        : citrixSnapshot.getAvailableDeliveryControllers());
+        snapshot.setCitrixServerLoadPercent(
+                        citrixSnapshot == null ? null : citrixSnapshot.getServerLoadPercent());
         snapshot.setCitrixFailedLogons(
                         citrixSnapshot == null ? null : citrixSnapshot.getFailedLogons());
         snapshot.setGlpiOpenTickets(
                         glpiSnapshot == null ? null : glpiSnapshot.getOpenTickets());
+        snapshot.setGlpiCreatedToday(
+                        glpiSnapshot == null ? null : glpiSnapshot.getCreatedToday());
+        snapshot.setGlpiClosedToday(
+                        glpiSnapshot == null ? null : glpiSnapshot.getClosedToday());
+        snapshot.setGlpiCreatedThisWeek(
+                        glpiSnapshot == null ? null : glpiSnapshot.getCreatedThisWeek());
+        snapshot.setGlpiClosedThisWeek(
+                        glpiSnapshot == null ? null : glpiSnapshot.getClosedThisWeek());
+        snapshot.setGlpiOperationalBacklog(
+                        glpiSnapshot == null ? null : glpiSnapshot.getOperationalBacklog());
         snapshot.setArubaOpenTickets(
                         glpiSnapshot == null ? null : glpiSnapshot.getArubaOpenTicketsRaw());
         snapshot.setCitrixOpenTickets(
                         glpiSnapshot == null ? null : glpiSnapshot.getCitrixOpenTicketsRaw());
         snapshot.setMicrosoft365OpenTickets(
                         glpiSnapshot == null ? null : glpiSnapshot.getMicrosoft365OpenTicketsRaw());
+        snapshot.setMicrosoft365ActiveUsers(
+                        microsoft365Snapshot == null
+                                        ? null
+                                        : microsoft365Snapshot.getActiveUsers());
         snapshot.setMicrosoft365NonCompliantDevices(
                         microsoft365Snapshot == null
                                         ? null
                                         : microsoft365Snapshot.getNonCompliantDevices());
+        snapshot.setMicrosoft365UsersWithoutMfa(
+                        microsoft365Snapshot == null
+                                        ? null
+                                        : microsoft365Snapshot.getUsersWithoutMfa());
+        snapshot.setMicrosoft365FailedSignIns(
+                        microsoft365Snapshot == null
+                                        ? null
+                                        : microsoft365Snapshot.getFailedSignIns());
         snapshot.setAffectedServicesPercent(summary.getAffectedServicesPercent());
         snapshot.setArubaStatus(kpiScoringService.statusFromAffection(aruba));
         snapshot.setCitrixStatus(kpiScoringService.statusFromAffection(citrix));

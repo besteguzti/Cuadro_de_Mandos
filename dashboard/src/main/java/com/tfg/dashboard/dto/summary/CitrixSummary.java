@@ -5,12 +5,7 @@ import java.time.LocalDateTime;
 import com.tfg.dashboard.dto.CitrixHealthStatusDto;
 import com.tfg.dashboard.dto.KpiResultDto;
 
-/**
- * Respuesta de la vista Citrix.
- *
- * Expone el último snapshot Citrix, su índice de salud normalizado y el estado
- * de frescura usado por el dashboard.
- */
+// Respuesta de la vista Citrix.
 public class CitrixSummary {
 
     private int activeSessions;
@@ -22,13 +17,8 @@ public class CitrixSummary {
     private int serverLoadPercent;
     private int failedLogons;
     private int citrixOpenTickets;
-    private String citrixHealth;
-
-    // Detalle normalizado del indice Citrix. Mantiene citrixHealth como semaforo.
-
     private CitrixHealthStatusDto citrixHealthDetails;
     private KpiResultDto citrixHealthKpi;
-
     private LocalDateTime lastUpdated;
     private String dataStatus;
 
@@ -99,16 +89,8 @@ public class CitrixSummary {
         this.failedLogons = failedLogons;
     }
 
-    public String getCitrixHealth() {
-        return citrixHealth;
-    }
-
     public int getCitrixOpenTickets() {
         return citrixOpenTickets;
-    }
-
-    public void setCitrixHealth(String citrixHealth) {
-        this.citrixHealth = citrixHealth;
     }
 
     public void setCitrixOpenTickets(int citrixOpenTickets) {

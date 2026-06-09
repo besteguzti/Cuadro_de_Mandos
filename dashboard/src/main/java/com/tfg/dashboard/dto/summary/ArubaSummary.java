@@ -2,17 +2,14 @@ package com.tfg.dashboard.dto.summary;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 import com.tfg.dashboard.dto.ArubaNetworkStatusDto;
+import com.tfg.dashboard.dto.ArubaSwitchClientUsageDto;
 import com.tfg.dashboard.dto.KpiResultDto;
-import com.tfg.dashboard.model.ArubaSwitchClientUsage;
 
-/**
- * Respuesta de la vista Aruba.
- *
- * Agrupa inventario de APs/switches, clientes WiFi, estado normalizado de red
- * y frescura de los datos sincronizados desde Aruba Central.
- */
+//Respuesta de la vista Aruba.
+
 public class ArubaSummary {
 
     private int totalAps;
@@ -22,18 +19,14 @@ public class ArubaSummary {
     private int totalSwarms;
     private int firmwareOutdated;
     private int apsWithoutPublicIp;
-    private String networkStatus;
-
-    // Detalle calculado en backend para explicar la afección de red Aruba. Se
-    // mantiene networkStatus como campo
-    // simple para no romper vistas ni consumidores existentes.
     private ArubaNetworkStatusDto networkStatusDetails;
     private KpiResultDto networkStatusKpi;
+    private Map<String, String> kpiStatuses;
     private int inactiveAps;
     private int totalSwitches;
     private int downSwitches;
     private int switchesFirmwareUpgradeRequired;
-    private List<ArubaSwitchClientUsage> underusedSwitches;
+    private List<ArubaSwitchClientUsageDto> underusedSwitches;
     private int totalWifiClients;
     private int arubaOpenTickets;
     private int mutualiaApsClients;
@@ -45,14 +38,6 @@ public class ArubaSummary {
     private int mutualiaKorporatiboaClients;
     private int wifiPacsClients;
     private int mutVideoClients;
-
-    // Frescura Aruba
-
-    // lastUpdated indica la fecha y hora del último dato Aruba usado para construir
-    // este resumen.
-    // dataStatus indica si los datos Aruba son recientes,antiguos o inexistentes:
-    // OK, STALE o NO_DATA.
-
     private LocalDateTime lastUpdated;
     private String dataStatus;
 
@@ -84,16 +69,16 @@ public class ArubaSummary {
         return apsWithoutPublicIp;
     }
 
-    public String getNetworkStatus() {
-        return networkStatus;
-    }
-
     public ArubaNetworkStatusDto getNetworkStatusDetails() {
         return networkStatusDetails;
     }
 
     public KpiResultDto getNetworkStatusKpi() {
         return networkStatusKpi;
+    }
+
+    public Map<String, String> getKpiStatuses() {
+        return kpiStatuses;
     }
 
     public int getInactiveAps() {
@@ -112,7 +97,7 @@ public class ArubaSummary {
         return switchesFirmwareUpgradeRequired;
     }
 
-    public List<ArubaSwitchClientUsage> getUnderusedSwitches() {
+    public List<ArubaSwitchClientUsageDto> getUnderusedSwitches() {
         return underusedSwitches;
     }
 
@@ -196,10 +181,6 @@ public class ArubaSummary {
         this.apsWithoutPublicIp = apsWithoutPublicIp;
     }
 
-    public void setNetworkStatus(String networkStatus) {
-        this.networkStatus = networkStatus;
-    }
-
     public void setNetworkStatusDetails(
             ArubaNetworkStatusDto networkStatusDetails) {
         this.networkStatusDetails = networkStatusDetails;
@@ -207,6 +188,10 @@ public class ArubaSummary {
 
     public void setNetworkStatusKpi(KpiResultDto networkStatusKpi) {
         this.networkStatusKpi = networkStatusKpi;
+    }
+
+    public void setKpiStatuses(Map<String, String> kpiStatuses) {
+        this.kpiStatuses = kpiStatuses;
     }
 
     public void setInactiveAps(int inactiveAps) {
@@ -226,7 +211,7 @@ public class ArubaSummary {
     }
 
     public void setUnderusedSwitches(
-            List<ArubaSwitchClientUsage> underusedSwitches) {
+            List<ArubaSwitchClientUsageDto> underusedSwitches) {
         this.underusedSwitches = underusedSwitches;
     }
 
@@ -282,3 +267,4 @@ public class ArubaSummary {
         this.dataStatus = dataStatus;
     }
 }
+

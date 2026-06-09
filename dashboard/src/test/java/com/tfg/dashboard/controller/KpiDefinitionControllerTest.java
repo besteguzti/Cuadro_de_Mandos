@@ -34,6 +34,6 @@ class KpiDefinitionControllerTest {
                 .andExpect(jsonPath("$[?(@.id == 'global_status')].thresholds.green")
                         .value(hasItem("0-33")))
                 .andExpect(jsonPath("$[?(@.id == 'global_status')].formula")
-                        .value(hasItem(containsString("Aruba estado de red * 0.40"))));
+                        .value(hasItem(containsString("Índice de salud Aruba * 0.40"))));
     }
 }
