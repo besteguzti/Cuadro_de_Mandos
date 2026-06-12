@@ -60,7 +60,7 @@ class SimulationConsistencyServiceTest {
     }
 
     @Test
-    void microsoft365ActiveUsersCanRemainAboveCitrixSessionsAndSecurityCountsAreCappedByCoherentLimits() {
+    void keepsMicrosoft365AndCitrixMetricsIndependent() {
         SimulationConsistencyService service = serviceWithEmptyGlpiHistory();
         ArubaSummary aruba = new ArubaSummary();
         CitrixSummary citrix = new CitrixSummary();

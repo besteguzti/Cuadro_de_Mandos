@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 import MainPage from "./Pages/MainPage";
 import ArubaPage from "./Pages/ArubaPage";
@@ -174,3 +174,4 @@ function resolveInitialPage() {
 }
 
 export default App;
+

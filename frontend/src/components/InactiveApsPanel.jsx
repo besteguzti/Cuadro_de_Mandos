@@ -140,10 +140,10 @@ function InactiveApsPanel({ onBack }) {
                 <th>Nombre</th>
                 <th>Serial</th>
                 <th>Estado</th>
-                <th>Ultima vez visto</th>
+                <th>Última vez visto</th>
                 <th>Dias inactivo</th>
                 <th>Anotacion</th>
-                <th>Accion</th>
+                <th>Acción</th>
               </tr>
             </thead>
             <tbody>
@@ -197,3 +197,4 @@ function formatDate(value) {
 }
 
 export default InactiveApsPanel
+

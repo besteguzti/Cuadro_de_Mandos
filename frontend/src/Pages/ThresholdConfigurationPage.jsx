@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import "../App.css";
 
@@ -9,6 +9,9 @@ function ThresholdConfigurationPage() {
   const [weights, setWeights] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [syncControl, setSyncControl] = useState(null);
+  const [syncControlUpdating, setSyncControlUpdating] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
 
@@ -31,6 +34,7 @@ function ThresholdConfigurationPage() {
       const data = await fetchConfiguration();
       setThresholds(data.thresholds);
       setWeights(data.weights);
+      setSyncControl(data.syncControl);
     } catch {
       setError("No se pudo cargar la configuración de umbrales.");
     } finally {
@@ -46,6 +50,7 @@ function ThresholdConfigurationPage() {
         if (!cancelled) {
           setThresholds(data.thresholds);
           setWeights(data.weights);
+          setSyncControl(data.syncControl);
         }
       })
       .catch(() => {
@@ -179,6 +184,81 @@ function ThresholdConfigurationPage() {
     }
   };
 
+  const synchronizePlatforms = async () => {
+    setSyncing(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/metrics/sync`, {
+        method: "POST"
+      });
+
+      if (!response.ok) {
+        throw new Error(await readError(response));
+      }
+
+      const data = await response.json();
+      const platformDetails = formatPlatformResults(data.platforms);
+
+      if (data.status === "OK") {
+        setSuccess(
+          `${data.message || "Sincronización completada correctamente."} Vuelve al panel principal para ver los datos actualizados.${platformDetails}`
+        );
+        return;
+      }
+
+      if (data.status === "IN_PROGRESS") {
+        setError(data.message || "Ya hay una sincronización en curso.");
+        return;
+      }
+
+      setError(
+        `${data.message || "Sincronización completada con errores parciales."}${platformDetails}`
+      );
+    } catch (err) {
+      setError(err.message || "No se pudo lanzar la sincronización manual.");
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const toggleAutomaticSync = async () => {
+    if (!syncControl) {
+      return;
+    }
+
+    setSyncControlUpdating(true);
+    setError(null);
+    setSuccess(null);
+
+    const endpoint = syncControl.automaticSyncEnabled
+      ? "/api/metrics/sync-control/pause"
+      : "/api/metrics/sync-control/resume";
+
+    try {
+      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+        method: "POST"
+      });
+
+      if (!response.ok) {
+        throw new Error(await readError(response));
+      }
+
+      const data = await response.json();
+      setSyncControl(data);
+      setSuccess(
+        data.automaticSyncEnabled
+          ? "Sincronizacion automatica activada."
+          : "Sincronizacion automatica pausada."
+      );
+    } catch (err) {
+      setError(err.message || "No se pudo cambiar la sincronizacion automatica.");
+    } finally {
+      setSyncControlUpdating(false);
+    }
+  };
+
   if (loading) {
     return (
       <main className="dashboard">
@@ -194,15 +274,44 @@ function ThresholdConfigurationPage() {
           <p className="eyebrow">Modelo de KPIs</p>
           <h1>Configuración de umbrales</h1>
         </div>
-        <button
-          className="secondary-action"
-          type="button"
-          onClick={resetConfiguration}
-          disabled={saving}
-        >
-          Restaurar valores por defecto
-        </button>
+        <div className="header-actions">
+          <button
+            className="secondary-action"
+            type="button"
+            onClick={toggleAutomaticSync}
+            disabled={syncControlUpdating || !syncControl}
+          >
+            {syncControlUpdating
+              ? "Actualizando..."
+              : syncControl?.automaticSyncEnabled
+              ? "Pausar sincronizacion automatica"
+              : "Iniciar sincronizacion automatica"}
+          </button>
+          <button
+            className="secondary-action"
+            type="button"
+            onClick={synchronizePlatforms}
+            disabled={saving || syncing}
+          >
+            {syncing ? "Sincronizando..." : "Sincronizar plataformas"}
+          </button>
+          <button
+            className="secondary-action"
+            type="button"
+            onClick={resetConfiguration}
+            disabled={saving || syncing}
+          >
+            Restaurar valores por defecto
+          </button>
+        </div>
       </header>
+
+      {syncControl && (
+        <section className="alert config-note">
+          Sincronizacion automatica:{" "}
+          {syncControl.automaticSyncEnabled ? "Activa" : "Pausada"}
+        </section>
+      )}
 
       <section className="alert config-note">
         Esta pantalla modifica solo la configuración del modelo de scoring. No cambia datos reales,
@@ -343,20 +452,38 @@ async function readError(response) {
   }
 }
 
+function formatPlatformResults(platforms = []) {
+  if (!platforms.length) {
+    return "";
+  }
+
+  const details = platforms
+    .map((platform) => {
+      const message = platform.message ? ` (${platform.message})` : "";
+      return `${platform.name}: ${platform.status}${message}`;
+    })
+    .join(" | ");
+
+  return ` Detalle: ${details}`;
+}
+
 async function fetchConfiguration() {
-  const [thresholdResponse, weightResponse] = await Promise.all([
+  const [thresholdResponse, weightResponse, syncControlResponse] = await Promise.all([
     fetch(`${API_BASE_URL}/api/config/thresholds`),
-    fetch(`${API_BASE_URL}/api/config/platform-weights`)
+    fetch(`${API_BASE_URL}/api/config/platform-weights`),
+    fetch(`${API_BASE_URL}/api/metrics/sync-control`)
   ]);
 
-  if (!thresholdResponse.ok || !weightResponse.ok) {
+  if (!thresholdResponse.ok || !weightResponse.ok || !syncControlResponse.ok) {
     throw new Error("No se pudo cargar la configuración.");
   }
 
   return {
     thresholds: await thresholdResponse.json(),
-    weights: await weightResponse.json()
+    weights: await weightResponse.json(),
+    syncControl: await syncControlResponse.json()
   };
 }
 
 export default ThresholdConfigurationPage;
+

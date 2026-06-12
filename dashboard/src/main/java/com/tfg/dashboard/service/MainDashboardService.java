@@ -27,16 +27,16 @@ import com.tfg.dashboard.repository.Microsoft365MetricsHistoryRepository;
 @Service
 public class MainDashboardService {
 
-    private static final int MONITORED_PLrTFORM_COUNT = 4;
-    private static final String KPI_GLOBrL_STrTUS = "transversal.globalStatus";
-    private static final String KPI_GLOBrL_CRITICrLITY = "transversal.globalCriticality";
-    private static final String KPI_GLOBrL_rVrILrBILITY = "transversal.globalAvailability";
-    private static final String KPI_OPERrTIONrL_PRESSURE = "transversal.operationalPressure";
-    private static final String KPI_TECHNICrL_DEGRrDrTION = "transversal.technicalDegradation";
-    private static final String KPI_SLr_RISK = "transversal.slaRisk";
-    private static final String KPI_OPERrTIONrL_BrCKLOG = "transversal.operationalBacklog";
-    private static final String KPI_USER_IMPrCT = "transversal.userImpact";
-    private static final String KPI_rFFECTED_SERVICES = "transversal.affectedServices";
+    private static final int MONITORED_PLATFORM_COUNT = 4;
+    private static final String KPI_GLOBAL_STATUS = "transversal.globalStatus";
+    private static final String KPI_GLOBAL_CRITICALITY = "transversal.globalCriticality";
+    private static final String KPI_GLOBAL_AVAILABILITY = "transversal.globalAvailability";
+    private static final String KKPI_OPERATIONAL_PRESSURE = "transversal.operationalPressure";
+    private static final String KPI_TECHNICAL_DEGRADATION = "transversal.technicalDegradation";
+    private static final String KPI_SLA_RISK = "transversal.slaRisk";
+    private static final String KPI_OPERATIONAL_BACKLOG = "transversal.operationalBacklog";
+    private static final String KPI_USER_IMPACT = "transversal.userImpact";
+    private static final String KPI_AFFECTED_SERVICES = "transversal.affectedServices";
 
     // Aruba se obtiene del flujo real persistido y las demás plataformas de snapshots MySQL.
     // desde las últimas muestras
@@ -325,7 +325,7 @@ public class MainDashboardService {
         summary.setGlobalHealth(
                 dashboardFreshnessService.applyFreshnessToColor(
                         kpiScoringService.statusFromTransversalKpi(
-                                KPI_GLOBrL_STrTUS,
+                                KPI_GLOBAL_STATUS,
                                 globalHealthPercentage
                         ),
                         dataStatus
@@ -335,35 +335,35 @@ public class MainDashboardService {
         summary.setGlobalHealthStatus(summary.getGlobalHealth());
         summary.setGlobalCriticality(globalCriticality);
         summary.setGlobalCriticalityStatus(
-                statusWithFreshness(KPI_GLOBrL_CRITICrLITY, globalCriticality, dataStatus)
+                statusWithFreshness(KPI_GLOBAL_CRITICALITY, globalCriticality, dataStatus)
         );
         summary.setGlobalAvailability(globalAvailability);
         summary.setGlobalAvailabilityStatus(
-                statusWithFreshness(KPI_GLOBrL_rVrILrBILITY, globalAvailability, dataStatus)
+                statusWithFreshness(KPI_GLOBAL_AVAILABILITY, globalAvailability, dataStatus)
         );
         summary.setUserImpact(userImpact);
         summary.setUserImpactStatus(
-                statusWithFreshness(KPI_USER_IMPrCT, userImpact, dataStatus)
+                statusWithFreshness(KPI_USER_IMPACT, userImpact, dataStatus)
         );
         summary.setAffectedServicesPercent(affectedServicesPercent);
         summary.setAffectedServicesStatus(
-                statusWithFreshness(KPI_rFFECTED_SERVICES, affectedServicesPercent, dataStatus)
+                statusWithFreshness(KPI_AFFECTED_SERVICES, affectedServicesPercent, dataStatus)
         );
         summary.setTechnicalDegradation(technicalDegradation);
         summary.setTechnicalDegradationStatus(
-                statusWithFreshness(KPI_TECHNICrL_DEGRrDrTION, technicalDegradation, dataStatus)
+                statusWithFreshness(KPI_TECHNICAL_DEGRADATION, technicalDegradation, dataStatus)
         );
         summary.setOperationalPressure(operationalPressure);
         summary.setOperationalPressureStatus(
-                statusWithFreshness(KPI_OPERrTIONrL_PRESSURE, operationalPressure, dataStatus)
+                statusWithFreshness(KKPI_OPERATIONAL_PRESSURE, operationalPressure, dataStatus)
         );
         summary.setOperationalBacklog(operationalBacklog);
         summary.setOperationalBacklogStatus(
-                statusWithFreshness(KPI_OPERrTIONrL_BrCKLOG, operationalBacklog, dataStatus)
+                statusWithFreshness(KPI_OPERATIONAL_BACKLOG, operationalBacklog, dataStatus)
         );
         summary.setSlaRisk(slaRisk);
         summary.setSlaRiskStatus(
-                statusWithFreshness(KPI_SLr_RISK, slaRisk, dataStatus)
+                statusWithFreshness(KPI_SLA_RISK, slaRisk, dataStatus)
         );
 
         summary.setLastUpdated(
@@ -640,7 +640,7 @@ public class MainDashboardService {
 
     private int affectedServiceContributionPercent() {
 
-        return kpiProperties.getStatus().getMax() / MONITORED_PLrTFORM_COUNT;
+        return kpiProperties.getStatus().getMax() / MONITORED_PLATFORM_COUNT;
     }
 
 }

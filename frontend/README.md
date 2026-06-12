@@ -1,65 +1,68 @@
-﻿# Frontend
+# Frontend
 
-Interfaz React del dashboard multiproveedor del TFG. El frontend muestra el
-dashboard principal, el diagnóstico operativo, las vistas de Aruba, Citrix,
-Microsoft 365 y GLPI, y el panel de análisis exploratorio basado en snapshots
-persistidos.
+Interfaz React del dashboard multiproveedor. Desde aquí se muestran el dashboard principal, las vistas de Aruba, Citrix, Microsoft 365 y GLPI, el panel de análisis, la configuración y el banco de pruebas.
 
-## Tecnologias
+El frontend no calcula los KPIs principales. Recibe los datos ya preparados por el backend y se encarga de mostrarlos en tarjetas, tablas, gráficas y mensajes de estado.
 
-- React.
-- Vite.
-- CSS modularizado en hojas del proyecto.
+## Tecnologías
+
+- React
+- Vite
+- CSS propio del proyecto
 
 ## Arranque
 
-Desde la carpeta `frontend`:
+Acceder a la carpeta `frontend` con powershell y:
 
-```powershell
 npm install
 npm run dev
-```
 
-Por defecto Vite sirve la aplicacion en:
 
-```text
+Por defecto, Vite levanta la aplicación en:
+
 http://localhost:5173
-```
+
 
 Para generar una build de producción:
 
-```powershell
 npm run build
-```
+
 
 ## Configuración
 
-El frontend centraliza la URL del backend en `src/config/api.js`.
+La URL del backend se centraliza en:
+
+src/config/api.js
+
 
 Variable opcional:
 
-```powershell
+powershell
 $env:VITE_API_BASE_URL="http://localhost:8080"
-```
 
-Si no se define `VITE_API_BASE_URL`, se usa `http://localhost:8080`.
 
-## Paginas principales
+Si no se define, se usa por defecto:
 
-- Dashboard principal: KPIs transversales normalizados.
-- Resumen operativo: diagnóstico ejecutivo para responsable IT.
-- Aruba: estado de red, APs, clientes WiFi, switches y switches infrautilizados.
-- Citrix: indicadores simulados persistidos en MySQL.
-- Microsoft 365: indicadores simulados persistidos en MySQL.
-- GLPI: indicadores simulados persistidos en MySQL.
-- Panel de análisis: relación operativa aparente entre GLPI y plataformas técnicas.
-- Banco de pruebas: evaluacion manual de escenarios sin persistir datos reales.
+http://localhost:8080
 
-## Endpoints consumidos directamente por React
 
-React usa estos endpoints en el flujo actual del frontend:
+## Páginas principales
 
-```http
+- **Dashboard principal**: KPIs transversales y estado global de la infraestructura.
+- **Resumen operativo**: lectura de alto nivel para responsable IT.
+- **Aruba**: APs, switches, clientes WiFi, firmware y estado de red.
+- **Citrix**: sesiones, Delivery Controllers, errores de inicio y disponibilidad.
+- **Microsoft 365**: identidad, seguridad, cumplimiento y servicios cloud.
+- **GLPI**: tickets, SLA, backlog y presión operativa.
+- **Panel de análisis**: relaciones entre indicadores y evolución temporal.
+- **Configuración**: umbrales, pesos y sincronización manual.
+- **Banco de pruebas**: evaluación manual de escenarios sin persistir datos reales.
+
+## Endpoints principales
+
+Endpoints usados en el flujo normal del frontend:
+
+http
 GET /dashboard/summary
 GET /api/dashboard/executive-summary
 GET /aruba/summary
@@ -68,58 +71,56 @@ GET /microsoft365/summary
 GET /glpi/summary
 GET /api/analysis/glpi-platform-relation
 POST /api/test-scenarios/evaluate
-```
+POST /api/metrics/sync
 
-El endpoint `/api/analysis/glpi-platform-relation` alimenta el panel de
-análisis actual y devuelve los bloques `technicalRelations`, `technicalTimeline`
-y `specificKpiRelations`.
+El endpoint `/api/analysis/glpi-platform-relation` alimenta el panel de análisis. Devuelve relaciones técnicas, evolución temporal y relaciones específicas entre KPIs.
 
-## Endpoints auxiliares disponibles en backend
+## Endpoints auxiliares
 
-Estos endpoints están disponibles en el backend para consulta, validación técnica
-y pruebas, pero no son consumidos directamente por React en el flujo actual.
+El backend también expone endpoints útiles para consulta o validación técnica. No todos se usan directamente desde el flujo principal de React.
 
-```http
+http
 GET /api/analysis/technical-degradation-impact
 GET /api/analysis/platform-evolution
 GET /api/analysis/snapshots
 GET /api/kpis/definitions
-```
+GET /api/reports/monthly-context
 
-## Endpoints administrativos o de sincronización Aruba
 
-Estos endpoints se usan para sincronización manual, diagnóstico o pruebas locales
-relaciónadas con Aruba Central:
+## Sincronización y diagnóstico
 
-```http
+Desde la pantalla de configuración se puede lanzar una sincronización manual:
+
+http
+POST /api/metrics/sync
+
+
+También existen endpoints específicos de Aruba para sincronización o diagnóstico local:
+
+http
 POST /aruba/sync-all
 POST /aruba/sync-aps
 POST /aruba/sync-switches
 POST /aruba/sync-switch-client-usage
 GET /aruba/wifi-clients/diagnostics
-```
 
-## Análisis exploratorio
 
-El panel de análisis no intenta demostrar causa raíz automática. Compara
-snapshots históricos para observar relaciónes aparentes, co-ocurrencias y
-patrones operativos entre la presión de GLPI y la afección técnica de Aruba,
-Citrix y Microsoft 365.
+## Panel de análisis
 
-El panel actual consume principalmente `/api/analysis/glpi-platform-relation`.
-La respuesta agrupa co-ocurrencias, tabla técnica, evolución temporal y
-relaciónes específicas entre indicadores.
+El panel de análisis compara snapshots históricos para mostrar relaciones aparentes, co-ocurrencias y evolución temporal.
+
+No intenta detectar causa raíz de forma automática. Su objetivo es ayudar a revisar posibles relaciones entre la presión operativa de GLPI y la afección técnica de Aruba, Citrix o Microsoft 365.
 
 ## Banco de pruebas
 
-El Banco de pruebas envía escenarios manuales al backend mediante
-`POST /api/test-scenarios/evaluate`. React no calcula KPIs ni resumen operativo:
-solo muestra la respuesta del backend.
+El banco de pruebas envía escenarios manuales al backend mediante:
 
-Los tickets abiertos totales se calculan como suma de tickets por plataforma:
-Aruba, Citrix y Microsoft 365. Ese total puede mostrarse en pantalla como dato
-calculado, pero no forma parte del payload enviado al backend.
+http
+POST /api/test-scenarios/evaluate
 
-El resumen operativo del Banco de pruebas reutiliza el mismo componente visual
-que el dashboard principal. La tendencia se muestra como no disponible porque
-el escenario manual no tiene histórico real.
+
+React no calcula los KPIs ni el resumen operativo. Solo muestra la respuesta devuelta por el backend.
+
+Los tickets abiertos totales se muestran como suma de los tickets asociados a Aruba, Citrix y Microsoft 365. Ese valor puede aparecer en pantalla, pero no forma parte del payload enviado al backend.
+
+La tendencia aparece como no disponible porque los escenarios manuales no tienen histórico real.

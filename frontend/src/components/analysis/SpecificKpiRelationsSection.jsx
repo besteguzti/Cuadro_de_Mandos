@@ -1,16 +1,20 @@
-﻿import { useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 import AnalysisEmptyState from "./AnalysisEmptyState";
 import PeriodSelector from "./PeriodSelector";
 import { formatValue } from "./analysisUtils";
 
-const DEFAULT_RELATION_CODE = "affected_services_vs_glpi_pressure";
+const DEFAULT_RELATION_CODE = "aruba_affectation_vs_wifi_clients";
 const MIN_CHART_POINTS = 2;
 const CHART_WIDTH = 720;
 const CHART_HEIGHT = 340;
 const CHART_PADDING = 56;
 const AXIS_PADDING_RATIO = 0.15;
 const FLAT_AXIS_PADDING = 5;
+const PERCENT_AXIS_MIN = 0;
+const PERCENT_AXIS_MAX = 100;
+const PERCENT_AXIS_TICKS = [0, 33, 66, 100];
+const PERCENT_REFERENCE_TICKS = [33, 66];
 const EMPTY_RELATIONS = [];
 
 function axisLabel(label, unit) {
@@ -29,6 +33,39 @@ function normalizeRelation(relation = {}) {
     xUnit: relation.xUnit ?? relation.xunit ?? "",
     yUnit: relation.yUnit ?? relation.yunit ?? ""
   };
+}
+
+function buildRelationRecommendation(relationCode) {
+  switch (relationCode) {
+    case "aruba_affectation_vs_wifi_clients":
+      return "Revisar conectividad, APs, clientes WiFi y eventos Aruba en los días donde sube la afectación y baja el uso de red.";
+    case "aruba_affectation_vs_aruba_tickets":
+      return "Revisar los días en los que coinciden afectación Aruba y tickets Aruba para priorizar incidencias de conectividad.";
+    case "citrix_affectation_vs_citrix_tickets":
+      return "Revisar sesiones, Delivery Controllers, errores de inicio y tickets Citrix en los días con mayor coincidencia.";
+    case "microsoft365_affectation_vs_microsoft365_tickets":
+      return "Revisar identidad, cumplimiento de dispositivos, SharePoint y tickets Microsoft 365 en los días con mayor coincidencia.";
+    case "aruba_wifi_clients_vs_citrix_sessions":
+      return "Revisar si los días con menor conectividad WiFi coinciden con menor uso de sesiones Citrix.";
+    case "aruba_wifi_clients_vs_microsoft365_active_users":
+      return "Revisar si los días con menor conectividad WiFi coinciden con menos usuarios activos en Microsoft 365.";
+    case "citrix_delivery_controllers_vs_failed_logons":
+      return "Revisar disponibilidad de Delivery Controllers y errores de inicio Citrix en los días con peor combinación.";
+    case "citrix_delivery_controllers_vs_sessions":
+      return "Revisar si la disponibilidad de Delivery Controllers coincide con cambios relevantes en las sesiones Citrix.";
+    case "aruba_down_switches_vs_down_aps":
+      return "Revisar switching y APs caídos en los días donde ambos indicadores empeoran a la vez.";
+    case "glpi_pressure_vs_operational_backlog":
+      return "Revisar si la presión operativa GLPI coincide con acumulación de backlog, especialmente cuando Aruba, Citrix y Microsoft 365 permanecen estables.";
+    case "glpi_pressure_vs_open_tickets":
+      return "Revisar si la presión operativa GLPI se corresponde con incremento de tickets abiertos y capacidad de soporte tensionada.";
+    case "glpi_created_vs_closed_tickets":
+      return "Revisar si los tickets creados superan a los cerrados de forma persistente, porque esa brecha explica acumulación de trabajo pendiente.";
+    case "microsoft365_active_users_vs_citrix_sessions":
+      return "Revisar si la actividad de Microsoft 365 y las sesiones Citrix evolucionan de forma parecida en el periodo.";
+    default:
+      return "Revisar los datos y considerar si el patrón observado se reproduce en más histórico.";
+  }
 }
 
 function buildRelationReport(relation, period, periods) {
@@ -70,26 +107,6 @@ function buildRelationReport(relation, period, periods) {
       return "No hay variación suficiente para interpretar una tendencia clara.";
     }
 
-    if (relation.code === "affected_services_vs_glpi_pressure") {
-      if (highHighPercentage >= 60) {
-        return "En varios días coinciden más plataformas afectadas con mayor presión operativa en GLPI.";
-      }
-
-      if (xMax >= xHighThreshold && yMax < yHighThreshold) {
-        return "La degradación técnica todavía no parece haberse traducido en carga operativa.";
-      }
-
-      if (xMax < xHighThreshold && yMax >= yHighThreshold) {
-        return "La presión en GLPI puede venir de una causa no visible en estas plataformas o de incidencias ya acumuladas.";
-      }
-
-      if (xMax < xHighThreshold && yMax < yHighThreshold) {
-        return "No se aprecia una situación transversal relevante en el periodo.";
-      }
-
-      return "Se observan valores altos de servicios afectados o de presión GLPI, pero no una coincidencia alta-alta predominante.";
-    }
-
     if (highHighPercentage >= 60) {
       return `Se observa co-ocurrencia alta-alta en el ${highHighPercentage}% de los días analizados.`;
     }
@@ -121,31 +138,6 @@ function buildRelationReport(relation, period, periods) {
     return "Los datos sugieren una relación aparente baja. No demuestra causalidad y puede indicar que este patrón no es dominante en el periodo.";
   })();
 
-  const recommendation = (() => {
-    switch (relation.code) {
-      case "aruba_network_vs_citrix_logon":
-        return "Revisar conectividad, APs/switches y acceso a Citrix en los días donde coinciden mayor afección Aruba y logon más lento.";
-      case "aruba_wifi_clients_vs_citrix_sessions":
-        return "Revisar si la caída de clientes WiFi coincide con menor uso de Citrix.";
-      case "citrix_failed_logons_vs_citrix_open_tickets":
-        return "Revisar errores de autenticación, Delivery Controllers y eventos Citrix en los días con más tickets Citrix.";
-      case "microsoft365_non_compliant_devices_vs_microsoft365_open_tickets":
-        return "Revisar políticas de cumplimiento, dispositivos no conformes y tickets asociados a puesto de usuario.";
-      case "affected_services_vs_glpi_pressure":
-        return "Revisar los días con mayor coincidencia entre afección transversal y presión GLPI, y después entrar al detalle por plataforma.";
-      case "technical_degradation_vs_user_impact":
-        return "Revisar si la degradación técnica coincide con indicadores de impacto en usuario final.";
-      case "aruba_affectation_vs_glpi_pressure":
-        return "Revisar tickets categorizados de Aruba y estado de red en los días de mayor presión.";
-      case "citrix_affectation_vs_operational_pressure":
-        return "Revisar tickets Citrix, errores de inicio y duración de logon.";
-      case "microsoft365_affectation_vs_operational_pressure":
-        return "Revisar tickets Microsoft 365, equipos no conformes, MFA y estado de servicios cloud.";
-      default:
-        return "Revisar los datos y considerar si el patrón observado se reproduce en más histórico.";
-    }
-  })();
-
   return {
     pointCount,
     periodLabel,
@@ -162,13 +154,24 @@ function buildRelationReport(relation, period, periods) {
     totalSamples,
     patternObserved,
     conclusion,
-    recommendation,
+    recommendation: buildRelationRecommendation(relation.code),
     hasEnoughData,
     hasSufficientVariation
   };
 }
 
 function buildAxis(points, key, unit) {
+  const isPercent = unit === "%";
+
+  if (isPercent) {
+    return {
+      min: PERCENT_AXIS_MIN,
+      max: PERCENT_AXIS_MAX,
+      ticks: PERCENT_AXIS_TICKS,
+      referenceTicks: PERCENT_REFERENCE_TICKS
+    };
+  }
+
   const values = points.map((point) => Number(point[key] ?? 0));
   const minValue = Math.min(...values);
   const maxValue = Math.max(...values);
@@ -176,17 +179,15 @@ function buildAxis(points, key, unit) {
   const padding = range === 0
     ? FLAT_AXIS_PADDING
     : Math.max(1, range * AXIS_PADDING_RATIO);
-  const isPercent = unit === "%";
   const min = Math.max(0, minValue - padding);
-  const max = isPercent
-    ? Math.min(100, maxValue + padding)
-    : maxValue + padding;
+  const max = maxValue + padding;
   const safeMax = max === min ? min + FLAT_AXIS_PADDING : max;
 
   return {
     min,
     max: safeMax,
-    ticks: [min, (min + safeMax) / 2, safeMax]
+    ticks: [min, (min + safeMax) / 2, safeMax],
+    referenceTicks: []
   };
 }
 
@@ -233,7 +234,7 @@ function SpecificRelationScatterChart({ relation }) {
       {xAxis.ticks.map((tick) => (
         <g key={`specific-x-${tick}`}>
           <line
-            className="analysis-grid-line"
+            className={xAxis.referenceTicks.includes(tick) ? "analysis-reference-line" : "analysis-grid-line"}
             x1={scaleX(tick)}
             y1={CHART_PADDING}
             x2={scaleX(tick)}
@@ -252,7 +253,7 @@ function SpecificRelationScatterChart({ relation }) {
       {yAxis.ticks.map((tick) => (
         <g key={`specific-y-${tick}`}>
           <line
-            className="analysis-grid-line"
+            className={yAxis.referenceTicks.includes(tick) ? "analysis-reference-line" : "analysis-grid-line"}
             x1={CHART_PADDING}
             y1={scaleY(tick)}
             x2={CHART_WIDTH - CHART_PADDING}
@@ -288,7 +289,7 @@ function SpecificRelationScatterChart({ relation }) {
           r="6"
         >
           <title>
-            {`${new Date(point.timestamp).toLocaleDateString()} | ${relation.xLabel}: ${formatWithUnit(point.x, relation.xUnit)} | ${relation.yLabel}: ${formatWithUnit(point.y, relation.yUnit)} | Muestras usadas: ${point.samplesUsed ?? 1}${point.generatedScenario ? " | escenario demo" : ""}`}
+            {`${new Date(point.timestamp).toLocaleDateString()} | ${relation.xLabel}: ${formatWithUnit(point.x, relation.xUnit)} | ${relation.yLabel}: ${formatWithUnit(point.y, relation.yUnit)} | Muestras usadas: ${point.samplesUsed ?? 1}${point.generatedScenario ? " | escenario de prueba" : ""}`}
           </title>
         </circle>
       ))}
@@ -330,6 +331,11 @@ function SpecificKpiRelationsSection({ relations, periods, selectedPeriod, onPer
             plataformas. Cada punto representa un snapshot histórico. La
             gráfica ayuda a ver coincidencias aparentes entre dos indicadores,
             y debe leerse como apoyo exploratorio para orientar la revisión.
+          </p>
+          <p className="section-subtitle">
+            Esta gráfica muestra coincidencias aparentes entre dos indicadores,
+            pero no representa la secuencia temporal. Para analizar evolución,
+            degradación o recuperación, consulte la evolución temporal del periodo.
           </p>
         </div>
 
@@ -422,7 +428,7 @@ function SpecificKpiRelationsSection({ relations, periods, selectedPeriod, onPer
               <p>{report.recommendation}</p>
             </div>
 
-            <p className="analysis-demo-note">
+            <p className="analysis-test-note">
               El informe es exploratorio y no demuestra causalidad.
             </p>
           </aside>
@@ -433,3 +439,4 @@ function SpecificKpiRelationsSection({ relations, periods, selectedPeriod, onPer
 }
 
 export default SpecificKpiRelationsSection;
+

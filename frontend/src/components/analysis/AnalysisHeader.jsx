@@ -1,4 +1,4 @@
-﻿function AnalysisHeader({ children }) {
+function AnalysisHeader({ children }) {
   return (
     <header className="dashboard-header">
       <div>
@@ -12,3 +12,4 @@
 }
 
 export default AnalysisHeader;
+

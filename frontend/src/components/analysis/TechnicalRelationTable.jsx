@@ -1,4 +1,4 @@
-﻿import {
+import {
   cssTone,
   formatOptionalPercent,
   formatOptionalSigned
@@ -40,3 +40,4 @@ function TechnicalRelationTable({ relations }) {
 }
 
 export default TechnicalRelationTable;
+

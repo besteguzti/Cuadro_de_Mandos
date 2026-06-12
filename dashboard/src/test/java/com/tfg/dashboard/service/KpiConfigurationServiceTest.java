@@ -126,7 +126,7 @@ class KpiConfigurationServiceTest {
     }
 
     @Test
-    void addsMissingThresholdWithoutOverwritingExistingCustomThresholds() {
+    void addsMissingThresholdWithoutOverwritingCustomValues() {
         when(thresholdRepository.findAll())
                 .thenReturn(defaultThresholdsWith("transversal.globalStatus.yellowMin", 45).stream()
                         .filter(threshold ->
@@ -144,7 +144,7 @@ class KpiConfigurationServiceTest {
     }
 
     @Test
-    void keepsPersistedCitrixThresholdsEvenWhenTheyMatchPreviousDefaults() {
+    void keepsPersistedCitrixThresholds() {
         List<KpiThresholdConfiguration> stored = defaultThresholds().stream()
                 .map(threshold -> {
                     if ("citrix.deliveryControllerYellowBelowPercent".equals(threshold.getConfigKey())) {
@@ -173,7 +173,7 @@ class KpiConfigurationServiceTest {
     }
 
     @Test
-    void keepsPersistedMicrosoft365ThresholdsEvenWhenTheyMatchPreviousDefaults() {
+    void keepsPersistedMicrosoft365Thresholds() {
         List<KpiThresholdConfiguration> stored = defaultThresholds().stream()
                 .map(threshold -> {
                     if ("microsoft365.usersWithoutMfaRedAbove".equals(threshold.getConfigKey())) {
@@ -363,7 +363,7 @@ class KpiConfigurationServiceTest {
     }
 
     @Test
-    void addsMissingPlatformWeightWithoutOverwritingExistingWeights() {
+    void addsMissingPlatformWeightWithoutOverwritingCustomValues() {
         when(weightRepository.findAll())
                 .thenReturn(List.of(
                         weight("ARUBA", 50),

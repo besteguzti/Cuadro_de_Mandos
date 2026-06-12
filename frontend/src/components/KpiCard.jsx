@@ -1,4 +1,4 @@
-﻿import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 function KpiCard({ title, value, critical = false, status, info, onValueClick }) {
     const [isInfoOpen, setIsInfoOpen] = useState(false)
@@ -165,3 +165,4 @@ function normalizeStatus(status) {
 }
 
 export default KpiCard
+

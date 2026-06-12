@@ -1,6 +1,7 @@
-﻿import {
+import {
     formatImpactLevel,
     formatPriority,
+    formatStatus,
     formatTrend
 } from "../utils/statusFormatters";
 
@@ -58,6 +59,8 @@ function OperationalSummaryPanel({ summary, contextualNotice }) {
                     value={summary.firstAction}
                 />
             </div>
+
+            <PlatformFindings findings={summary.platformFindings} />
         </section>
     );
 }
@@ -71,4 +74,41 @@ function ExecutiveField({ label, value }) {
     );
 }
 
+function PlatformFindings({ findings }) {
+    const visibleFindings = Array.isArray(findings)
+        ? findings.filter((item) => item?.platform && Array.isArray(item.findings) && item.findings.length > 0)
+        : [];
+
+    return (
+        <div className="platform-findings">
+            <h3>Incidencias detectadas por plataforma</h3>
+            {visibleFindings.length > 0 ? (
+                <div className="platform-findings-grid">
+                    {visibleFindings.map((item) => (
+                        <article
+                            className={`platform-finding-card platform-finding-${(item.status ?? "UNKNOWN").toLowerCase()}`}
+                            key={item.platform}
+                        >
+                            <div className="platform-finding-header">
+                                <strong>{item.platform}</strong>
+                                <span>{formatStatus(item.status)}</span>
+                            </div>
+                            <ul>
+                                {item.findings.map((finding, index) => (
+                                    <li key={`${item.platform}-${index}`}>{finding}</li>
+                                ))}
+                            </ul>
+                        </article>
+                    ))}
+                </div>
+            ) : (
+                <p className="platform-findings-empty">
+                    No se han detectado incidencias relevantes en los indicadores evaluados.
+                </p>
+            )}
+        </div>
+    );
+}
+
 export default OperationalSummaryPanel;
+

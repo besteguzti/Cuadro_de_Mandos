@@ -19,7 +19,7 @@ class ManualSyncServiceSpringContextTest {
     private ManualSyncService manualSyncService;
 
     @Test
-    void springCreatesManualSyncServiceWithConstructorInjection() {
+    void loadsManualSyncServiceInSpringContext() {
         assertThat(manualSyncService).isNotNull();
     }
 

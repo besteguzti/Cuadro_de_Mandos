@@ -1,9 +1,9 @@
-﻿import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 import "../App.css";
 
 import KpiCard from "../components/KpiCard";
-import { API_BASE_URL } from "../config/api";
+import { API_BASE_URL, FRONTEND_REFRESH_INTERVAL_MS } from "../config/api";
 import { formatDataStatus, formatStatus } from "../utils/statusFormatters";
 
 const glpiKpiInfo = {
@@ -13,7 +13,7 @@ const glpiKpiInfo = {
     algorithm:
       "Se genera dinámicamente en GlpiService. De 0 a 100 tickets es verde, de 101 a 200 es amarillo y 201 o más es rojo.",
     interpretation:
-      "Un valor alto indica mayor volumen de trabajo pendiente y puede requerir refuerzo operativo."
+      "Cuando sube, hay más trabajo pendiente y puede hacer falta refuerzo operativo."
   },
   criticalOpenTickets: {
     description:
@@ -27,17 +27,17 @@ const glpiKpiInfo = {
     description:
       "Cuenta tickets que han superado el tiempo objetivo de resolución o atención.",
     algorithm:
-      "Se genera dinámicamente en GlpiService como señal informativa de incumplimiento de SLA.",
+      "Se genera dinámicamente en GlpiService. 0 es verde, de 1 a 10 es amarillo y más de 10 es rojo.",
     interpretation:
-      "Un valor alto indica incumplimiento de compromisos de servicio y mayor riesgo operativo."
+      "Cuando sube, conviene revisar compromisos de servicio y posibles retrasos."
   },
   averageResolutionHours: {
     description:
-      "Mide el tiempo medio de resolución de tickets, expresado en horas.",
+      "Indica el tiempo medio de resolución de tickets, expresado en horas.",
     algorithm:
       "Se genera dinámicamente en GlpiService como indicador informativo de rendimiento operativo.",
     interpretation:
-      "Un valor alto indica lentitud en la resolución y posible saturación del equipo de soporte."
+      "Cuando sube, puede haber lentitud en la resolución o saturación del equipo de soporte."
   },
   operationalBacklog: {
     description:
@@ -53,7 +53,7 @@ const glpiKpiInfo = {
     algorithm:
       "Se genera dinámicamente en GlpiService como actividad diaria entrante.",
     interpretation:
-      "Un valor alto indica mayor demanda de soporte durante el día."
+      "Cuando sube, el soporte ha recibido más trabajo durante el día."
   },
   closedToday: {
     description:
@@ -69,7 +69,7 @@ const glpiKpiInfo = {
     algorithm:
       "Se genera dinámicamente en GlpiService como actividad semanal entrante.",
     interpretation:
-      "Un valor alto indica mayor demanda semanal y ayuda a detectar picos de actividad."
+      "Ayuda a detectar semanas con más entrada de tickets y posibles picos de actividad."
   },
   closedThisWeek: {
     description:
@@ -86,7 +86,7 @@ function GlpiPage() {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const loadGlpiDashboard = () => {
     // GLPI llega como consecuencia operativa calculada en backend; React solo
     // muestra el resumen y sus estados.
     fetch(`${API_BASE_URL}/glpi/summary`)
@@ -108,6 +108,16 @@ function GlpiPage() {
         setSummary(null);
         setLoading(false);
       });
+  };
+
+  useEffect(() => {
+    loadGlpiDashboard();
+
+    const interval = setInterval(() => {
+      loadGlpiDashboard();
+    }, FRONTEND_REFRESH_INTERVAL_MS);
+
+    return () => clearInterval(interval);
   }, []);
 
   if (loading) {
@@ -138,7 +148,7 @@ function GlpiPage() {
     <main className="dashboard">
       <header className="dashboard-header">
         <div>
-          <p className="eyebrow">Monitorizacion GLPI</p>
+          <p className="eyebrow">Monitorización GLPI</p>
           <h1>GLPI</h1>
         </div>
         <div className="freshness">
@@ -201,7 +211,7 @@ function GlpiPage() {
         <KpiCard
           title="Tickets vencidos SLA"
           value={summary.slaBreachedTickets}
-          status="neutral"
+          status={indicatorStatus("Tickets vencidos SLA")}
           info={glpiKpiInfo.slaBreachedTickets}
         />
       </div>
@@ -287,3 +297,7 @@ function findIndicatorStatus(indicators, name) {
 }
 
 export default GlpiPage;
+
+
+
+

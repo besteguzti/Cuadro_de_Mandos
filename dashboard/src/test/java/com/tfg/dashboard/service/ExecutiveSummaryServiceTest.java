@@ -161,7 +161,7 @@ class ExecutiveSummaryServiceTest {
     }
 
     @Test
-    void executiveSummaryReportsCitrixLogonFindingEvenWhenGlobalStatusIsGreen() {
+    void reportsCitrixFindingDespiteGreenGlobalStatus() {
 
         when(mainDashboardService.getSummary())
                 .thenReturn(summaryWithPlatformScores("GREEN", 3, 10, 0, 10, 0, 0));
@@ -190,7 +190,7 @@ class ExecutiveSummaryServiceTest {
     }
 
     @Test
-    void citrixGreenWithSevenTicketsDoesNotCreateOperationalFinding() {
+    void ignoresGreenCitrixTicketVolume() {
 
         when(mainDashboardService.getSummary())
                 .thenReturn(summaryWithPlatformScores("GREEN", 0, 10, 0, 0, 0, 0));
@@ -304,7 +304,7 @@ class ExecutiveSummaryServiceTest {
     }
 
     @Test
-    void scenarioWithCitrixRedKeepsOperationalPriorityAtLeastMedium() {
+    void keepsMediumPriorityForCitrixRedScenario() {
 
         ExecutiveSummaryDto summary =
                 service.buildScenarioSummary(
@@ -326,7 +326,7 @@ class ExecutiveSummaryServiceTest {
     }
 
     @Test
-    void scenarioWithMicrosoft365RedKeepsOperationalPriorityAtLeastMedium() {
+    void keepsMediumPriorityForMicrosoft365RedScenario() {
 
         ExecutiveSummaryDto summary =
                 service.buildScenarioSummary(
@@ -348,7 +348,7 @@ class ExecutiveSummaryServiceTest {
     }
 
     @Test
-    void scenarioWithCitrixAndMicrosoft365RedIsHighPriority() {
+    void raisesPriorityWhenSeveralPlatformsAreRed() {
 
         ExecutiveSummaryDto summary =
                 service.buildScenarioSummary(
@@ -369,7 +369,7 @@ class ExecutiveSummaryServiceTest {
     }
 
     @Test
-    void scenarioWithGreenWeightedGlobalButRedPlatformDoesNotHideCriticalPlatform() {
+    void highlightsRedPlatformDespiteGreenWeightedGlobal() {
 
         ExecutiveSummaryDto summary =
                 service.buildScenarioSummary(
@@ -386,7 +386,7 @@ class ExecutiveSummaryServiceTest {
     }
 
     @Test
-    void scenarioWithArubaRedKeepsNetworkActionAndAffectedService() {
+    void keepsNetworkActionForArubaRedScenario() {
 
         ExecutiveSummaryDto summary =
                 service.buildScenarioSummary(
@@ -405,7 +405,7 @@ class ExecutiveSummaryServiceTest {
     }
 
     @Test
-    void arubaFindingKeepsYellowWhenFinalAffectationIsThirtySevenEvenWithRedInternalSignals() {
+    void keepsArubaFindingYellowWithModerateAffectation() {
 
         ExecutiveSummaryDto summary =
                 service.buildScenarioSummary(
@@ -429,7 +429,7 @@ class ExecutiveSummaryServiceTest {
     }
 
     @Test
-    void arubaFindingKeepsYellowWhenFinalAffectationIsFiftySix() {
+    void keepsArubaFindingYellowWithWarningAffectation() {
 
         ExecutiveSummaryDto summary =
                 service.buildScenarioSummary(
@@ -448,7 +448,7 @@ class ExecutiveSummaryServiceTest {
     }
 
     @Test
-    void arubaFindingIsRedWhenFinalAffectationReachesRedRange() {
+    void marksArubaFindingRedAtCriticalAffectation() {
 
         ExecutiveSummaryDto summary =
                 service.buildScenarioSummary(

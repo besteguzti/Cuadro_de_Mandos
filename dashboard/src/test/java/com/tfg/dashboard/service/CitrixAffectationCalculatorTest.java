@@ -124,7 +124,7 @@ class CitrixAffectationCalculatorTest {
         }
 
         @Test
-        void captureCaseWithSpecificCitrixValuesReturnsZero() {
+        void keepsHealthyCitrixCaptureAtZeroAffection() {
 
                 CitrixAffectationCalculator.Result result = calculate(inputBuilder()
                                 .activeLicenses(510)
@@ -141,7 +141,7 @@ class CitrixAffectationCalculatorTest {
         }
 
         @Test
-        void serverLoadSeventyFiveWithYellowLogonAndFailedLogonsDoesNotForceOneHundredPercent() {
+        void calculatesCitrixAffectationWithoutForcingMaximumValue() {
 
                 CitrixAffectationCalculator.Result result = calculate(inputBuilder()
                                 .activeSessions(42)
@@ -176,7 +176,7 @@ class CitrixAffectationCalculatorTest {
         }
 
         @Test
-        void topStatusUsesAffectionTotalWhenInternalIndicatorIsRedAtFortyEightPercent() {
+        void usesTotalAffectionForTopStatus() {
 
                 CitrixAffectationCalculator.Result result = calculate(inputBuilder()
                                 .serverLoadPercent(92)
@@ -280,7 +280,7 @@ class CitrixAffectationCalculatorTest {
         }
 
         @Test
-        void zeroActiveSessionsAreCriticalAndRepresentMaximumAffection() {
+        void treatsZeroActiveSessionsAsMaximumAffection() {
 
                 CitrixAffectationCalculator.Result result = calculate(inputBuilder()
                                 .activeSessions(0)
@@ -300,7 +300,7 @@ class CitrixAffectationCalculatorTest {
         }
 
         @Test
-        void zeroDeliveryControllersRepresentMaximumAffection() {
+        void treatsZeroDeliveryControllersAsMaximumAffection() {
 
                 CitrixAffectationCalculator.Result result = calculate(inputBuilder()
                                 .availableDeliveryControllers(0)
@@ -319,7 +319,7 @@ class CitrixAffectationCalculatorTest {
         }
 
         @Test
-        void eightFailedLogonsReturnsYellowAndAddsFifteenPercent() {
+        void flagsModerateFailedLogonsAsYellow() {
 
                 CitrixAffectationCalculator.Result result = calculate(inputBuilder()
                                 .failedLogons(8)

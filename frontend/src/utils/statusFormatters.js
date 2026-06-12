@@ -1,9 +1,9 @@
-﻿const STATUS_LABELS = {
+const STATUS_LABELS = {
   GREEN: "Correcto",
   YELLOW: "Advertencia",
   RED: "Crítico",
   NO_DATA: "Sin datos",
-  STALE: "Dato obsoleto",
+  STALE: "Datos obsoletos",
   HEALTHY: "Correcto",
   DEGRADED: "Advertencia",
   INCIDENT: "Crítico",
@@ -62,3 +62,4 @@ function formatValue(value, labels) {
   const normalized = String(value).trim();
   return labels[normalized] ?? labels[normalized.toUpperCase()] ?? normalized;
 }
+

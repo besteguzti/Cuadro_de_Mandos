@@ -1,80 +1,80 @@
-﻿import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 import "../App.css";
 
 import KpiCard from "../components/KpiCard";
 import OperationalSummaryPanel from "../components/OperationalSummaryPanel";
-import { API_BASE_URL } from "../config/api";
+import { API_BASE_URL, FRONTEND_REFRESH_INTERVAL_MS } from "../config/api";
 import { formatDataStatus } from "../utils/statusFormatters";
 
 const mainKpiInfo = {
     globalHealth: {
         description:
-            "Resume la afección general de la plataforma combinando Aruba, Citrix, Microsoft 365 y GLPI.",
+            "Resume la afección general combinando Aruba, Citrix, Microsoft 365 y GLPI.",
         algorithm:
-            "Se calcula ponderando los índices principales de Aruba, Citrix, Microsoft 365 y GLPI según la configuración definida en backend.",
+            "Se calcula ponderando los índices principales según la configuración definida en backend.",
         interpretation:
             "0-33 es verde, 34-66 amarillo y 67-100 rojo. Cuanto más alto, mayor afección global."
     },
     globalCriticality: {
         description:
-            "Mide la presencia de condiciones críticas en rojo dentro de las plataformas.",
+            "Recoge cuántas señales críticas aparecen dentro de las plataformas.",
         algorithm:
             "Promedia indicadores normalizados: correcto 0, advertencia 50 y crítico 100.",
         interpretation:
-            "Un valor alto indica que existen señales críticas repartidas por varias plataformas."
+            "Cuando sube, conviene revisar primero las plataformas con indicadores en rojo."
     },
     globalAvailability: {
         description:
-            "Mide la disponibilidad estimada de los servicios principales.",
+            "Resume la disponibilidad estimada de los servicios principales.",
         algorithm:
-            "Combina señales de disponibilidad de Aruba, Citrix, Microsoft 365 y GLPI usando los pesos configurados en backend.",
+            "Agrupa señales de disponibilidad de Aruba, Citrix, Microsoft 365 y GLPI usando los pesos configurados en backend.",
         interpretation:
             "Cuanto más alto, mayor disponibilidad estimada. Valores bajos indican mayor afección sobre la disponibilidad."
     },
     operationalPressure: {
         description:
-            "Mide la carga de trabajo técnica y operativa acumulada.",
+            "Resume la carga técnica y operativa acumulada.",
         algorithm:
-            "Combina señales de GLPI, Citrix, Microsoft 365 y Aruba usando los pesos configurados en backend.",
+            "Agrupa señales de GLPI, Citrix, Microsoft 365 y Aruba usando los pesos configurados en backend.",
         interpretation:
-            "Un valor alto indica más presión sobre el área técnica."
+            "Cuando sube, el área técnica tiene más trabajo o más tensión operativa."
     },
     technicalDegradation: {
         description:
-            "Mide deterioro tecnico aunque no exista una caída total.",
+            "Detecta deterioro técnico aunque no exista una caída total.",
         algorithm:
-            "Combina indicadores tecnicos de Aruba, Citrix, Microsoft 365 y GLPI según la configuración del backend.",
+            "Agrupa indicadores técnicos de Aruba, Citrix, Microsoft 365 y GLPI según la configuración del backend.",
         interpretation:
             "Valores altos indican degradación técnica que conviene revisar."
     },
     slaRisk: {
         description:
-            "Mide el riesgo de incumplir niveles de servicio.",
+            "Estima si hay señales que puedan comprometer niveles de servicio.",
         algorithm:
-            "Combina señales de Citrix, Aruba, GLPI y Microsoft 365 con los pesos definidos en backend.",
+            "Cruza señales de Citrix, Aruba, GLPI y Microsoft 365 con los pesos definidos en backend.",
         interpretation:
-            "Un valor alto indica mayor probabilidad de incumplimiento o degradación percibida."
+            "Cuando sube, conviene revisar SLA, tiempos de respuesta y degradación percibida."
     },
     operationalBacklog: {
         description:
-            "Mide el trabajo pendiente acumulado.",
+            "Resume el trabajo pendiente acumulado.",
         algorithm:
-            "Combina trabajo pendiente de GLPI con señales de Microsoft 365, Aruba y Citrix según pesos configurados en backend.",
+            "Relaciona trabajo pendiente de GLPI con señales de Microsoft 365, Aruba y Citrix según pesos configurados en backend.",
         interpretation:
-            "Un valor alto indica acumulación de trabajo pendiente o acciónes técnicas."
+            "Cuando sube, hay más tareas pendientes o acciones técnicas por cerrar."
     },
     userImpact: {
         description:
-            "Mide la afección que pueden percibir los usuarios.",
+            "Aproxima la afección que pueden percibir los usuarios.",
         algorithm:
-            "Combina señales de impacto de Citrix, Aruba, Microsoft 365 y GLPI usando la configuración del backend.",
+            "Usa señales de impacto de Citrix, Aruba, Microsoft 365 y GLPI con la configuración del backend.",
         interpretation:
-            "Un valor alto indica mayor probabilidad de impacto visible para usuarios."
+            "Cuando sube, es más probable que el problema sea visible para usuarios finales."
     },
     affectedServices: {
         description:
-            "Mide cuántas plataformas están afectadas.",
+            "Indica cuántas plataformas están afectadas a la vez.",
         algorithm:
             "Calcula la proporción de plataformas que están en amarillo o rojo entre Aruba, Citrix, Microsoft 365 y GLPI.",
         interpretation:
@@ -125,7 +125,7 @@ function MainPage() {
                 if (!response.ok) {
 
                     throw new Error(
-                        "No se pudo cargar el diagnostico operativo"
+                        "No se pudo cargar el diagnóstico operativo"
                     );
                 }
 
@@ -150,7 +150,7 @@ function MainPage() {
 
                 loadDashboard();
 
-            }, 30000);
+            }, FRONTEND_REFRESH_INTERVAL_MS);
 
         return () => clearInterval(interval);
 
@@ -286,3 +286,4 @@ function formatSnapshotDate(value) {
 }
 
 export default MainPage;
+

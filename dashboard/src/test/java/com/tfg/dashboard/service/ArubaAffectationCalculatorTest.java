@@ -136,7 +136,7 @@ class ArubaAffectationCalculatorTest {
         }
 
         @Test
-        void zeroSwitchesWithPendingUpgradeDoNotAddAffectionOrReason() {
+        void ignoresSwitchUpgradeWhenNoneArePending() {
 
                 ArubaAffectationCalculator.Result result = calculate(inputBuilder().switchesFirmwareUpgradeRequired(0).build());
 
@@ -148,7 +148,7 @@ class ArubaAffectationCalculatorTest {
         }
 
         @Test
-        void oneSwitchWithPendingUpgradeAddsTwoPointsAndReason() {
+        void flagsPendingSwitchUpgrade() {
 
                 ArubaAffectationCalculator.Result result = calculate(inputBuilder().switchesFirmwareUpgradeRequired(1).build());
 
@@ -196,7 +196,7 @@ class ArubaAffectationCalculatorTest {
         }
 
         @Test
-        void currentObservedCombinationWithSwitchUpgradeAddsThirtyFourPoints() {
+        void includesSwitchUpgradeInObservedCombination() {
 
                 ArubaAffectationCalculator.Result result = calculate(inputBuilder()
                                 .pendingFirmwareAps(4)

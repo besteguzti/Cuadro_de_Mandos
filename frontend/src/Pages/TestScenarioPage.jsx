@@ -1,4 +1,4 @@
-﻿import { useState } from "react";
+import { useState } from "react";
 
 import "../App.css";
 
@@ -115,8 +115,8 @@ function TestScenarioPage() {
             addError("citrix.disconnectedSessions", "Las sesiones Citrix activas y desconectadas no pueden superar los clientes WiFi.");
         }
 
-        if (microsoft365.activeUsers > citrix.activeSessions) {
-            addError("microsoft365.activeUsers", "Usuarios activos Microsoft 365 no puede ser mayor que sesiones activas Citrix.");
+        if (microsoft365.usersWithoutMfa > microsoft365.activeUsers) {
+            addError("microsoft365.usersWithoutMfa", "Usuarios sin MFA no puede ser mayor que usuarios activos Microsoft 365.");
         }
 
         const percentageFields = [
@@ -411,3 +411,4 @@ function TestScenarioPage() {
 }
 
 export default TestScenarioPage;
+

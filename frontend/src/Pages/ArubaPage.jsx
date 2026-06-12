@@ -1,9 +1,9 @@
-﻿import { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import "../App.css";
 import InactiveApsPanel from '../components/InactiveApsPanel'
 import KpiCard from '../components/KpiCard'
-import { API_BASE_URL } from '../config/api'
+import { API_BASE_URL, FRONTEND_REFRESH_INTERVAL_MS } from '../config/api'
 import { formatDataStatus, formatStatus } from '../utils/statusFormatters'
 
 const arubaKpiInfo = {
@@ -75,7 +75,7 @@ const arubaKpiInfo = {
   mutualiaLangileakClients: {
     description: 'Clientes conectados a la red MUTUALIA_LANGILEAK.',
     algorithm: 'Se filtran clientes del grupo MUTUALIA-WIFI por el campo network MUTUALIA_LANGILEAK.',
-    interpretation: 'Un valor alto indica mayor uso de esta red específica.'
+    interpretation: 'Ayuda a ver cuándo esta red concentra más actividad.'
   },
   mutualiaClients: {
     description: 'Clientes conectados a la red MUTUALIA.',
@@ -147,7 +147,7 @@ function ArubaPage() {
 
       loadDashboard()
 
-    }, 30000)
+    }, FRONTEND_REFRESH_INTERVAL_MS)
 
     return () => clearInterval(interval)
 
@@ -164,34 +164,36 @@ function ArubaPage() {
   }
 
   const networkStatusDetails = summary?.networkStatusDetails
-  const status = networkStatusDetails?.color ?? summary?.networkStatus ?? 'UNKNOWN'
+  const status = networkStatusDetails?.color ?? 'UNKNOWN'
   const statusReasons = networkStatusDetails?.reasons ?? []
+  const kpiStatuses = summary?.kpiStatuses ?? networkStatusDetails?.indicatorStatuses ?? {}
+  const statusFor = (key, fallback = 'NEUTRAL') => kpiStatuses[key] ?? fallback
 
   const apCards = summary
     ? [
-      { title: 'Total APs', value: summary.totalAps, info: arubaKpiInfo.totalAps },
+      { title: 'Total APs', value: summary.totalAps, status: statusFor('totalAps'), info: arubaKpiInfo.totalAps },
       {
         title: 'APs activos',
         value: summary.upAps,
-        status: positiveIsOkStatus(summary.upAps),
+        status: statusFor('upAps'),
         info: arubaKpiInfo.upAps
       },
       {
         title: 'APs caidos',
         value: summary.downAps,
-        status: downCountStatus(summary.downAps, summary.totalAps),
+        status: statusFor('downAps', 'NO_DATA'),
         info: arubaKpiInfo.downAps
       },
       {
         title: 'Firmware pendiente',
         value: summary.firmwareOutdated,
-        status: zeroIsOkStatus(summary.firmwareOutdated),
+        status: statusFor('firmwareOutdated', 'NO_DATA'),
         info: arubaKpiInfo.firmwareOutdated
       },
       {
         title: 'APs inactivos',
         value: summary.inactiveAps,
-        status: zeroIsOkStatus(summary.inactiveAps),
+        status: statusFor('inactiveAps', 'NO_DATA'),
         info: arubaKpiInfo.inactiveAps,
         onValueClick: () => setShowInactiveApsPanel(true)
       }
@@ -200,17 +202,17 @@ function ArubaPage() {
 
   const switchCards = summary
     ? [
-      { title: 'Total switches', value: summary.totalSwitches, info: arubaKpiInfo.totalSwitches },
+      { title: 'Total switches', value: summary.totalSwitches, status: statusFor('totalSwitches'), info: arubaKpiInfo.totalSwitches },
       {
         title: 'Switches apagados',
         value: summary.downSwitches,
-        status: downCountStatus(summary.downSwitches, summary.totalSwitches),
+        status: statusFor('downSwitches', 'NO_DATA'),
         info: arubaKpiInfo.downSwitches
       },
       {
         title: 'Switches con upgrade',
         value: summary.switchesFirmwareUpgradeRequired,
-        status: zeroIsOkStatus(summary.switchesFirmwareUpgradeRequired),
+        status: statusFor('switchesFirmwareUpgradeRequired'),
         info: arubaKpiInfo.switchesFirmwareUpgradeRequired
       }
     ]
@@ -220,7 +222,7 @@ function ArubaPage() {
     ? (summary.underusedSwitches ?? []).map(switchUsage => ({
       title: switchUsage.associatedDeviceName || switchUsage.associatedDevice,
       value: `${switchUsage.downInterfaces} interfaces down`,
-      status: 'YELLOW',
+      status: statusFor('underusedSwitches'),
       info: arubaKpiInfo.underusedSwitches
     }))
     : []
@@ -230,19 +232,19 @@ function ArubaPage() {
       {
         title: 'Total clientes WiFi',
         value: summary.totalWifiClients,
-        status: positiveIsOkStatus(summary.totalWifiClients),
+        status: statusFor('totalWifiClients', 'NO_DATA'),
         info: arubaKpiInfo.totalWifiClients
       },
       {
         title: 'Clientes MUTUALIA-APs',
         value: summary.mutualiaApsClients,
-        status: positiveIsOkStatus(summary.mutualiaApsClients),
+        status: statusFor('mutualiaApsClients'),
         info: arubaKpiInfo.mutualiaApsClients
       },
       {
         title: 'Clientes MUTUALIA-WIFI',
         value: summary.mutualiaWifiClients,
-        status: positiveIsOkStatus(summary.mutualiaWifiClients),
+        status: statusFor('mutualiaWifiClients'),
         info: arubaKpiInfo.mutualiaWifiClients
       }
     ]
@@ -265,7 +267,7 @@ function ArubaPage() {
     <main className="dashboard">
       <header className="dashboard-header">
         <div>
-          <p className="eyebrow">Monitorizacion Aruba</p>
+          <p className="eyebrow">Monitorización Aruba</p>
           <h1>TFG Dashboard</h1>
         </div>
 
@@ -298,7 +300,7 @@ function ArubaPage() {
         <>
           <section className={`status status-${status.toLowerCase()}`}>
             <div className="status-main">
-              <span>Estado de red</span>
+              <span>Índice de salud Aruba</span>
               <strong>Afección: {networkStatusDetails?.percentage ?? 0} %</strong>
               <p>Estado: {formatStatus(status)}</p>
             </div>
@@ -324,7 +326,7 @@ function ArubaPage() {
               <KpiCard
                 title="Tickets abiertos Aruba"
                 value={summary.arubaOpenTickets}
-                status="neutral"
+                status={statusFor('arubaOpenTickets', 'NO_DATA')}
                 info={arubaKpiInfo.arubaOpenTickets}
               />
             </div>
@@ -412,7 +414,7 @@ function ArubaPage() {
                 <KpiCard
                   title="Switches infrautilizados"
                   value="0"
-                  status="GREEN"
+                  status={statusFor('underusedSwitches')}
                   info={arubaKpiInfo.underusedSwitches}
                 />
               )}
@@ -422,48 +424,6 @@ function ArubaPage() {
       )}
     </main>
   )
-}
-
-function positiveIsOkStatus(value) {
-  // Para métricas críticas de clientes, un valor positivo significa servicio activo.
-  if (value === null || value === undefined) {
-    return 'NO_DATA'
-  }
-
-  return Number(value) > 0 ? 'GREEN' : 'RED'
-}
-
-function zeroIsOkStatus(value) {
-  // Para incidencias o mantenimiento pendiente, cero es el estado saludable.
-  if (value === null || value === undefined) {
-    return 'NO_DATA'
-  }
-
-  return Number(value) > 0 ? 'YELLOW' : 'GREEN'
-}
-
-function downCountStatus(value, total) {
-  // Diferencia caída parcial frente a caída total para no usar una regla genérica value > 0.
-  if (value === null || value === undefined || total === null || total === undefined) {
-    return 'NO_DATA'
-  }
-
-  const count = Number(value)
-  const totalCount = Number(total)
-
-  if (Number.isNaN(count) || Number.isNaN(totalCount) || totalCount <= 0) {
-    return 'NO_DATA'
-  }
-
-  if (count <= 0) {
-    return 'GREEN'
-  }
-
-  if (count >= totalCount) {
-    return 'RED'
-  }
-
-  return 'YELLOW'
 }
 
 function formatSnapshotDate(value) {

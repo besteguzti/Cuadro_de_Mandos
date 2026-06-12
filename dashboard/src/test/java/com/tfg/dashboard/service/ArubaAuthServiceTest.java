@@ -51,7 +51,7 @@ class ArubaAuthServiceTest {
     }
 
     @Test
-    void emptyTokenRefreshResponseFailsInControlledWay() {
+    void rejectsEmptyTokenRefreshResponse() {
 
         AtomicReference<MockRestServiceServer> server =
                 new AtomicReference<>();
@@ -73,7 +73,7 @@ class ArubaAuthServiceTest {
     }
 
     @Test
-    void connectionErrorDuringRefreshFailsInControlledWay() {
+    void handlesRefreshConnectionErrors() {
 
         RestTemplateBuilder builder =
                 new RestTemplateBuilder()

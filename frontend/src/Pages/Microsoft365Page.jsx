@@ -1,9 +1,9 @@
-﻿import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 import "../App.css";
 
 import KpiCard from "../components/KpiCard";
-import { API_BASE_URL } from "../config/api";
+import { API_BASE_URL, FRONTEND_REFRESH_INTERVAL_MS } from "../config/api";
 import { formatDataStatus, formatStatus } from "../utils/statusFormatters";
 
 const microsoft365KpiInfo = {
@@ -13,7 +13,7 @@ const microsoft365KpiInfo = {
     algorithm:
       "Se obtiene como dato dinámico desde Microsoft365Service para simular actividad de usuarios en la plataforma.",
     interpretation:
-      "Un valor alto indica mayor actividad general. No implica necesariamente usuarios únicos conectados en tiempo real."
+      "Ayuda a estimar la actividad general. No implica necesariamente usuarios únicos conectados en tiempo real."
   },
   unassignedLicenses: {
     description:
@@ -67,7 +67,7 @@ const microsoft365KpiInfo = {
     description:
       "Representa el porcentaje simulado de almacenamiento usado en SharePoint.",
     algorithm:
-      "Se genera dinámicamente en Microsoft365Service. Menos del 80% es verde, entre 80% y 90% es amarillo y por encima del 90% es rojo.",
+      "Se genera dinámicamente en Microsoft365Service. Menos del 80% es verde, de 80% a 89% es amarillo y desde 90% es rojo.",
     interpretation:
       "Valores altos indican presión de capacidad y posible necesidad de limpieza o ampliación."
   },
@@ -75,7 +75,7 @@ const microsoft365KpiInfo = {
     description:
       "Cuenta usuarios simulados con señales de riesgo de identidad.",
     algorithm:
-      "Se genera dinámicamente en Microsoft365Service como señal informativa de identidad en riesgo.",
+      "El backend marca 0 usuarios como verde, de 1 a 9 como amarillo y desde 10 como rojo.",
     interpretation:
       "Un valor mayor que cero requiere revisión de identidad, actividad sospechosa o controles de acceso."
   },
@@ -83,7 +83,7 @@ const microsoft365KpiInfo = {
     description:
       "Indica intentos de inicio de sesión fallidos.",
     algorithm:
-      "Se genera dinámicamente en Microsoft365Service y se marca como advertencia cuando supera 400.",
+      "El backend marca menos de 10 como verde, de 10 a 19 como amarillo y desde 20 como rojo.",
     interpretation:
       "Un valor alto puede indicar errores de usuario, ataques de fuerza bruta o problemas de autenticación."
   },
@@ -91,7 +91,7 @@ const microsoft365KpiInfo = {
     description:
       "Cuenta usuarios simulados sin autenticación multifactor.",
     algorithm:
-      "Se genera dinámicamente en Microsoft365Service. 0 usuarios es verde, entre 1 y 3 es amarillo y más de 3 es rojo.",
+      "Se genera dinámicamente en Microsoft365Service. 0 usuarios es verde, de 1 a 4 es amarillo y desde 5 es rojo.",
     interpretation:
       "Un valor alto aumenta la exposición ante robo de credenciales y debería reducirse."
   },
@@ -107,7 +107,7 @@ const microsoft365KpiInfo = {
     description:
       "Cuenta aplicaciones empresariales simuladas sin uso relevante.",
     algorithm:
-      "Se genera dinámicamente en Microsoft365Service y se marca como advertencia cuando supera 10.",
+      "El backend lo marca como advertencia cuando hay al menos una aplicación sin uso.",
     interpretation:
       "Un valor alto puede indicar sobreconfiguración o aplicaciones que conviene revisar o retirar."
   },
@@ -115,7 +115,7 @@ const microsoft365KpiInfo = {
     description:
       "Cuenta aplicaciones con permisos elevados.",
     algorithm:
-      "Se genera dinámicamente en Microsoft365Service y se marca como crítico cuando supera 5.",
+      "El backend lo marca como advertencia cuando hay al menos una aplicación con permisos elevados.",
     interpretation:
       "Un valor alto incrementa el riesgo de seguridad y requiere revisión de permisos concedidos."
   },
@@ -123,7 +123,7 @@ const microsoft365KpiInfo = {
     description:
       "Indica equipos que no cumplen las políticas simuladas de Intune.",
     algorithm:
-      "Se genera dinámicamente en Microsoft365Service. De 0 a 50 equipos es verde, de 51 a 100 es amarillo y más de 100 es rojo.",
+      "Se genera dinámicamente en Microsoft365Service. Hasta 30 equipos es verde, de 31 a 50 es amarillo y más de 50 es rojo.",
     interpretation:
       "Un valor alto puede implicar dispositivos con configuración insegura o fuera de estándar."
   },
@@ -147,7 +147,7 @@ const microsoft365KpiInfo = {
     description:
       "Indica equipos sin cifrado de disco.",
     algorithm:
-      "Se obtiene desde Microsoft365Service. De 0 a 5 equipos es verde y más de 5 es rojo.",
+      "Se obtiene desde Microsoft365Service. 0 equipos es verde y cualquier valor superior a 0 es rojo.",
     interpretation:
       "Un valor mayor que cero supone riesgo de exposición de datos si se pierde o roba un equipo."
   },
@@ -155,7 +155,7 @@ const microsoft365KpiInfo = {
     description:
       "Cuenta dispositivos sin check-in durante más de 90 días.",
     algorithm:
-      "Se genera dinámicamente en Microsoft365Service y se marca como advertencia cuando supera 10.",
+      "Se genera dinámicamente en Microsoft365Service. Cualquier valor superior a 0 se considera crítico.",
     interpretation:
       "Un valor alto puede indicar inventario obsoleto, equipos fuera de uso o dispositivos que han dejado de reportar."
   },
@@ -163,7 +163,7 @@ const microsoft365KpiInfo = {
     description:
       "Resume el estado general simulado de Microsoft 365 mediante un semáforo: correcto, advertencia o crítico.",
     algorithm:
-      "Combina los indicadores principales de Microsoft 365 en una escala comun de afección.",
+      "Agrupa los indicadores principales de Microsoft 365 en una escala común de afección.",
     interpretation:
       "Correcto indica estabilidad, advertencia indica degradación moderada y crítico una situación que requiere atención prioritaria."
   }
@@ -174,7 +174,7 @@ function Microsoft365Page() {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const loadMicrosoft365Dashboard = () => {
     // La página renderiza el resumen calculado por backend; no recalcula el
     // índice de salud ni los umbrales de Microsoft 365.
     fetch(`${API_BASE_URL}/microsoft365/summary`)
@@ -196,6 +196,16 @@ function Microsoft365Page() {
         setSummary(null);
         setLoading(false);
       });
+  };
+
+  useEffect(() => {
+    loadMicrosoft365Dashboard();
+
+    const interval = setInterval(() => {
+      loadMicrosoft365Dashboard();
+    }, FRONTEND_REFRESH_INTERVAL_MS);
+
+    return () => clearInterval(interval);
   }, []);
 
   if (loading) {
@@ -217,8 +227,7 @@ function Microsoft365Page() {
   }
 
   const microsoft365HealthDetails = summary.microsoft365HealthDetails;
-  const microsoft365Health =
-    microsoft365HealthDetails?.color ?? summary.microsoft365Health ?? "UNKNOWN";
+  const microsoft365Health = microsoft365HealthDetails?.color ?? "UNKNOWN";
   const microsoft365Reasons = microsoft365HealthDetails?.reasons ?? [];
   const indicatorStatus = (name) =>
     findIndicatorStatus(microsoft365HealthDetails?.indicators, name);
@@ -227,7 +236,7 @@ function Microsoft365Page() {
     <main className="dashboard">
       <header className="dashboard-header">
         <div>
-          <p className="eyebrow">Monitorizacion Microsoft 365</p>
+          <p className="eyebrow">Monitorización Microsoft 365</p>
           <h1>Microsoft 365</h1>
         </div>
         <div className="freshness">
@@ -284,7 +293,7 @@ function Microsoft365Page() {
         <KpiCard
           title="Licencias no asignadas"
           value={summary.unassignedLicenses}
-          status="neutral"
+          status={indicatorStatus("Licencias no asignadas")}
           info={microsoft365KpiInfo.unassignedLicenses}
         />
       </div>
@@ -298,21 +307,21 @@ function Microsoft365Page() {
         <KpiCard
           title="Outlook"
           value={formatStatus(summary.outlookStatus)}
-          status={summary.outlookStatus}
+          status={indicatorStatus("Outlook")}
           info={microsoft365KpiInfo.outlookStatus}
         />
 
         <KpiCard
           title="Teams"
           value={formatStatus(summary.teamsStatus)}
-          status={summary.teamsStatus}
+          status={indicatorStatus("Teams")}
           info={microsoft365KpiInfo.teamsStatus}
         />
 
         <KpiCard
           title="SharePoint"
           value={formatStatus(summary.sharePointStatus)}
-          status={summary.sharePointStatus}
+          status={indicatorStatus("Servicio SharePoint")}
           info={microsoft365KpiInfo.sharePointStatus}
         />
       </div>
@@ -326,14 +335,14 @@ function Microsoft365Page() {
         <KpiCard
           title="Buzones casi llenos"
           value={summary.nearlyFullMailboxes}
-          status="neutral"
+          status={indicatorStatus("Buzones casi llenos")}
           info={microsoft365KpiInfo.nearlyFullMailboxes}
         />
 
         <KpiCard
           title="Emails en cuarentena"
           value={summary.emailsQuarantined}
-          status="neutral"
+          status={indicatorStatus("Emails en cuarentena")}
           info={microsoft365KpiInfo.emailsQuarantined}
         />
 
@@ -354,14 +363,14 @@ function Microsoft365Page() {
         <KpiCard
           title="Usuarios en riesgo"
           value={summary.riskyUsers}
-          status="neutral"
+          status={indicatorStatus("Usuarios en riesgo")}
           info={microsoft365KpiInfo.riskyUsers}
         />
 
         <KpiCard
           title="Inicios fallidos"
           value={summary.failedSignIns}
-          status="neutral"
+          status={indicatorStatus("Inicios fallidos")}
           info={microsoft365KpiInfo.failedSignIns}
         />
 
@@ -389,14 +398,14 @@ function Microsoft365Page() {
         <KpiCard
           title="Aplicaciones sin uso"
           value={summary.unusedApplications}
-          status="neutral"
+          status={indicatorStatus("Aplicaciones sin uso")}
           info={microsoft365KpiInfo.unusedApplications}
         />
 
         <KpiCard
           title="Apps permisos elevados"
           value={summary.highPrivilegeApplications}
-          status="neutral"
+          status={indicatorStatus("Apps permisos elevados")}
           info={microsoft365KpiInfo.highPrivilegeApplications}
         />
       </div>
@@ -417,7 +426,7 @@ function Microsoft365Page() {
         <KpiCard
           title="Tickets abiertos Microsoft 365"
           value={summary.microsoft365OpenTickets}
-          status="neutral"
+          status={indicatorStatus("Tickets abiertos Microsoft 365")}
           info={microsoft365KpiInfo.microsoft365OpenTickets}
         />
 
@@ -438,7 +447,7 @@ function Microsoft365Page() {
         <KpiCard
           title="Sin check-in >90 días"
           value={summary.staleDevices}
-          status="neutral"
+          status={indicatorStatus("Sin check-in >90 dias")}
           info={microsoft365KpiInfo.staleDevices}
         />
       </div>
@@ -463,3 +472,7 @@ function findIndicatorStatus(indicators, name) {
 }
 
 export default Microsoft365Page;
+
+
+
+

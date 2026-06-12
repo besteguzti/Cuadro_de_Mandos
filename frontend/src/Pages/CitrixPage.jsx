@@ -1,9 +1,9 @@
-﻿import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 import "../App.css";
 
 import KpiCard from "../components/KpiCard";
-import { API_BASE_URL } from "../config/api";
+import { API_BASE_URL, FRONTEND_REFRESH_INTERVAL_MS } from "../config/api";
 import { formatDataStatus, formatStatus } from "../utils/statusFormatters";
 
 const citrixKpiInfo = {
@@ -13,7 +13,7 @@ const citrixKpiInfo = {
     algorithm:
       "En esta fase se genera de forma simulada en CitrixService mediante un valor dinámico entre 250 y 449 sesiones. En una integración real se obtendría desde Citrix Monitor o Citrix Cloud.",
     interpretation:
-      "Un valor alto indica mayor uso de la plataforma Citrix. No representa usuarios únicos, sino sesiones activas observadas."
+      "Sirve para ver cuánta actividad hay en Citrix. No representa usuarios únicos, sino sesiones activas observadas."
   },
   activeLicenses: {
     description:
@@ -27,7 +27,7 @@ const citrixKpiInfo = {
     description:
       "Indica cuántos Delivery Controllers están disponibles respecto al total configurado. Son componentes críticos para gestionar sesiones y publicar recursos Citrix.",
     algorithm:
-      "Se calcula como availableDeliveryControllers / totalDeliveryControllers. En el mock actual el total se fija en 4 y los disponibles se generan dinámicamente entre 3 y 4.",
+      "Se calcula como availableDeliveryControllers / totalDeliveryControllers. De 67% a 100% es correcto, de 34% a 66% es advertencia y de 0% a 33% es crítico.",
     interpretation:
       "Si todos los controllers están disponibles, el estado es correcto. Si alguno no está disponible, se considera una degradación importante del servicio."
   },
@@ -51,7 +51,7 @@ const citrixKpiInfo = {
     description:
       "Representa la carga media simulada de los servidores Citrix.",
     algorithm:
-      "Se genera en CitrixService como porcentaje dinámico. De 0 a 33% es verde, de 34% a 66% es amarillo y de 67% a 100% es rojo.",
+      "Se genera en CitrixService como porcentaje dinámico. Menos de 80% es verde, de 80% a 89% es amarillo y 90% o más es rojo.",
     interpretation:
       "Una carga elevada puede afectar al rendimiento de las sesiones y anticipar saturación de la plataforma."
   },
@@ -59,7 +59,7 @@ const citrixKpiInfo = {
     description:
       "Indica intentos de inicio de sesión fallidos en el entorno Citrix simulado.",
     algorithm:
-      "Se genera dinámicamente en CitrixService. De 0 a 10 errores es verde, de 11 a 30 es amarillo y más de 30 es rojo.",
+      "Se genera dinámicamente en CitrixService. De 0 a 5 errores es verde, de 6 a 20 es amarillo y más de 20 es rojo.",
     interpretation:
       "Un número elevado puede indicar problemas de autenticación, disponibilidad o acceso a recursos publicados."
   },
@@ -75,7 +75,7 @@ const citrixKpiInfo = {
     description:
       "Resume el estado general del entorno Citrix mediante un semáforo: correcto, advertencia o crítico.",
     algorithm:
-      "El índice usa ponderación uniforme entre sesiones activas, Delivery Controllers, Average Logon Duration, carga de servidores y errores de inicio. Cada indicador aporta 0, 50 o 100 puntos de afección según sus umbrales.",
+      "El índice suma afecciones parciales de Citrix. El estado superior se calcula con la afección total: 0-33% correcto, 34-66% advertencia y 67-100% crítico. Las tarjetas internas mantienen su propio estado.",
     interpretation:
       "Correcto indica funcionamiento normal, advertencia indica degradación moderada y crítico indica una situación que requiere revisión."
   }
@@ -114,7 +114,7 @@ function CitrixPage() {
 
     const interval = setInterval(() => {
       loadCitrixDashboard();
-    }, 30000);
+    }, FRONTEND_REFRESH_INTERVAL_MS);
 
     return () => clearInterval(interval);
   }, []);
@@ -129,8 +129,7 @@ function CitrixPage() {
   }
 
   const citrixHealthDetails = summary?.citrixHealthDetails;
-  const citrixHealth =
-    citrixHealthDetails?.color ?? summary?.citrixHealth ?? "UNKNOWN";
+  const citrixHealth = citrixHealthDetails?.color ?? "UNKNOWN";
   const citrixReasons = citrixHealthDetails?.reasons ?? [];
   const indicatorStatus = (name) =>
     findIndicatorStatus(citrixHealthDetails?.indicators, name);
@@ -139,7 +138,7 @@ function CitrixPage() {
     <main className="dashboard">
       <header className="dashboard-header">
         <div>
-          <p className="eyebrow">Monitorizacion Citrix</p>
+          <p className="eyebrow">Monitorización Citrix</p>
           <h1>Citrix</h1>
         </div>
 
@@ -199,7 +198,7 @@ function CitrixPage() {
             <KpiCard
               title="Licencias activas"
               value={summary.activeLicenses}
-              status="neutral"
+              status={indicatorStatus("Licencias activas")}
               info={citrixKpiInfo.activeLicenses}
             />
 
@@ -213,7 +212,7 @@ function CitrixPage() {
             <KpiCard
               title="Sesiones desconectadas"
               value={summary.disconnectedSessions}
-              status="neutral"
+              status={indicatorStatus("Sesiones desconectadas")}
               info={citrixKpiInfo.disconnectedSessions}
             />
 
@@ -241,7 +240,7 @@ function CitrixPage() {
             <KpiCard
               title="Tickets abiertos Citrix"
               value={summary.citrixOpenTickets}
-              status="neutral"
+              status={indicatorStatus("Tickets abiertos Citrix")}
               info={citrixKpiInfo.citrixOpenTickets}
             />
 
@@ -269,3 +268,7 @@ function findIndicatorStatus(indicators, name) {
 }
 
 export default CitrixPage;
+
+
+
+
